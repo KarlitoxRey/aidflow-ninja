@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shinobi Galaxy: Techno-Feudal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+
+        body {
+            margin: 0; background: #050505; overflow: hidden;
+            font-family: 'Orbitron', sans-serif; touch-action: none; user-select: none;
+        }
+        canvas { display: block; }
+        
+        /* UI & OVERLAYS */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px;
+        }
+        .hud-top { display: flex; justify-content: space-between; text-shadow: 0 0 10px rgba(0,0,0,0.8); }
+        .score-box { color: #ffb703; font-size: 24px; }
+        .lives-box { color: #d90429; font-size: 24px; }
+
+        #overlay-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5,5,5,0.95); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 10; pointer-events: auto; text-align: center;
+        }
+        h1 { color: #d90429; font-size: 2.5rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;}
+        p { color: #888; margin-bottom: 30px; font-size: 1rem; }
+        .btn-action {
+            background: transparent; color: #ffb703; border: 2px solid #ffb703;
+            padding: 15px 40px; font-family: 'Orbitron'; font-size: 1.2rem;
+            cursor: pointer; text-transform: uppercase; transition: 0.3s;
+        }
+        .btn-action:hover { background: #ffb703; color: #000; box-shadow: 0 0 20px rgba(255, 183, 3, 0.4); }
+        
+        /* CORRECCIÓN: Fondo de imagen real */
+        .bg-stars {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: url('assets/background.jpg') no-repeat center center;
+            background-size: cover;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-stars"></div>
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="score-box">PTS: <span id="scoreVal">0</span></div>
+            <div class="lives-box">ESCUDOS: <span id="livesVal">3</span></div>
+        </div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="overlay-screen">
+        <h1 id="overlay-title">INICIANDO SISTEMA...</h1>
+        <p id="overlay-msg">Cargando flota enemiga...</p>
+        <button id="start-btn" class="btn-action" style="display:none;" onclick="startGame()">DESPEGAR</button>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, score=0, level=1, lives=3, gameActive=false, imagesLoaded=false; const keys={};
+
+    // 🖼️ CARGA DE SPRITES DEFINITIVA (6 imágenes)
+    const sprites = { player:new Image(), enemy1:new Image(), enemy2:new Image(), enemy3:new Image(), boss:new Image(), shuriken:new Image() };
+    const ASSETS_PATH = 'assets/'; let assetsToLoad=6, assetsLoaded=0;
+
+    function onAssetLoad() {
+        assetsLoaded++;
+        if(assetsLoaded >= assetsToLoad) {
+            imagesLoaded = true;
+            document.getElementById('overlay-title').innerText = "SHINOBI GALAXY";
+            document.getElementById('overlay-msg').innerText = "El Shogunato Mecánico ataca.";
+            document.getElementById('start-btn').style.display = 'block';
+        }
+    }
+    // Cargamos todas las naves nuevas
+    ['player','enemy1','enemy2','enemy3','boss','shuriken'].forEach(k=>{ sprites[k].src=`${ASSETS_PATH}${k}.png`; sprites[k].onload=onAssetLoad; sprites[k].onerror=onAssetLoad; });
+
+    // Entidades
+    let player, bullets=[], enemies=[], particles=[];
+
+    class Player {
+        constructor() {
+            this.w=60; this.h=70; // Ajustado para el Glider
+            this.x=W/2-this.w/2; this.y=H-100; this.speed=8; this.cooldown=0;
+        }
+        update() {
+            if(keys['ArrowLeft'] && this.x>0) this.x-=this.speed;
+            if(keys['ArrowRight'] && this.x+this.w<W) this.x+=this.speed;
+            if(keys[' ']) this.shoot();
+            if(this.cooldown>0) this.cooldown--;
+        }
+        shoot() {
+            if(this.cooldown<=0) { bullets.push(new Bullet(this.x+this.w/2, this.y)); this.cooldown=12; }
+        }
+        draw() { if(isLoaded(sprites.player)) ctx.drawImage(sprites.player,this.x,this.y,this.w,this.h); }
+    }
+
+    class Bullet {
+        constructor(x,y) { this.x=x; this.y=y; this.r=15; this.speed=14; this.angle=0; }
+        update() { this.y-=this.speed; this.angle+=0.6; } // Rotación del shuriken
+        draw() {
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+            // Efecto de brillo extra
+            ctx.shadowBlur = 15; ctx.shadowColor = '#ff0000';
+            if(isLoaded(sprites.shuriken)) ctx.drawImage(sprites.shuriken, -15, -15, 30, 30);
+            ctx.restore();
+        }
+    }
+
+    class Enemy {
+        constructor(x,y,type) {
+            this.x=x; this.y=y; this.type=type;
+            // Lógica para los nuevos tipos de naves
+            if(type==='genin') { // Drone Kunai (Pequeño)
+                this.w=30; this.h=50; this.hp=1; this.speedY=3+(level*0.1); this.img=sprites.enemy1; this.score=10;
+            } else if (type==='chunin') { // Caza Luna (Ancho)
+                this.w=70; this.h=40; this.hp=2; this.speedY=5+(level*0.2); this.img=sprites.enemy2; this.score=25;
+            } else if (type==='jonin') { // Tanque (Grande)
+                this.w=80; this.h=80; this.hp=5; this.speedY=1.5+(level*0.1); this.img=sprites.enemy3; this.score=50;
+            } else if (type==='boss') { // Nave Nodriza (ENORME)
+                this.w=200; this.h=200; this.hp=30+(level*5); this.speedY=0.7; this.img=sprites.boss; this.score=1000;
+            }
+        }
+        update() {
+            this.y+=this.speedY;
+            if(this.type==='chunin') this.x += Math.sin(this.y*0.05)*3; // Movimiento lateral rápido
+        }
+        draw() { if(isLoaded(this.img)) ctx.drawImage(this.img,this.x,this.y,this.w,this.h); }
+    }
+
+    class Particle {
+        constructor(x,y,c) { this.x=x; this.y=y; this.c=c; this.vx=(Math.random()-0.5)*10; this.vy=(Math.random()-0.5)*10; this.life=1; }
+        update() { this.x+=this.vx; this.y+=this.vy; this.life-=0.05; }
+        draw() { ctx.globalAlpha=this.life; ctx.fillStyle=this.c; ctx.beginPath(); ctx.arc(this.x,this.y,this.life*4,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
+    }
+
+    function isLoaded(img) { return img.complete && img.naturalHeight!==0; }
+    function startGame() { if(!imagesLoaded)return; document.getElementById('overlay-screen').style.display='none'; score=0; lives=3; level=1; player=new Player(); bullets=[]; enemies=[]; particles=[]; gameActive=true; updateHUD(); spawnWave(); loop(); }
+
+    function spawnWave() {
+        if(!gameActive)return;
+        let count=5+level*2; let spawned=0; let spawnInterval=900-(level*60); if(spawnInterval<300)spawnInterval=300;
+        const interval=setInterval(()=>{
+            if(!gameActive){clearInterval(interval);return;}
+            let isBoss=(spawned===count-1 && level%4===0); let type='genin';
+            if(isBoss) type='boss';
+            else {
+                let rand=Math.random();
+                if(level<3) type=rand>0.8?'chunin':'genin';
+                else { if(rand>0.85)type='jonin'; else if(rand>0.6)type='chunin'; else type='genin'; }
+            }
+            let eW=type==='boss'?200:(type==='chunin'?70:40);
+            enemies.push(new Enemy(Math.random()*(W-eW), -200, type)); spawned++;
+            if(spawned>=count)clearInterval(interval);
+        }, spawnInterval);
+    }
+
+    function loop() {
+        if(!gameActive)return; requestAnimationFrame(loop); ctx.clearRect(0,0,W,H);
+        player.update(); player.draw();
+        for(let i=bullets.length-1;i>=0;i--){ let b=bullets[i]; b.update(); b.draw(); if(b.y<-50)bullets.splice(i,1); }
+        for(let i=enemies.length-1;i>=0;i--){
+            let e=enemies[i]; e.update(); e.draw();
+            for(let j=bullets.length-1;j>=0;j--){
+                let b=bullets[j];
+                if(b.x>e.x && b.x<e.x+e.w && b.y>e.y && b.y<e.y+e.h) {
+                    bullets.splice(j,1); e.hp--; createExplosion(b.x,b.y,'#fff');
+                    if(e.hp<=0) { enemies.splice(i,1); score+=e.score; createExplosion(e.x+e.w/2,e.y+e.h/2,'#d90429'); updateHUD(); break; }
+                }
+            }
+            if(e.hp<=0)continue;
+            if(player.x<e.x+e.w && player.x+player.w>e.x && player.y<e.y+e.h && player.y+player.h>e.y) {
+                enemies.splice(i,1); createExplosion(player.x+player.w/2, player.y+player.h/2,'#ffb703'); lives--; updateHUD(); if(lives<=0)gameOver();
+            }
+            if(e.y>H)enemies.splice(i,1);
+        }
+        if(enemies.length===0){ level++; spawnWave(); }
+        for(let i=particles.length-1;i>=0;i--){ particles[i].update(); particles[i].draw(); if(particles[i].life<=0)particles.splice(i,1); }
+    }
+
+    function createExplosion(x,y,c) { for(let k=0;k<12;k++)particles.push(new Particle(x,y,c)); }
+    function updateHUD() { document.getElementById('scoreVal').innerText=score; document.getElementById('livesVal').innerText="🛡️".repeat(lives); }
+    function gameOver() { gameActive=false; document.getElementById('overlay-title').innerText="NAVE DESTRUIDA"; document.getElementById('overlay-msg').innerHTML=`Honor obtenido: <strong style="color:white">${score}</strong>`; document.getElementById('start-btn').innerText="REINTENTAR"; document.getElementById('overlay-screen').style.display='flex'; }
+    function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; if(player)player.y=H-100; }
+    window.addEventListener('resize',resize); window.addEventListener('keydown',e=>keys[e.key]=true); window.addEventListener('keyup',e=>{keys[e.key]=false;if(e.key===' '&&gameActive)player.shoot();});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();if(player){player.x=e.touches[0].clientX-player.w/2;player.shoot();}},{passive:false});
+    resize();
+</script>
+</body>
+</html>

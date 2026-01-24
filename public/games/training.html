@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Entrenamiento Ninja</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; z-index: 10; pointer-events: none; }
+        h1 { margin: 0; font-size: 20px; color: #ffb400; text-transform: uppercase; }
+        p { margin: 0; color: #ccc; font-size: 12px; }
+        #gameOver {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; background: rgba(142, 0, 0, 0.9); padding: 40px; border: 2px solid #ffb400;
+        }
+        button {
+            background: #ffb400; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h1>Reflejos de Sombra</h1>
+        <p>Puntaje: <span id="score">0</span></p>
+    </div>
+
+    <div id="gameOver">
+        <h2 style="color:white; margin-top:0;">¡DERROTADO!</h2>
+        <p>Sobreviviste <span id="finalScore">0</span> segundos</p>
+        <button onclick="startGame()">REINTENTAR</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let player, enemies, score, gameLoop, spawnInterval;
+        let isGameOver = false;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function startGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            player = { x: canvas.width/2, y: canvas.height/2, r: 15, c: '#ffb400' };
+            enemies = [];
+            score = 0;
+            isGameOver = false;
+            
+            // Controles mouse
+            canvas.onmousemove = (e) => {
+                player.x = e.clientX;
+                player.y = e.clientY;
+            };
+
+            // Spawner
+            if(spawnInterval) clearInterval(spawnInterval);
+            spawnInterval = setInterval(spawnEnemy, 500);
+
+            update();
+        }
+
+        function spawnEnemy() {
+            const r = Math.random() * 20 + 10;
+            let x, y;
+            // Spawnear fuera de pantalla
+            if(Math.random() < 0.5) {
+                x = Math.random() < 0.5 ? 0 - r : canvas.width + r;
+                y = Math.random() * canvas.height;
+            } else {
+                x = Math.random() * canvas.width;
+                y = Math.random() < 0.5 ? 0 - r : canvas.height + r;
+            }
+            
+            const angle = Math.atan2(player.y - y, player.x - x);
+            const velocity = { x: Math.cos(angle) * (3 + score/100), y: Math.sin(angle) * (3 + score/100) };
+            
+            enemies.push({ x, y, r, velocity });
+        }
+
+        function update() {
+            if(isGameOver) return;
+            requestAnimationFrame(update);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Estela ninja
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Player
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+            ctx.fillStyle = player.c;
+            ctx.fill();
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.c;
+
+            // Enemies
+            enemies.forEach((enemy, index) => {
+                enemy.x += enemy.velocity.x;
+                enemy.y += enemy.velocity.y;
+
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.r, 0, Math.PI * 2);
+                ctx.fillStyle = '#8e0000';
+                ctx.fill();
+
+                // Colisión
+                const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                if(dist - enemy.r - player.r < 1) {
+                    endGame();
+                }
+            });
+
+            score++;
+            document.getElementById('score').innerText = Math.floor(score/10);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            clearInterval(spawnInterval);
+            document.getElementById('finalScore').innerText = Math.floor(score/10);
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        startGame();
+    </script>
+</body>
+</html>

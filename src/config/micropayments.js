@@ -1,0 +1,6 @@
+export const MICROPAYMENTS = {
+  LOGIN: 0.5,
+  DUEL_WIN: 1,
+  TOURNAMENT: 2,
+  REFERRAL: 5,
+};

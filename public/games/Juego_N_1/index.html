@@ -1,0 +1,51 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>AidFlow Arena</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button onclick="quitGame()" class="btn-exit">❌ SALIR</button>
+
+<div class="ui">
+  <h1>AIDFLOW <span>ARENA</span></h1>
+  
+  <div class="stats-bar">
+    <div>
+        <span class="stat-label">PUNTAJE</span>
+        <span id="score" class="stat-value">0</span>
+    </div>
+    <div>
+        <span class="stat-label">RECORD LOCAL</span>
+        <span id="highScore" class="stat-value">0</span>
+    </div>
+  </div>
+</div>
+
+<div class="game-container">
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+</div>
+
+<div class="controls">
+  <p>🕹️ WASD / Flechas para moverte</p>
+  <button id="btnStart" onclick="startGame()">INICIAR COMBATE</button>
+</div>
+
+<script src="js/game-sdk.js"></script> 
+<script src="game.js"></script>
+
+<script>
+    function quitGame() {
+        // Usamos el SDK que acabamos de actualizar
+        if(window.AidFlow) {
+            window.AidFlow.exitGame();
+        }
+    }
+</script>
+
+</body>
+</html>

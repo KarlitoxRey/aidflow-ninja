@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Forjar Guerrero | AidFlow Ninja</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* Estilos compartidos copiados y adaptados para consistencia */
+    :root {
+      --blood: #d90429;
+      --gold: #ffb703;
+      --void: #050505;
+      --glass: rgba(20, 20, 20, 0.85);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: var(--void);
+      background-image: 
+        radial-gradient(circle at 20% 10%, #1a0505 0%, transparent 60%),
+        linear-gradient(0deg, #000 0%, #080808 100%);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      padding: 20px;
+    }
+
+    .ninja-bg {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100vw; height: 100vh;
+      background: url('images/ninja-avatar.png') no-repeat right bottom;
+      background-size: contain;
+      opacity: 0.1;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .auth-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 450px;
+    }
+
+    .card {
+      background: var(--glass);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-left: 3px solid var(--gold);
+      padding: 40px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+      /* Forma angular tecnológica */
+      clip-path: polygon(
+        20px 0, 100% 0, 
+        100% calc(100% - 20px), 
+        calc(100% - 20px) 100%, 
+        0 100%, 0 20px
+      );
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 800;
+      font-size: 1.8rem;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      color: #fff;
+    }
+
+    p.subtitle {
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+    }
+
+    .form-group { margin-bottom: 20px; position: relative; }
+    
+    .input-wrapper { position: relative; }
+
+    input[type="text"], input[type="email"], input[type="password"] {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid #333;
+      border-bottom: 2px solid #333;
+      padding: 12px 12px 12px 40px;
+      color: #fff;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1.1rem;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    input:focus {
+      background: rgba(0,0,0,0.8);
+      border-bottom-color: var(--blood);
+      box-shadow: inset 0 -10px 20px rgba(217, 4, 41, 0.05);
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #555;
+      font-size: 1rem;
+    }
+
+    input:focus + .input-icon { color: var(--blood); }
+
+    label.field-label {
+      font-family: 'Orbitron';
+      font-size: 0.7rem;
+      color: var(--gold);
+      margin-bottom: 5px;
+      display: block;
+      letter-spacing: 1px;
+    }
+
+    /* Checkbox personalizado */
+    .terms-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 25px 0;
+      font-size: 0.9rem;
+      color: #aaa;
+      cursor: pointer;
+    }
+
+    .terms-container input {
+      accent-color: var(--blood);
+      width: 18px;
+      height: 18px;
+      margin-top: 3px;
+    }
+
+    .terms-text a {
+      color: var(--gold);
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    .btn-register {
+      width: 100%;
+      background: linear-gradient(90deg, var(--blood), #9e021d);
+      color: white;
+      border: none;
+      padding: 16px;
+      font-family: 'Orbitron';
+      font-weight: 900;
+      font-size: 1.1rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+      transition: 0.3s;
+    }
+
+    .btn-register:hover {
+      filter: brightness(1.2);
+      box-shadow: 0 0 25px rgba(217, 4, 41, 0.5);
+    }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 25px;
+      color: #666;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .back-link:hover { color: var(--gold); }
+
+    /* Barra de progreso visual arriba */
+    .scan-line {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--gold);
+      box-shadow: 0 0 10px var(--gold);
+      animation: scan 3s infinite ease-in-out;
+    }
+
+    @keyframes scan {
+      0% { width: 0; opacity: 0; }
+      50% { width: 100%; opacity: 1; }
+      100% { width: 0; opacity: 0; left: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ninja-bg"></div>
+
+  <div class="auth-container">
+    <div class="card">
+      <div class="scan-line"></div>
+      <h1>Forjar Pase</h1>
+      <p class="subtitle">Únete al Clan y comienza tu ascenso.</p>
+      
+      <form id="registerForm">
+        
+        <div class="form-group">
+          <label class="field-label">NOMBRE DE GUERRERO</label>
+          <div class="input-wrapper">
+            <input type="text" id="ninjaName" placeholder="Ej: Hanzo" required>
+            <i class="fas fa-user-ninja input-icon"></i>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="field-label">CORREO ELECTRÓNICO</label>
+          <div class="input-wrapper">
+            <input type="email" id="email" placeholder="ninja@clan.com" required>
+            <i class="fas fa-envelope input-icon"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="field-label">CONTRASEÑA</label>
+          <div class="input-wrapper">
+            <input type="password" id="password" placeholder="••••••••" required>
+            <i class="fas fa-key input-icon"></i>
+          </div>
+        </div>
+
+        <label class="terms-container">
+          <input type="checkbox" id="acceptTerms" required>
+          <span class="terms-text">
+            Juro lealtad al <a href="javascript:void(0)" onclick="mostrarTerminos()">Código de Honor</a>. 
+            Entiendo los riesgos del camino.
+          </span>
+        </label>
+
+        <button type="submit" class="btn-register">INICIAR INICIACIÓN</button>
+      </form>
+
+      <a href="login.html" class="back-link">¿Ya eres del Clan? <span style="color:white; font-weight:bold;">Entra al Dojo</span></a>
+    </div>
+  </div>
+  
+
+  <script>
+    function mostrarTerminos() {
+        window.open('terminos.html', 'CodigoHonor', 'width=600,height=800');
+    }
+  </script>
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>

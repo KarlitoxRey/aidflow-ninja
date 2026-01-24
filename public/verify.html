@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificando Honor | AidFlow Ninja</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    /* Estilos inline para mantenerlo simple y centrado */
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        text-align: center;
+        background: radial-gradient(circle at center, #1a0202 0%, #050505 100%);
+    }
+    .verify-card {
+        background: #0d0d0d;
+        padding: 40px;
+        border: 1px solid #333;
+        border-top: 4px solid var(--ninja-red);
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 0 30px rgba(217, 4, 41, 0.2);
+    }
+    .status-icon { font-size: 50px; margin-bottom: 20px; display: block; }
+    .loader { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+  </style>
+</head>
+<body>
+
+  <div class="verify-card">
+    <span id="icon" class="status-icon loader">⏳</span>
+    <h2 id="title" class="shogun-title-mini" style="font-size: 20px; margin-bottom: 15px;">ANALIZANDO SELLO...</h2>
+    <p id="message" class="muted-text">El Consejo está verificando tu identidad.</p>
+    
+    <a id="loginBtn" href="login.html" class="btn-ninja-primary" style="display: none; margin-top: 20px; text-decoration: none;">ENTRAR AL DOJO</a>
+  </div>
+
+  <script type="module">
+    import { API_URL } from "./js/api.js";
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        // 1. Capturar el token de la URL (ej: verify.html?token=xyz123)
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token");
+
+        const icon = document.getElementById("icon");
+        const title = document.getElementById("title");
+        const msg = document.getElementById("message");
+        const btn = document.getElementById("loginBtn");
+
+        if (!token) {
+            showError("No se encontró el sello de verificación.");
+            return;
+        }
+
+        try {
+            // 2. Enviar al Backend
+            const res = await fetch(`${API_URL}/api/auth/verify`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                // ✅ ÉXITO
+                icon.innerHTML = "⛩️";
+                icon.classList.remove("loader");
+                title.innerHTML = "HONOR CONFIRMADO";
+                title.classList.add("gold-text");
+                msg.innerHTML = "Tu identidad ha sido validada. El Dojo te espera.";
+                btn.style.display = "inline-block"; // Mostrar botón de login
+            } else {
+                // ❌ ERROR DEL SERVIDOR
+                showError(data.error || "El sello ha expirado o es inválido.");
+            }
+
+        } catch (error) {
+            console.error(error);
+            showError("Error de conexión con el Templo.");
+        }
+
+        function showError(text) {
+            icon.innerHTML = "🚫";
+            icon.classList.remove("loader");
+            title.innerHTML = "ACCESO DENEGADO";
+            title.style.color = "red";
+            msg.innerHTML = text;
+        }
+    });
+  </script>
+
+</body>
+</html>

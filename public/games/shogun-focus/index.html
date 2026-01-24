@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shogun's Focus</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #050505;
+            font-family: 'Orbitron', sans-serif;
+            touch-action: none; /* Previene zoom/scroll en móviles */
+        }
+
+        #gameCanvas {
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+
+        .hud-text {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        h1 { color: #d90429; font-size: 40px; margin: 0; text-transform: uppercase; }
+        p { color: #ffb703; font-size: 24px; margin: 10px 0 30px 0; }
+        
+        button {
+            background: #8e0000;
+            color: white;
+            border: 2px solid #d90429;
+            padding: 15px 40px;
+            font-family: 'Orbitron';
+            font-size: 18px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #ff0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+        }
+
+        /* Efecto CRT Scanline */
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 100% 4px;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="hud-text" style="color:#ffb703">PUNTOS: <span id="scoreVal">0</span></div>
+        <div class="hud-text" style="color:#d90429">VIDAS: <span id="livesVal">3</span></div>
+    </div>
+
+    <div class="scanlines"></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="game-over">
+        <h1>DESHONRA</h1>
+        <p>Puntuación Final: <span id="finalScore">0</span></p>
+        <button onclick="restartGame()">REINTENTAR</button>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Configuración Ninja
+    const COLORS = {
+        bg: '#050505',
+        enemy: '#d90429', // Rojo AidFlow
+        gold: '#ffb703',  // Dorado
+        trap: '#ffffff',  // Trampa (Blanco fantasmal)
+        text: '#ffffff'
+    };
+
+    let width, height;
+    let score = 0;
+    let lives = 3;
+    let gameRunning = true;
+    let targets = [];
+    let particles = [];
+    let spawnRate = 1000;
+    let lastSpawn = 0;
+    let difficultyMultiplier = 1;
+
+    // Ajustar Canvas
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Input
+    canvas.addEventListener('mousedown', handleInput);
+    canvas.addEventListener('touchstart', (e) => {
+        handleInput(e.touches[0]);
+    }, {passive: false});
+
+    function handleInput(e) {
+        if (!gameRunning) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Check hits
+        for (let i = targets.length - 1; i >= 0; i--) {
+            const t = targets[i];
+            const dist = Math.hypot(t.x - x, t.y - y);
+            
+            if (dist < t.radius) {
+                // HIT!
+                if(t.type === 'trap') {
+                    takeDamage();
+                } else {
+                    addScore(t.x, t.y);
+                }
+                targets.splice(i, 1);
+                return; // Solo un hit por click
+            }
+        }
+        
+        // Efecto visual de corte en el aire
+        spawnParticles(x, y, '#555', 3);
+    }
+
+    class Target {
+        constructor() {
+            this.radius = 40;
+            this.x = Math.random() * (width - 100) + 50;
+            this.y = Math.random() * (height - 100) + 50;
+            this.maxLife = 100; // Tiempo de vida
+            this.life = this.maxLife;
+            // 10% probabilidad de trampa
+            this.type = Math.random() > 0.9 ? 'trap' : 'normal'; 
+            this.color = this.type === 'trap' ? COLORS.trap : COLORS.enemy;
+            
+            // Si es dorado (bonus)
+            if(this.type === 'normal' && Math.random() > 0.8) {
+                this.type = 'gold';
+                this.color = COLORS.gold;
+            }
+        }
+
+        update() {
+            this.life -= (1 * difficultyMultiplier);
+            this.radius = (this.life / this.maxLife) * 40; // Se encoge
+            return this.life > 0;
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = this.color;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Icono interno
+            ctx.fillStyle = '#000';
+            ctx.font = `${this.radius}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let icon = this.type === 'trap' ? '☠️' : (this.type === 'gold' ? '⚡' : '');
+            if(icon) ctx.fillText(icon, this.x, this.y);
+        }
+    }
+
+    function spawnParticles(x, y, color, amount = 8) {
+        for(let i=0; i<amount; i++){
+            particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                life: 1.0,
+                color
+            });
+        }
+    }
+
+    function addScore(x, y) {
+        score += 10;
+        difficultyMultiplier += 0.05; // Se pone más rápido
+        document.getElementById('scoreVal').innerText = score;
+        spawnParticles(x, y, COLORS.gold, 15);
+    }
+
+    function takeDamage() {
+        lives--;
+        document.getElementById('livesVal').innerText = lives;
+        // Flash rojo
+        ctx.fillStyle = 'rgba(255,0,0,0.3)';
+        ctx.fillRect(0,0,width,height);
+        
+        if (lives <= 0) gameOver();
+    }
+
+    function gameOver() {
+        gameRunning = false;
+        document.getElementById('finalScore').innerText = score;
+        document.getElementById('game-over').style.display = 'flex';
+    }
+
+    window.restartGame = function() {
+        score = 0;
+        lives = 3;
+        difficultyMultiplier = 1;
+        targets = [];
+        particles = [];
+        document.getElementById('scoreVal').innerText = score;
+        document.getElementById('livesVal').innerText = lives;
+        document.getElementById('game-over').style.display = 'none';
+        gameRunning = true;
+        loop();
+    }
+
+    function loop(timestamp) {
+        if (!gameRunning) return;
+
+        // Limpiar
+        ctx.fillStyle = COLORS.bg;
+        ctx.fillRect(0, 0, width, height);
+
+        // Spawner
+        if (timestamp - lastSpawn > (spawnRate / difficultyMultiplier)) {
+            targets.push(new Target());
+            lastSpawn = timestamp;
+        }
+
+        // Update & Draw Targets
+        for (let i = targets.length - 1; i >= 0; i--) {
+            let t = targets[i];
+            if (!t.update()) {
+                // Desapareció (fallaste)
+                targets.splice(i, 1);
+                if(t.type !== 'trap') takeDamage(); // Solo duele si no era trampa
+            } else {
+                t.draw();
+            }
+        }
+
+        // Update & Draw Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.05;
+            
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            if(p.life <= 0) particles.splice(i, 1);
+        }
+
+        requestAnimationFrame(loop);
+    }
+
+    // Iniciar
+    loop(0);
+
+</script>
+</body>
+</html>

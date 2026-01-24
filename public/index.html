@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>AidFlow Ninja | El Origen del Clan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="css/main.css">
+
+    <style>
+        /* =========================================
+           ESTILOS LEGENDARIOS (OVERRIDES)
+           ========================================= */
+        :root {
+            --void: #030303;
+            --armor: #111111;
+            --blood: #d90429;
+            --blood-glow: rgba(217, 4, 41, 0.6);
+            --gold: #ffb703;
+            --gold-glow: rgba(255, 183, 3, 0.4);
+            --text-main: #e0e0e0;
+        }
+
+        body {
+            background-color: var(--void);
+            background-image: 
+                radial-gradient(circle at 50% 0%, #2a0a0a 0%, var(--void) 60%),
+                url('images/image_97efed.jpg'); /* Tu imagen de fondo si existe */
+            background-blend-mode: overlay;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: 'Rajdhani', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* TIPOGRAFÍA DE IMPACTO */
+        .hero-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 900;
+            line-height: 0.9;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        .hero-title .red {
+            color: var(--blood);
+            text-shadow: 0 0 30px var(--blood-glow);
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2vw, 1.4rem);
+            color: #aaa;
+            max-width: 700px;
+            margin: 0 auto 40px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        /* SECCIÓN HERO */
+        .hero-section {
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* CARD DE FUNDADORES (LA JOYA) */
+        .founders-card {
+            background: linear-gradient(180deg, rgba(20,20,20,0.95) 0%, rgba(5,5,5,0.98) 100%);
+            border: 1px solid #333;
+            border-top: 4px solid var(--gold);
+            border-bottom: 4px solid var(--gold);
+            padding: 40px 30px;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto 60px;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.7), 0 0 20px var(--gold-glow);
+            transform: skewX(-2deg);
+        }
+
+        .founders-card > * { transform: skewX(2deg); /* Corrige el texto */ }
+
+        .founders-badge {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%) skewX(2deg);
+            background: var(--gold);
+            color: black;
+            font-family: 'Orbitron';
+            font-weight: 900;
+            padding: 8px 30px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px var(--gold-glow);
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .benefit-item {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 2px solid var(--gold);
+        }
+
+        .benefit-item i { font-size: 2rem; color: var(--gold); }
+        .benefit-item h3 { margin: 0; color: white; font-family: 'Orbitron'; font-size: 1.1rem; }
+        .benefit-item p { margin: 5px 0 0; color: #999; font-size: 0.9rem; line-height: 1.4; }
+
+        /* BOTONES DE GUERRA */
+        .btn-legendary {
+            background: var(--blood);
+            color: white;
+            font-family: 'Orbitron';
+            font-weight: 900;
+            font-size: 1.2rem;
+            padding: 20px 50px;
+            border: none;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%);
+            display: inline-block;
+            margin: 10px;
+        }
+
+        .btn-legendary:hover {
+            background: #ff0000;
+            box-shadow: 0 0 30px var(--blood-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            font-family: 'Orbitron';
+            font-weight: 700;
+            padding: 18px 40px;
+            text-decoration: none;
+            text-transform: uppercase;
+            display: inline-block;
+            transition: 0.3s;
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+            margin: 10px;
+        }
+        .btn-ghost:hover {
+            border-color: white;
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* SECCIÓN DAO (TESORERÍA) */
+        .dao-section {
+            background: #000;
+            padding: 80px 20px;
+            border-top: 1px solid #222;
+        }
+        
+        .dao-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            margin-top: 40px;
+        }
+
+        .stat-box {
+            text-align: center;
+            background: #0a0a0a;
+            padding: 30px;
+            border: 1px solid #222;
+            width: 250px;
+            transition: 0.3s;
+        }
+        .stat-box:hover { border-color: var(--blood); transform: translateY(-5px); }
+        .stat-number { font-family: 'Orbitron'; font-size: 2.5rem; color: var(--blood); font-weight: 900; }
+        .stat-label { font-family: 'Rajdhani'; font-size: 1.2rem; color: white; font-weight: 700; text-transform: uppercase; margin-top: 5px; }
+        .stat-desc { color: #666; font-size: 0.9rem; margin-top: 10px; }
+
+        /* FOOTER CORRECTO */
+        .footer-legendary {
+            background: #050505;
+            padding: 40px 20px;
+            text-align: center;
+            border-top: 1px solid #111;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .footer-link {
+            color: #888;
+            text-decoration: none;
+            border-bottom: 1px dotted #888;
+            transition: 0.3s;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .footer-link:hover {
+            color: var(--blood);
+            border-color: var(--blood);
+        }
+
+        /* Animación de pulso para el botón principal */
+        @keyframes blood-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(217, 4, 41, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(217, 4, 41, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(217, 4, 41, 0); }
+        }
+        .pulse-anim { animation: blood-pulse 2s infinite; }
+
+    </style>
+</head>
+<body>
+
+    <header class="hero-section">
+        <div style="margin-bottom: 20px; letter-spacing: 5px; color: var(--blood); font-weight: bold; font-family: 'Orbitron';">
+            AIDFLOW NINJA // PROTOCOLO 1.0
+        </div>
+        
+        <h1 class="hero-title">
+            DOMINA LAS <br>
+            <span class="red">SOMBRAS</span>
+        </h1>
+        
+        <p class="hero-subtitle">
+            No somos un banco. No somos una inversión. <br>
+            Somos un <strong>Clan de Ayuda Mutua</strong> basado en honor, meritocracia y código.
+        </p>
+
+        <div class="founders-card">
+            <div class="founders-badge">⚠️ ACCESO: 100 FUNDADORES</div>
+            
+            <h2 style="font-family: 'Orbitron'; color: var(--gold); text-transform: uppercase; margin-bottom: 10px; font-size: 1.8rem;">
+                Estado de Vanguardia
+            </h2>
+            <p style="color: #ccc;">Los primeros 100 guerreros obtienen privilegios vitalicios inalterables.</p>
+
+            <div class="benefits-grid">
+                <div class="benefit-item">
+                    <i class="fas fa-infinity"></i>
+                    <div>
+                        <h3>RECOMPRA ETERNA $8</h3>
+                        <p>Costos fijos reducidos de por vida. Maximiza tu retorno en cada ciclo completado.</p>
+                    </div>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-vote-yea"></i>
+                    <div>
+                        <h3>GOBERNANZA DAO</h3>
+                        <p>Voz y voto real sobre el destino del 10% del Tesoro. Tú decides qué proyectos financiar.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cta-group">
+            <a href="register.html" class="btn-legendary pulse-anim">
+                FORJAR MI DESTINO
+            </a>
+            <a href="login.html" class="btn-ghost">
+                ENTRAR AL DOJO
+            </a>
+        </div>
+    </header>
+
+    <section class="dao-section">
+        <div class="container" style="max-width: 1200px; margin: 0 auto; text-align: center;">
+            <h2 style="font-family: 'Orbitron'; color: white; font-size: 2.5rem; margin-bottom: 10px;">
+                ECONOMÍA DE <span style="color: var(--blood);">LEALTAD</span>
+            </h2>
+            <p style="color: #888; max-width: 600px; margin: 0 auto;">
+                Transparencia absoluta. El 10% de cada ciclo alimenta la maquinaria del Clan para garantizar la supervivencia de todos.
+            </p>
+
+            <div class="dao-stats">
+                <div class="stat-box">
+                    <div class="stat-number">30%</div>
+                    <div class="stat-label">Desarrollo</div>
+                    <div class="stat-desc">Creación de nuevos juegos PvP y expansión del universo Ninja.</div>
+                </div>
+                <div class="stat-box" style="border-color: var(--gold); box-shadow: 0 0 15px rgba(255,183,3,0.1);">
+                    <div class="stat-number" style="color: var(--gold);">40%</div>
+                    <div class="stat-label">FONDO RESCATE</div>
+                    <div class="stat-desc">Liquidación de cuentas estancadas y ayudas a clanes aliados.</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">30%</div>
+                    <div class="stat-label">Torneos</div>
+                    <div class="stat-desc">Premios en metálico para los guerreros más hábiles de la arena.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer-legendary">
+        <div style="margin-bottom: 20px;">
+            <i class="fas fa-dragon" style="font-size: 30px; color: #333;"></i>
+        </div>
+        <p>
+            <a href="javascript:void(0)" onclick="mostrarTerminos()" class="footer-link">Código de Honor (Términos y Condiciones)</a>
+        </p>
+        <p>© 2026 AidFlow Ninja. El camino no tiene fin.</p>
+    </footer>
+
+    <script>
+        window.mostrarTerminos = function() {
+            const ancho = 600;
+            const alto = 800;
+            const x = (window.screen.width / 2) - (ancho / 2);
+            const y = (window.screen.height / 2) - (alto / 2);
+            
+            window.open(
+                'terminos.html', 
+                'CodigoDeHonor', 
+                `width=${ancho},height=${alto},left=${x},top=${y},scrollbars=yes`
+            );
+        };
+    </script>
+</body>
+</html>

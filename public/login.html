@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Identificación | AidFlow Ninja</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --blood: #d90429;
+      --dark-blood: #6a040f;
+      --gold: #ffb703;
+      --void: #050505;
+      --glass: rgba(20, 20, 20, 0.85);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: var(--void);
+      /* Un fondo procedural oscuro y sangriento */
+      background-image: 
+        radial-gradient(circle at 50% 0%, #1a0505 0%, transparent 70%),
+        radial-gradient(circle at 85% 90%, #1a0505 0%, transparent 60%),
+        linear-gradient(0deg, #000 0%, #080808 100%);
+      font-family: 'Rajdhani', sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      color: #fff;
+    }
+
+    /* La presencia del Ninja de fondo */
+    .ninja-bg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120%;
+      height: 120%;
+      background: url('images/ninja-avatar.png') no-repeat center center;
+      background-size: contain;
+      opacity: 0.15;
+      z-index: 0;
+      filter: drop-shadow(0 0 50px var(--blood));
+      pointer-events: none;
+    }
+
+    .auth-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 2px solid var(--blood);
+      border-bottom: 2px solid var(--gold);
+      padding: 50px 40px;
+      position: relative;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+      clip-path: polygon(
+        0 0, 
+        100% 0, 
+        100% calc(100% - 20px), 
+        calc(100% - 20px) 100%, 
+        0 100%
+      );
+    }
+
+    /* Efecto de luz roja pulsante detrás */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: -2px; left: -2px; right: -2px; bottom: -2px;
+      background: linear-gradient(45deg, var(--blood), transparent, var(--gold));
+      z-index: -1;
+      opacity: 0.3;
+      filter: blur(20px);
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      text-align: center;
+      letter-spacing: 3px;
+      margin-bottom: 5px;
+      background: linear-gradient(to bottom, #fff, #aaa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+    }
+
+    p.subtitle {
+      text-align: center;
+      color: var(--gold);
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      margin-bottom: 40px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+      position: relative;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid #333;
+      padding: 15px 15px 15px 45px; /* Espacio para icono */
+      color: #fff;
+      font-size: 1.1rem;
+      font-family: 'Rajdhani', sans-serif;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 15px rgba(255, 183, 3, 0.1);
+      background: rgba(0,0,0,0.8);
+    }
+
+    /* Iconos dentro del input */
+    .input-icon {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #666;
+      font-size: 1.2rem;
+      transition: 0.3s;
+    }
+
+    input:focus + .input-icon {
+      color: var(--gold);
+    }
+
+    label {
+      position: absolute;
+      top: -10px;
+      left: 10px;
+      background: var(--void);
+      padding: 0 5px;
+      font-size: 0.75rem;
+      color: #888;
+      font-family: 'Orbitron';
+      letter-spacing: 1px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: var(--blood);
+      color: white;
+      border: none;
+      padding: 18px;
+      font-family: 'Orbitron';
+      font-weight: 900;
+      font-size: 1.1rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 10px;
+      clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-submit:hover {
+      background: #f00;
+      box-shadow: 0 0 30px rgba(217, 4, 41, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .footer-links {
+      margin-top: 30px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    a {
+      color: #888;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: 0.3s;
+    }
+
+    a:hover {
+      color: white;
+      text-shadow: 0 0 5px white;
+    }
+
+    .register-link {
+      color: var(--gold);
+      font-weight: bold;
+      text-transform: uppercase;
+      font-family: 'Orbitron';
+      font-size: 0.8rem;
+    }
+
+    .floating-particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      z-index: 1;
+      pointer-events: none;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <div class="ninja-bg"></div>
+
+  <div class="auth-container">
+    <div class="card">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <i class="fas fa-dragon" style="font-size: 30px; color: var(--blood);"></i>
+      </div>
+      
+      <h1>AidFlow</h1>
+      <p class="subtitle">Acceso al Dojo</p>
+
+      <form id="loginForm">
+        
+        <div class="form-group">
+          <div class="input-wrapper">
+            <input type="email" id="email" required placeholder=" ">
+            <i class="fas fa-envelope input-icon"></i>
+            <label for="email">CORREO</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="input-wrapper">
+            <input type="password" id="password" required placeholder=" ">
+            <i class="fas fa-lock input-icon"></i>
+            <label for="password">CLAVE</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit">
+          Entrar <i class="fas fa-chevron-right" style="margin-left: 10px; font-size: 0.8em;"></i>
+        </button>
+      </form>
+
+      <div class="footer-links">
+        <a href="register.html" class="register-link">No tengo pase [ Crear Cuenta ]</a>
+        <a href="javascript:void(0)" onclick="mostrarTerminos()">Olvidé mi Código de Honor</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/auth.js"></script>
+  <script>
+    function mostrarTerminos() {
+        window.open('terminos.html', 'CodigoHonor', 'width=600,height=800');
+    }
+  </script>
+</body>
+</html>
