@@ -99,15 +99,18 @@ app.get('/test-email', async (req, res) => {
         }
 
         // 2. Configurar transporte
-       const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com", // Dirección exacta
-    port: 587,              // Puerto seguro estándar (TLS)
-    secure: false,          // false para el puerto 587
-    auth: { user, pass },
-    tls: {
-        rejectUnauthorized: false // ⚠️ Esto ayuda si Render se pone estricto con los certificados
-    }
-});
+   // 2. Configurar transporte (INTENTO CON PUERTO 465 SSL)
+        const transporter = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 465,              // 🔴 CAMBIO: Puerto SSL estricto
+            secure: true,           // 🔴 CAMBIO: true para puerto 465
+            auth: { user, pass },
+            tls: {
+                rejectUnauthorized: false 
+            },
+            connectionTimeout: 10000 // 🔴 Para que no esperes 2 minutos si falla (falla en 10s)
+        });
+        
         // 3. Verificar conexión con Google
         await transporter.verify();
         console.log("✅ Conexión con Gmail exitosa");
