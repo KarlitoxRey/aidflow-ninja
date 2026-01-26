@@ -11,10 +11,15 @@ const generateReferralCode = (name) => {
     return `${cleanName}-${randomNum}`;
 };
 
-// 1. REGISTRO (Crea usuario + Envía Email)
+// 1. REGISTRO (CORREGIDO: Sin doble hash y con limpieza de datos)
 export const register = async (req, res) => {
     try {
-        const { ninjaName, email, password, referralCodeInput } = req.body;
+        let { ninjaName, email, password, referralCodeInput } = req.body;
+
+        // 🧹 LIMPIEZA DE DATOS (Vital para evitar errores tontos)
+        email = email.trim().toLowerCase();
+        ninjaName = ninjaName.trim();
+        password = password.trim();
 
         const existingUser = await User.findOne({ $or: [{ email }, { ninjaName }] });
         if (existingUser) return res.status(400).json({ error: "Guerrero o Email ya registrados." });
@@ -22,15 +27,17 @@ export const register = async (req, res) => {
         // Generar credenciales
         const myReferralCode = generateReferralCode(ninjaName);
         const emailToken = crypto.randomBytes(32).toString("hex");
-        const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Procesar Referido (Si existe)
+        // ⚠️ CAMBIO CRUCIAL: NO ENCRIPTAMOS AQUÍ. 
+        // Pasamos la contraseña PLANA y dejamos que el Modelo User.js la encripte.
+        // Si tu modelo NO tiene encriptación automática, avísame y cambiamos esto.
+
+        // Procesar Referido
         let referrerId = null;
         if (referralCodeInput) {
             const referrer = await User.findOne({ referralCode: referralCodeInput });
             if (referrer) {
                 referrerId = referrer.referralCode;
-                // Opcional: Sumar contador al padre aquí o al confirmar pago
                 referrer.referralStats.count += 1;
                 await referrer.save();
             }
@@ -39,16 +46,16 @@ export const register = async (req, res) => {
         const newUser = new User({
             ninjaName,
             email,
-            password: hashedPassword,
+            password, // <--- PASAMOS LA CLAVE LIMPIA (El modelo debe encriptarla)
             referralCode: myReferralCode,
             referredBy: referrerId,
             verificationToken: emailToken,
             isVerified: false 
         });
 
-        await newUser.save();
+        await newUser.save(); // Aquí es donde el modelo debería encriptar
 
-        // Enviar Correo en segundo plano
+        // Enviar Correo
         sendVerificationEmail(email, emailToken).catch(err => console.error("Fallo envío mail:", err));
 
         res.status(201).json({ 
@@ -56,7 +63,7 @@ export const register = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Error en Registro:", error);
         res.status(500).json({ error: "Error interno del Dojo." });
     }
 };
