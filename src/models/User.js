@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs"; // 👈 ¡ESTO FALTABA!
 
 const UserSchema = new mongoose.Schema({
     // 🥷 IDENTIDAD
@@ -21,7 +22,7 @@ const UserSchema = new mongoose.Schema({
     },
     role: { 
         type: String, 
-        enum: ["ninja", "shogun"], 
+        enum: ["ninja", "shogun", "admin"], // Agregué 'admin' por si acaso
         default: "ninja" 
     },
     status: {
@@ -61,5 +62,21 @@ const UserSchema = new mongoose.Schema({
     verificationExpires: { type: Date }
 
 }, { timestamps: true });
+
+// 👇👇👇 EL CÓDIGO MAESTRO QUE FALTABA 👇👇👇
+// Este "hook" se ejecuta automáticamente ANTES de guardar el usuario
+UserSchema.pre("save", async function (next) {
+    // Si la contraseña no se modificó, no hacemos nada (para no re-encriptar lo encriptado)
+    if (!this.isModified("password")) return next();
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
+// 👆👆👆 FIN DEL CÓDIGO MAESTRO 👆👆👆
 
 export default mongoose.model("User", UserSchema);
