@@ -98,17 +98,17 @@ app.get('/test-email', async (req, res) => {
             return res.status(500).send(`❌ ERROR: Faltan variables en Render. <br>USER: ${user ? 'OK' : 'FALTA'} <br>PASS: ${pass ? 'OK' : 'FALTA'}`);
         }
 
-        // 2. Configurar transporte
-   // 2. Configurar transporte (INTENTO CON PUERTO 465 SSL)
+   // 2. Configurar transporte (CON PARCHE IPV4)
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
-            port: 465,              // 🔴 CAMBIO: Puerto SSL estricto
-            secure: true,           // 🔴 CAMBIO: true para puerto 465
+            port: 465,              // Puerto Seguro SSL
+            secure: true,           // Usar SSL
             auth: { user, pass },
             tls: {
                 rejectUnauthorized: false 
             },
-            connectionTimeout: 10000 // 🔴 Para que no esperes 2 minutos si falla (falla en 10s)
+            family: 4,              // 🔴 CLAVE DEL ÉXITO: Forzar IPv4 para evitar ETIMEDOUT
+            connectionTimeout: 10000 // 10 segundos máximo de espera
         });
         
         // 3. Verificar conexión con Google
