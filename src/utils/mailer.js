@@ -1,33 +1,62 @@
 import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 
-// Configura esto con tus datos reales (Gmail, Outlook, o hosting SMTP)
-// Si usas Gmail, necesitas una "App Password", no tu contraseña normal.
+dotenv.config();
+
 const transporter = nodemailer.createTransport({
-    service: "gmail", // O host: 'smtp.tuservidor.com'
+    service: 'gmail',
     auth: {
-        user: "tu_correo_del_clan@gmail.com", 
-        pass: "tu_password_de_aplicacion" 
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS
     }
 });
 
 export const sendVerificationEmail = async (email, token) => {
-    // Cambia esta URL por la de tu frontend real/producción
-    const url = `http://localhost:3000/verify.html?token=${token}`;
+    // Enlace a la página de verificación (que crearemos abajo)
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify.html?token=${token}`;
 
-    const mailOptions = {
-        from: '"AidFlow Ninja Dojo" <no-reply@aidflowninja.com>',
-        to: email,
-        subject: "🥷 Confirma tu identidad - AidFlow Ninja",
-        html: `
-            <div style="background:#000; color:#fff; padding:20px; font-family:sans-serif; border: 2px solid #d90429;">
-                <h1 style="color:#ffb703;">BIENVENIDO AL CLAN</h1>
-                <p>Para activar tu Pase Ninja, debes verificar este correo.</p>
-                <p>Haz clic en el siguiente enlace:</p>
-                <a href="${url}" style="background:#d90429; color:#fff; padding:10px 20px; text-decoration:none; font-weight:bold;">CONFIRMAR IDENTIDAD</a>
-                <p style="margin-top:20px; color:#666; font-size:12px;">Si no solicitaste esto, ignora el mensaje.</p>
-            </div>
-        `
-    };
+    const emailHtml = `
+    <div style="background-color: #050505; color: #ffffff; font-family: 'Courier New', sans-serif; padding: 40px; text-align: center; border: 1px solid #d90429;">
+        <h1 style="color: #d90429; font-size: 32px; letter-spacing: 5px; margin-bottom: 5px;">AIDFLOW</h1>
+        <p style="color: #ffb703; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin-top:0;">Comando Central</p>
+        
+        <hr style="border: 0; border-top: 1px dashed #333; margin: 30px 0;">
 
-    await transporter.sendMail(mailOptions);
+        <h2 style="color: #ffffff;">CONFIRMACIÓN DE ACCESO</h2>
+        <p style="color: #cccccc; max-width: 500px; margin: 0 auto; line-height: 1.5;">
+            Guerrero, tu solicitud para unirte al Dojo ha sido recibida. 
+            Para activar tu ciclo de prosperidad, debes verificar tu honor.
+        </p>
+
+        <div style="background: #111; border-left: 3px solid #d90429; padding: 15px; margin: 30px auto; max-width: 400px; text-align: left;">
+            <strong style="color: #ffb703;">TUS BENEFICIOS AL ACTIVAR EL PASE:</strong>
+            <ul style="color: #aaa; font-size: 13px; padding-left: 20px; margin-top: 10px;">
+                <li>🔄 Acceso a Ciclos de Ayuda Mutua.</li>
+                <li>⚔️ Participación en Torneos PVP.</li>
+                <li>💰 Recompensas del Fondo DAO.</li>
+            </ul>
+        </div>
+
+        <a href="${verificationUrl}" style="background-color: #d90429; color: #000; padding: 15px 40px; text-decoration: none; font-weight: 900; font-size: 14px; display: inline-block; margin-top: 10px; border: 1px solid #d90429;">
+            VERIFICAR AHORA >
+        </a>
+
+        <p style="margin-top: 50px; font-size: 10px; color: #444;">
+            Si no iniciaste este proceso, elimina este mensaje.<br>
+            AidFlow Ninja © Protocolo Seguro.
+        </p>
+    </div>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: `"AidFlow Shogun" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: "⚔️ Activa tu Pase - AidFlow Ninja",
+            html: emailHtml
+        });
+        console.log(`📧 Flyer enviado a: ${email}`);
+    } catch (error) {
+        console.error("❌ Error enviando correo:", error);
+    }
 };
