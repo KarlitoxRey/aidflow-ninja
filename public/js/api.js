@@ -1,7 +1,11 @@
-
 // 🌐 Configuración del Templo Backend
-// Durante desarrollo usamos localhost, en producción será tu URL de Render
-const API_URL = "http://localhost:5000";
 
-// Exportamos para los archivos que lo usan como módulos (como dashboard.js)
+// Detectamos si estamos en casa (localhost) o en la nube
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+// Si es local, usa el puerto 5000. Si es nube, usa el origen actual (https://aidflow-ninja...)
+const API_URL = isLocalhost 
+    ? "http://localhost:5000" 
+    : window.location.origin;
+
 export { API_URL };
