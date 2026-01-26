@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs"; 
 
 const UserSchema = new mongoose.Schema({
     // 🥷 IDENTIDAD
@@ -22,7 +22,7 @@ const UserSchema = new mongoose.Schema({
     },
     role: { 
         type: String, 
-        enum: ["ninja", "shogun"], 
+        enum: ["ninja", "shogun", "admin"], 
         default: "ninja" 
     },
     status: {
@@ -62,5 +62,18 @@ const UserSchema = new mongoose.Schema({
     verificationExpires: { type: Date }
 
 }, { timestamps: true });
+
+// 👇 CÓDIGO MAESTRO DE ENCRIPTACIÓN 👇
+UserSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next();
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
 
 export default mongoose.model("User", UserSchema);

@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, verifyEmail, getMe } from '../controllers/authController.js';
+import { register, login, verifyEmail, getMe } from '../controllers/auth.controller.js';
 // Asegúrate de tener un middleware para proteger rutas (si no lo tienes, avísame)
 // import { protect } from '../middlewares/authMiddleware.js'; 
 

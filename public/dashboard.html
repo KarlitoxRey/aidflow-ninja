@@ -46,44 +46,26 @@
 
                <div class="clan-stats flex-between" style="background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333;">
     
-    <div class="stat-item" style="text-align: center;">
-        <span class="muted-text" style="font-size: 10px; display: block;">FONDO DAO</span>
-        <strong id="globalDao" class="gold-text" style="font-size: 16px;">--</strong>
-    </div>
+                <div class="stat-item" style="text-align: center;">
+                    <span class="muted-text" style="font-size: 10px; display: block;">FONDO DAO</span>
+                    <strong id="globalDao" class="gold-text" style="font-size: 16px;">--</strong>
+                </div>
 
-    <div class="stat-item" style="text-align: center; border-left: 1px solid #444; padding-left: 20px;">
-        <span class="muted-text" style="font-size: 10px; display: block;">POZO PREMIOS</span>
-        <strong id="globalPrizes" class="red-text" style="font-size: 16px;">--</strong>
-    </div>
+                <div class="stat-item" style="text-align: center; border-left: 1px solid #444; padding-left: 20px;">
+                    <span class="muted-text" style="font-size: 10px; display: block;">POZO PREMIOS</span>
+                    <strong id="globalPrizes" class="red-text" style="font-size: 16px;">--</strong>
+                </div>
 
-    <div class="stat-item" style="text-align: center; border-left: 1px solid #444; padding-left: 20px;">
-        <span class="muted-text" style="font-size: 10px; display: block;">MIS REFERIDOS</span>
-        <div style="display:flex; align-items:center; gap:5px; justify-content:center;">
-            <strong id="myReferrals" style="color: #fff; font-size: 16px;">0</strong>
-            <button onclick="copyReferralLink()" title="Copiar Link de Reclutamiento" style="background:none; border:none; cursor:pointer; color:var(--gold);">🔗</button>
-        </div>
-        <div style="font-size: 10px; color: #0f0;">+<span id="referralEarnings">0</span> NC</div>
-    </div>
+                <div class="stat-item" style="text-align: center; border-left: 1px solid #444; padding-left: 20px;">
+                    <span class="muted-text" style="font-size: 10px; display: block;">MIS REFERIDOS</span>
+                    <div style="display:flex; align-items:center; gap:5px; justify-content:center;">
+                        <strong id="myReferrals" style="color: #fff; font-size: 16px;">0</strong>
+                        <button onclick="copyReferralLink()" title="Copiar Link de Reclutamiento" style="background:none; border:none; cursor:pointer; color:var(--gold);">🔗</button>
+                    </div>
+                    <div style="font-size: 10px; color: #0f0;">+<span id="referralEarnings">0</span> NC</div>
+                </div>
 
-</div>
-
-    <div class="stat-item" style="text-align: center;">
-        <span class="muted-text" style="font-size: 10px; display: block;">FONDO DAO (COMUNIDAD)</span>
-        <strong id="globalDao" class="gold-text" style="font-size: 16px;">Cargando...</strong>
-    </div>
-
-    <div class="stat-item" style="text-align: center; border-left: 1px solid #444; padding-left: 20px;">
-        <span class="muted-text" style="font-size: 10px; display: block;">POZO DE TORNEOS</span>
-        <strong id="globalPrizes" class="red-text" style="font-size: 16px;">Cargando...</strong>
-    </div>
-
-    <div class="stat-item" style="text-align: center; border-left: 1px solid #444; padding-left: 20px;">
-        <span class="muted-text" style="font-size: 10px; display: block;">MIS REFERIDOS</span>
-        <strong id="myReferrals" style="color: #fff; font-size: 16px;">0 Guerreros</strong>
-        <div style="font-size: 10px; color: #0f0;">+<span id="referralEarnings">0</span> NC Ganados</div>
-    </div>
-
-</div>
+            </div>
                 
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div class="balance-pill" style="background:#111; padding:5px 15px; border:1px solid var(--gold); border-radius:20px; display: flex; align-items: center; gap: 10px;">
@@ -256,7 +238,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script type="module" src="js/dashboard.js"></script>
     
-    <script>
+    <script type="module">
         import { API_URL } from './js/api.js';
 
         // Poner el nombre del usuario en el modal para que no se olvide
@@ -276,12 +258,8 @@
             if(!amount || !referenceId) return alert("Completa todos los datos");
 
             try {
-                // Usamos la API_URL definida en js/api.js si es posible, o hardcoded fallback
-                // Nota: Al ser script inline, el import arriba podría fallar si no es module.
-                // Mejor usamos fetch directo a la ruta relativa o localhost si estamos dev
-                const baseUrl = "http://localhost:5000"; 
-
-                const res = await fetch(`${baseUrl}/api/payments/deposit`, {
+                // ✅ AHORA USAMOS LA VARIABLE IMPORTADA CORRECTAMENTE
+                const res = await fetch(`${API_URL}/payments/deposit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ amount, referenceId })
@@ -297,6 +275,7 @@
                 }
             } catch(err) {
                 alert("Error de conexión con el Templo.");
+                console.error(err);
             }
         });
     </script>
