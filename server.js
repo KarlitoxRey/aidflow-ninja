@@ -108,7 +108,7 @@ app.get('/test-email', async (req, res) => {
                 rejectUnauthorized: false 
             },
             
-            family: 4            // 🔴 CLAVE DEL ÉXITO: Forzar IPv4 para evitar ETIMEDOUT
+            family: 4 ,           // 🔴 CLAVE DEL ÉXITO: Forzar IPv4 para evitar ETIMEDOUT
             connectionTimeout: 10000 // 10 segundos máximo de espera
         });
         
