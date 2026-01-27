@@ -135,3 +135,24 @@ export const getMe = async (req, res) => {
         res.status(500).json({ error: "Error al obtener perfil" });
     }
 };
+
+// Asegúrate de importar el modelo User al inicio del archivo si no está
+// import User from "../models/User.js"; 
+
+export const getMe = async (req, res) => {
+    try {
+        // req.user viene del middleware verifyToken (que decodificó el token)
+        // Buscamos el usuario en la BD excluyendo la contraseña
+        const user = await User.findById(req.user.id).select("-password");
+
+        if (!user) {
+            return res.status(404).json({ error: "Ninja no encontrado en los registros." });
+        }
+
+        // Devolvemos el usuario (incluye role, ninjaName, email, etc.)
+        res.status(200).json(user);
+    } catch (error) {
+        console.error("Error en getMe:", error);
+        res.status(500).json({ error: "Error interno del Templo." });
+    }
+};
