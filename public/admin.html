@@ -42,8 +42,6 @@
             .menu-item span { display: none; }
             .menu-item { padding: 10px 20px; font-size: 1.2rem; }
         }
-        
-        /* Grid específica para Finanzas */
         .grid-finance { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .stat-card { background: #111; border-radius: 8px; transition: transform 0.2s; }
         .stat-card:hover { transform: translateY(-2px); }
@@ -56,19 +54,19 @@
         <aside class="sidebar">
             <div class="brand">SHOGUN <span class="red-text">ADMIN</span></div>
             
-            <div class="menu-item active" onclick="switchView('dashboard')">
+            <div class="menu-item active" onclick="switchView('dashboard', this)">
                 <i class="fas fa-chart-line"></i> <span>Resumen</span>
             </div>
-            <div class="menu-item" onclick="switchView('tournaments')">
+            <div class="menu-item" onclick="switchView('tournaments', this)">
                 <i class="fas fa-trophy"></i> <span>Torneos</span>
             </div>
-            <div class="menu-item" onclick="switchView('games')">
+            <div class="menu-item" onclick="switchView('games', this)">
                 <i class="fas fa-gamepad"></i> <span>Juegos</span>
             </div>
-            <div class="menu-item" onclick="switchView('users')">
+            <div class="menu-item" onclick="switchView('users', this)">
                 <i class="fas fa-users"></i> <span>Ninjas</span>
             </div>
-            <div class="menu-item" onclick="switchView('dao')">
+            <div class="menu-item" onclick="switchView('dao', this)">
                 <i class="fas fa-coins"></i> <span>DAO</span>
             </div>
 
@@ -170,8 +168,8 @@
                 <h2 class="section-title">INVENTARIO DEL DOJO</h2>
                 
                 <div class="sub-tabs">
-                    <div class="sub-tab active" onclick="switchGameTab('internal')">⚔️ SOFTWARE DEL CLAN</div>
-                    <div class="sub-tab" onclick="switchGameTab('external')">🌐 EMBEDS EXTERNOS</div>
+                    <div class="sub-tab active" onclick="switchGameTab('internal', this)">⚔️ SOFTWARE DEL CLAN</div>
+                    <div class="sub-tab" onclick="switchGameTab('external', this)">🌐 EMBEDS EXTERNOS</div>
                 </div>
 
                 <div id="form-internal" class="card-dark game-form-group">
@@ -231,19 +229,25 @@
 
     <script type="module" src="js/admin.js"></script>
     <script>
-        // Lógica visual básica (UI)
-        window.switchView = function(viewName) {
+        // Lógica visual básica (UI) - Corregido el manejo de eventos
+        window.switchView = function(viewName, element) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            
             document.getElementById(`view-${viewName}`).classList.add('active');
-            event.currentTarget.classList.add('active');
+            // Usamos 'element' si se pasa, o event.currentTarget como fallback
+            const target = element || event.currentTarget;
+            if(target) target.classList.add('active');
         };
 
-        window.switchGameTab = function(type) {
+        window.switchGameTab = function(type, element) {
             document.querySelectorAll('.sub-tab').forEach(el => el.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            const target = element || event.currentTarget;
+            if(target) target.classList.add('active');
+            
             document.getElementById('form-internal').style.display = type === 'internal' ? 'block' : 'none';
             document.getElementById('form-external').style.display = type === 'external' ? 'block' : 'none';
+            
             if(window.filterGamesByType) window.filterGamesByType(type);
         };
 
