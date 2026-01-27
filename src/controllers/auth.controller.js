@@ -127,14 +127,6 @@ export const verifyEmail = async (req, res) => {
 };
 
 // 4. PERFIL DEL USUARIO (Me)
-export const getMe = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.userId).select("-password");
-        res.json(user);
-    } catch (error) {
-        res.status(500).json({ error: "Error al obtener perfil" });
-    }
-};
 
 // Asegúrate de importar el modelo User al inicio del archivo si no está
 // import User from "../models/User.js"; 
