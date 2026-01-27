@@ -88,7 +88,7 @@ app.use("/api", (req, res) => {
 
 // CATCH-ALL (SPA)
 // Usamos '*' simple que es más compatible que regex complejo en algunas versiones
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
