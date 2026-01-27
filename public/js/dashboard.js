@@ -3,15 +3,11 @@ import { API_URL } from "./api.js";
 let currentUser = null;
 let socket = null;
 
-// Elementos DOM cacheados
-const missionBtn = document.getElementById("missionBtn");
-const missionTimer = document.getElementById("missionTimer");
-
 // ==========================================
 // 1. INICIALIZACIÓN
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
-    initGameListener(); // 👂 Activamos la escucha del SDK del juego
+    window.addEventListener("message", handleGameMessage);
     await validateSession();
 });
 
@@ -28,16 +24,14 @@ async function validateSession() {
         
         currentUser = await res.json();
         
-        // Renderizar componentes
         renderUserHeader();
         applyAccessLogic();
-        
-        // Iniciar subsistemas
         initMissionLogic();
         loadUserGames(); 
         initChat();      
         
-        document.getElementById("loadingScreen").style.display = "none";
+        const loader = document.getElementById("loadingScreen");
+        if(loader) loader.style.display = "none";
 
     } catch (error) {
         console.error("Error de sesión:", error);
@@ -49,54 +43,29 @@ async function validateSession() {
 // ==========================================
 // 2. SISTEMA DE JUEGOS & RANKING
 // ==========================================
+async function handleGameMessage(event) {
+    if (!event.data || event.data.type !== "GAME_OVER") return;
+    const { score } = event.data;
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-// 📡 ESCUCHA DE EVENTOS (SDK BRIDGE)
-function initGameListener() {
-    window.addEventListener("message", async (event) => {
-        // 1. Seguridad: Solo aceptamos eventos de tipo GAME_OVER
-        if (!event.data || event.data.type !== "GAME_OVER") return;
-
-        const { score } = event.data;
-        const token = localStorage.getItem("token");
-
-        if (!token) return console.warn("🚫 Intento de guardar puntaje sin sesión.");
-
-        console.log("🥷 Recibido del Dojo:", score);
-
-        try {
-            // 2. Enviamos al Templo (Backend)
-            const res = await fetch(`${API_URL}/api/games/score`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({ 
-                    score: score,
-                    gameId: 'aidflow-arena' // ID fijo o dinámico según el juego
-                })
-            });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                // 3. Feedback al Guerrero
-                // Si el backend devuelve nuevo saldo (recompensa por jugar), actualizamos
-                if(data.newBalance !== undefined) {
-                    document.getElementById("headerBalance").innerText = data.newBalance.toFixed(2);
-                }
-                
-                alert(`🏆 COMBATE REGISTRADO\nPuntaje: ${score}\n${data.message || ''}`);
-                
-                // Opcional: Recargar ranking si existiera esa función
-                // loadRanking(); 
-            } else {
-                console.warn("⚠️ El Dojo rechazó el puntaje:", data.message);
+    try {
+        const res = await fetch(`${API_URL}/api/games/score`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ score, gameId: 'aidflow-arena' })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if(data.newBalance !== undefined) {
+                document.getElementById("headerBalance").innerText = Number(data.newBalance).toFixed(2);
             }
-        } catch (error) {
-            console.error("❌ Error de conexión al guardar Score:", error);
+            alert(`🏆 COMBATE REGISTRADO: ${score} Pts`);
         }
-    });
+    } catch (error) { console.error(error); }
 }
 
 async function loadUserGames() {
@@ -106,258 +75,35 @@ async function loadUserGames() {
     try {
         const res = await fetch(`${API_URL}/api/games`);
         const games = await res.json();
-
         if(games.length === 0) {
-            container.innerHTML = "<p class='muted-text'>No hay juegos disponibles aún.</p>";
+            container.innerHTML = "<p class='muted-text'>Dojo vacío.</p>";
             return;
         }
-
         container.innerHTML = games.map(g => {
-            // Corrección de rutas para Windows/Unix
-            let cleanThumb = g.thumbnail.replace(/\\/g, "/");
-            let cleanUrl = g.embedUrl.replace(/\\/g, "/");
-
-            const fullThumb = cleanThumb.startsWith("http") ? cleanThumb : `${API_URL}/${cleanThumb}`;
-            const fullGameUrl = cleanUrl.startsWith("http") ? cleanUrl : `${API_URL}/${cleanUrl}`;
-
+            let cleanThumb = g.thumbnail.startsWith('http') ? g.thumbnail : `${API_URL}/${g.thumbnail}`;
+            let cleanUrl = g.embedUrl.startsWith('http') ? g.embedUrl : `${API_URL}/${g.embedUrl}`;
             return `
-            <div class="game-card" onclick="playGame('${fullGameUrl}')">
-                <div class="thumb-wrapper">
-                    <img src="${fullThumb}" alt="${g.title}">
-                </div>
-                <div class="info">
-                    <h4>${g.title}</h4>
-                    <small>${g.type === 'internal' ? '⚔️ Competitivo' : '🎮 Práctica'}</small>
-                </div>
-            </div>
-            `;
+            <div class="game-card shadow-glow" onclick="playGame('${cleanUrl}')">
+                <div class="thumb-wrapper"><img src="${cleanThumb}" alt="${g.title}"></div>
+                <div class="info"><h4>${g.title}</h4></div>
+            </div>`;
         }).join('');
-    } catch (error) {
-        console.error("Error cargando juegos:", error);
-        container.innerHTML = "<p class='muted-text'>Error al cargar el Dojo de juegos.</p>";
-    }
+    } catch (error) { console.error(error); }
 }
 
 // ==========================================
-// 3. SISTEMA DE CHAT
+// 3. LOGICA DE CICLOS Y NIVELES (RESTAURADA) ⚠️
 // ==========================================
-function initChat() {
-    try {
-        socket = io(API_URL); 
+window.openLevelModal = () => document.getElementById("levelModal").style.display = "flex";
+window.closeLevelModal = () => document.getElementById("levelModal").style.display = "none";
 
-        const chatInput = document.getElementById("chatInput");
-        const sendBtn = document.querySelector("#chatBox + div button");
-        const chatBox = document.getElementById("chatBox");
-
-        socket.on("chat message", (msg) => {
-            const p = document.createElement("p");
-            p.className = "chat-msg";
-            p.innerHTML = `<strong class="ninja-name">${msg.user}:</strong> <span>${msg.text}</span>`;
-            chatBox.appendChild(p);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        });
-
-        const sendMessage = () => {
-            const text = chatInput.value.trim();
-            if (text && currentUser) {
-                socket.emit("chat message", { user: currentUser.ninjaName, text });
-                chatInput.value = "";
-            }
-        };
-
-        if(sendBtn) sendBtn.onclick = sendMessage;
-        if(chatInput) {
-            chatInput.addEventListener("keypress", (e) => {
-                if (e.key === "Enter") sendMessage();
-            });
-        }
-
-    } catch (e) {
-        console.error("Error iniciando chat:", e);
-    }
-}
-
-// ==========================================
-// 4. LOGICA DE MISIONES
-// ==========================================
-function initMissionLogic() {
-    if(!currentUser || !missionBtn) return;
-
-    const lastClaim = currentUser.lastDailyClaim ? new Date(currentUser.lastDailyClaim) : new Date(0);
-    const now = new Date();
-    const diffHours = Math.abs(now - lastClaim) / 36e5;
-
-    if (diffHours < 24) {
-        disableMissionButton(lastClaim);
-    } else {
-        const newBtn = missionBtn.cloneNode(true);
-        missionBtn.parentNode.replaceChild(newBtn, missionBtn);
-        newBtn.addEventListener("click", claimMission);
-    }
-}
-
-async function claimMission() {
-    const btn = document.getElementById("missionBtn"); 
-    const token = localStorage.getItem("token");
-    
-    btn.innerHTML = "⏳ Verificando...";
-    btn.disabled = true;
-
-    try {
-        const res = await fetch(`${API_URL}/api/missions/daily`, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}` 
-            }
-        });
-
-        if (res.status === 404) throw new Error("Ruta de misión no encontrada (404)");
-
-        const data = await res.json();
-
-        if (res.ok) {
-            alert(data.message);
-            document.getElementById("headerBalance").innerText = data.newBalance.toFixed(2);
-            disableMissionButton(new Date());
-        } else {
-            alert(`⚠️ ${data.error || "Misión fallida"}`);
-            btn.innerHTML = "⚔️ RECLAMAR RECOMPENSA";
-            btn.disabled = false;
-        }
-
-    } catch (error) {
-        console.error(error);
-        alert(`🚫 Error: ${error.message}`);
-        btn.disabled = false;
-        btn.innerHTML = "⚔️ RECLAMAR RECOMPENSA";
-    }
-}
-
-function disableMissionButton(lastClaimDate) {
-    const btn = document.getElementById("missionBtn");
-    if(!btn) return;
-    
-    btn.classList.add("btn-disabled");
-    btn.innerHTML = "✅ MISIÓN COMPLETADA";
-    
-    if(missionTimer) {
-        missionTimer.style.display = "block";
-        const nextClaim = new Date(lastClaimDate.getTime() + (24 * 60 * 60 * 1000));
-        const timeStr = nextClaim.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        document.getElementById("countdown").innerText = timeStr;
-    }
-}
-
-// ==========================================
-// 5. UI & NAVEGACIÓN
-// ==========================================
-function renderUserHeader() {
-    document.getElementById("sideName").innerText = currentUser.ninjaName;
-    const balance = Number(currentUser.balance) || 0;
-    document.getElementById("headerBalance").innerText = balance.toFixed(2);
-    
-    const badge = document.getElementById("sideLevelBadge");
-    const status = document.getElementById("sideStatus");
-    
-    if (currentUser.level > 0 && currentUser.hasNinjaPass) {
-        badge.innerText = `NIVEL ${currentUser.level}`;
-        badge.className = currentUser.level >= 3 ? "badge badge-master" : "badge badge-student";
-        status.innerText = "⚡ Ciclo Activo";
-        status.style.color = "var(--gold)";
-    } else {
-        badge.innerText = "RONIN";
-        badge.className = "badge badge-ronin";
-        status.innerText = "Esperando Pase...";
-    }
-
-    // NUEVO: PINTAR REFERIDOS
-    if(currentUser.referralStats) {
-        const refCount = document.getElementById("myReferrals");
-        const refEarn = document.getElementById("referralEarnings");
-        if(refCount) refCount.innerText = currentUser.referralStats.count || 0;
-        if(refEarn) refEarn.innerText = currentUser.referralStats.earnings || 0;
-    }
-
-}
-
-function applyAccessLogic() {
-    if (!currentUser.hasNinjaPass || currentUser.level === 0) {
-        document.getElementById("promoBanner").style.display = "flex";
-        document.getElementById("cycleContainer").style.display = "none";
-        lockSections();
-        return;
-    }
-
-    document.getElementById("promoBanner").style.display = "none";
-    document.getElementById("cycleContainer").style.display = "block";
-    unlockBtn("navArena");
-    if (currentUser.level >= 3) unlockBtn("navDao");
-
-    renderCycleProgress();
-}
-
-function renderCycleProgress() {
-    const target = currentUser.cycleTarget || 100;
-    let percent = currentUser.cyclePercent || 0;
-    const claimed = currentUser.claimedMilestones || [];
-
-    document.getElementById("trackFill").style.width = `${percent}%`;
-    document.getElementById("cyclePercentText").innerText = `${Math.floor(percent)}%`;
-
-    [25, 50, 75, 100].forEach(p => {
-        const cp = document.getElementById(`cp${p}`);
-        const lbl = document.getElementById(`lbl${p}`);
-        cp.classList.remove("active", "claimed");
-        lbl.classList.remove("active");
-        
-        if (percent >= p) {
-            cp.classList.add("active");
-            lbl.classList.add("active");
-            if (claimed.includes(p)) {
-                cp.classList.add("claimed");
-                cp.innerHTML = "✔";
-            }
-        }
-    });
-
-    updateWithdrawButton(percent, claimed, target);
-}
-
-function updateWithdrawButton(percent, claimedArray, totalTarget) {
-    const btn = document.getElementById("btnRetiro");
-    const displayAmount = document.getElementById("withdrawableAmount");
-    const trancheAmount = totalTarget * 0.25;
-    
-    let nextMilestone = 0;
-    if (percent >= 25 && !claimedArray.includes(25)) nextMilestone = 25;
-    else if (percent >= 50 && !claimedArray.includes(50)) nextMilestone = 50;
-    else if (percent >= 75 && !claimedArray.includes(75)) nextMilestone = 75;
-    else if (percent >= 100 && !claimedArray.includes(100)) nextMilestone = 100;
-
-    if (nextMilestone > 0) {
-        btn.className = "btn-ninja-primary";
-        btn.innerText = `RETIRAR TRAMO ${nextMilestone}% 💸`;
-        btn.disabled = false;
-        displayAmount.innerText = `$${trancheAmount.toFixed(2)} USD`;
-        displayAmount.style.color = "var(--gold)";
-    } else {
-        btn.className = "btn-ninja-outline";
-        btn.innerText = percent < 25 ? "META: 25% 🔒" : "BLOQUEADO 🔒";
-        if(claimedArray.includes(100)) btn.innerText = "CICLO COMPLETADO ✅";
-        
-        btn.disabled = true;
-        displayAmount.innerText = "$0.00 USD";
-        displayAmount.style.color = "#666";
-    }
-}
-
-// Globales para HTML onclick
 window.selectLevel = async (lvl) => {
     if(!confirm(`⚠️ ¿Confirmas forjar el Pase Nivel ${lvl}?`)) return;
-    const modalContent = document.querySelector("#levelModal > div");
+    
+    // UI Feedback
+    const modalContent = document.querySelector("#levelModal .modal-content");
     const originalHtml = modalContent.innerHTML;
-    modalContent.innerHTML = "<h3 class='blinking'>FORJANDO PASE...</h3>";
+    modalContent.innerHTML = "<h3 class='gold-text blinking'>FORJANDO PASE...</h3>";
 
     try {
         const token = localStorage.getItem("token");
@@ -370,13 +116,13 @@ window.selectLevel = async (lvl) => {
             body: JSON.stringify({ level: lvl })
         });
         const data = await res.json();
+        
         if (res.ok) {
-            alert(data.message);
-            closeLevelModal();
-            await validateSession();
+            alert("⛩️ " + data.message);
+            window.location.reload();
         } else {
-            alert(data.message || "Error");
-            modalContent.innerHTML = originalHtml;
+            alert("🚫 " + (data.message || "Error"));
+            modalContent.innerHTML = originalHtml; // Restaurar si falla
         }
     } catch (error) {
         alert("Error de conexión");
@@ -384,112 +130,181 @@ window.selectLevel = async (lvl) => {
     }
 };
 
-window.procesarRetiro = async () => {
-    const btn = document.getElementById("btnRetiro");
+// ==========================================
+// 4. MISIONES Y UI
+// ==========================================
+function initMissionLogic() {
+    const missionBtn = document.getElementById("missionBtn");
+    if(!currentUser || !missionBtn) return;
+
+    const lastClaim = currentUser.lastDailyClaim ? new Date(currentUser.lastDailyClaim) : new Date(0);
+    const diffHours = (new Date() - lastClaim) / (1000 * 60 * 60);
+
+    if (diffHours < 24) {
+        missionBtn.disabled = true;
+        missionBtn.innerText = "✅ RECOMPENSA RECLAMADA";
+        missionBtn.classList.add("btn-disabled");
+    } else {
+        missionBtn.disabled = false;
+        missionBtn.innerText = "⚔️ MISIÓN DIARIA";
+        missionBtn.onclick = claimMission;
+    }
+}
+
+async function claimMission() {
+    const btn = document.getElementById("missionBtn");
+    btn.innerText = "⏳ ...";
     btn.disabled = true;
-    btn.innerText = "PROCESANDO...";
     try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/payments/withdraw`, {
+        const res = await fetch(`${API_URL}/api/missions/daily`, {
             method: "POST",
-            headers: { "Authorization": `Bearer ${token}` }
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
         });
         const data = await res.json();
         if (res.ok) {
             alert(data.message);
-            await validateSession(); 
+            document.getElementById("headerBalance").innerText = Number(data.newBalance).toFixed(2);
+            btn.innerText = "✅ COMPLETADO";
         } else {
-            alert(data.message || "Error");
-            await validateSession(); 
+            alert(data.error || "Error");
+            btn.disabled = false;
+            btn.innerText = "⚔️ REINTENTAR";
         }
-    } catch (e) {
-        alert("Error de red");
-        btn.disabled = false;
-        btn.innerText = "REINTENTAR";
-    }
-};
-
-function lockSections() {
-    document.getElementById("navArena").classList.add("locked");
-    document.getElementById("navDao").classList.add("locked");
+    } catch (e) { btn.disabled = false; }
 }
 
-function unlockBtn(id) {
-    const btn = document.getElementById(id);
-    if(btn) {
-        btn.classList.remove("locked");
-        btn.innerText = btn.innerText.replace("🔒", "").trim();
-    }
-}
-
-window.showSection = function(id) {
-    if(id === 'arena' && (!currentUser.hasNinjaPass)) return alert("🚫 Requiere Pase Ninja.");
-    if(id === 'dao' && currentUser.level < 3) return alert("🚫 Solo Nivel 3.");
-
-    document.querySelectorAll('.content-section').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.sidebar-btn').forEach(el => el.classList.remove('active'));
+function renderUserHeader() {
+    document.getElementById("sideName").innerText = currentUser.ninjaName;
+    document.getElementById("headerBalance").innerText = Number(currentUser.balance || 0).toFixed(2);
     
-    const targetSec = document.getElementById(`sec-${id}`);
-    if(targetSec) targetSec.style.display = 'block';
+    const badge = document.getElementById("sideLevelBadge");
+    if (currentUser.level > 0) {
+        badge.innerText = `RANGO: ${currentUser.level}`;
+        badge.className = "badge badge-master";
+    } else {
+        badge.innerText = "RONIN";
+    }
+    
+    // Stats
+    const refCount = document.getElementById("myReferrals");
+    if(refCount) refCount.innerText = currentUser.referralStats?.count || 0;
+    const refEarn = document.getElementById("referralEarnings");
+    if(refEarn) refEarn.innerText = Number(currentUser.referralStats?.earnings || 0).toFixed(2);
+}
+
+function applyAccessLogic() {
+    const cycleContainer = document.getElementById("cycleContainer");
+    const promoBanner = document.getElementById("promoBanner");
+
+    if (!currentUser.hasNinjaPass || currentUser.level === 0) {
+        if(cycleContainer) cycleContainer.style.display = "none";
+        if(promoBanner) promoBanner.style.display = "block"; // Mostrar botón para comprar pase
+    } else {
+        if(cycleContainer) cycleContainer.style.display = "block";
+        if(promoBanner) promoBanner.style.display = "none";
+        renderCycleProgress();
+    }
+}
+
+function renderCycleProgress() {
+    const percent = currentUser.cyclePercent || 0;
+    const claimed = currentUser.claimedMilestones || [];
+    document.getElementById("trackFill").style.width = `${percent}%`;
+    document.getElementById("cyclePercentText").innerText = `${Math.floor(percent)}%`;
+
+    [25, 50, 75, 100].forEach(p => {
+        const cp = document.getElementById(`cp${p}`);
+        if(cp) {
+            if (percent >= p) cp.classList.add("active");
+            if (claimed.includes(p)) cp.classList.add("claimed");
+        }
+    });
+    updateWithdrawButton(percent, claimed);
+}
+
+function updateWithdrawButton(percent, claimed) {
+    const btn = document.getElementById("btnRetiro");
+    let nextMilestone = 0;
+    if (percent >= 25 && !claimed.includes(25)) nextMilestone = 25;
+    else if (percent >= 50 && !claimed.includes(50)) nextMilestone = 50;
+    else if (percent >= 75 && !claimed.includes(75)) nextMilestone = 75;
+    else if (percent >= 100 && !claimed.includes(100)) nextMilestone = 100;
+
+    if (nextMilestone > 0) {
+        btn.className = "btn-ninja-primary";
+        btn.innerText = `RETIRAR TRAMO ${nextMilestone}%`;
+        btn.disabled = false;
+        btn.onclick = procesarRetiro;
+    } else {
+        btn.className = "btn-ninja-outline";
+        btn.innerText = "RETIRO BLOQUEADO 🔒";
+        btn.disabled = true;
+    }
+}
+
+// ==========================================
+// 5. FUNCIONES GLOBALES
+// ==========================================
+window.procesarRetiro = async () => {
+    if(!confirm("¿Retirar ganancias?")) return;
+    const btn = document.getElementById("btnRetiro");
+    btn.innerText = "PROCESANDO...";
+    try {
+        const res = await fetch(`${API_URL}/api/payments/withdraw`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+        const data = await res.json();
+        alert(data.message);
+        window.location.reload();
+    } catch (e) { alert("Error de red"); }
 };
 
-window.openLevelModal = () => document.getElementById("levelModal").style.display = "flex";
-window.closeLevelModal = () => document.getElementById("levelModal").style.display = "none";
+window.copyReferralLink = function() {
+    if (!currentUser?.referralCode) return alert("⚠️ Necesitas un Pase Ninja.");
+    const link = `${window.location.origin}/register.html?ref=${currentUser.referralCode}`;
+    navigator.clipboard.writeText(link).then(() => alert("🔗 Copiado: " + link));
+};
 
 window.playGame = (url) => {
-    const modal = document.getElementById('gameModal');
-    const iframe = document.getElementById('gameFrame');
-    if(modal && iframe) { 
-        iframe.src = url; 
-        modal.style.display = 'flex'; 
-    }
+    const modal = document.getElementById('game-modal');
+    const iframe = document.getElementById('game-frame');
+    iframe.src = url; 
+    modal.style.display = 'flex'; 
+    modal.classList.remove('hidden');
 };
 
 window.closeGame = () => {
-    const modal = document.getElementById('gameModal');
-    const iframe = document.getElementById('gameFrame');
-    modal.style.display = 'none';
-    iframe.src = ''; // Detener juego
+    document.getElementById('game-frame').src = '';
+    document.getElementById('game-modal').style.display = 'none';
 };
+
+// Chat Socket
+function initChat() {
+    if(typeof io === 'undefined') return;
+    socket = io(API_URL); 
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendChatBtn");
+    const chatBox = document.getElementById("chatMessages");
+
+    socket.on("chat message", (msg) => {
+        const div = document.createElement("div");
+        div.className = "chat-msg";
+        div.innerHTML = `<strong class="gold-text">${msg.user}:</strong> <span class="white-text">${msg.text}</span>`;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    sendBtn.onclick = () => {
+        const text = chatInput.value.trim();
+        if (text && currentUser) {
+            socket.emit("chat message", { user: currentUser.ninjaName, text });
+            chatInput.value = "";
+        }
+    };
+}
 
 document.getElementById("logoutBtn")?.addEventListener("click", () => {
     localStorage.clear();
-    window.location.replace("index.html");
+    window.location.replace("login.html");
 });
-
-// ... (resto del código existente) ...
-
-// ==========================================
-// 🔗 SISTEMA VIRAL (NUEVO)
-// ==========================================
-window.copyReferralLink = function() {
-    if (!currentUser || !currentUser.referralCode) {
-        return alert("⚠️ Error: No tienes código de guerrero asignado.");
-    }
-
-    // Generar URL: tudominio.com/register.html?ref=CODIGO
-    // Usamos window.location.origin para que funcione en localhost y producción
-    const link = `${window.location.origin}/register.html?ref=${currentUser.referralCode}`;
-
-    navigator.clipboard.writeText(link).then(() => {
-        // Usamos Toastify si está disponible, sino alert
-        if(typeof Toastify === 'function') {
-            Toastify({
-                text: "🔗 Enlace de Reclutamiento Copiado",
-                backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-                duration: 3000
-            }).showToast();
-        } else {
-            alert("🔗 Enlace copiado al portapapeles:\n" + link);
-        }
-    }).catch(err => {
-        console.error('Error al copiar:', err);
-    });
-};
-
-// Modifica la función renderUserHeader para asegurar que se muestren los stats de referidos
-const originalRenderUserHeader = renderUserHeader; // Guardamos la referencia anterior si es necesario
-
-// Asegúrate de que en validateSession() o renderUserHeader() se actualicen los textos:
-// document.getElementById("myReferrals").innerText = currentUser.referralStats?.count || 0;
-// document.getElementById("referralEarnings").innerText = currentUser.referralStats?.earnings || 0;
