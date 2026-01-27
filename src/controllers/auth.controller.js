@@ -50,7 +50,7 @@ export const register = async (req, res) => {
             referralCode: myReferralCode,
             referredBy: referrerId,
             verificationToken: emailToken,
-            isVerified: false 
+            isVerified: true
         });
 
         await newUser.save(); // Aquí es donde el modelo debería encriptar
