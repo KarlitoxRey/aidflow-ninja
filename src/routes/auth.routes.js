@@ -3,7 +3,7 @@ import express from 'express';
 import { register, login, verifyEmail, getMe } from '../controllers/auth.controller.js';
 
 // 2. Importamos el middleware de seguridad que me acabas de pasar
-import { verifyToken } from '../middlewares/authMiddleware.js'; 
+import { verifyToken } from '../middlewares/auth.middleware.js'; 
 
 const router = express.Router();
 
