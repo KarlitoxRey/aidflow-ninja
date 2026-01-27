@@ -25,7 +25,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.set('trust proxy', 1); // Confianza en proxy (Render)
+app.set('trust proxy', 1);
 
 const server = http.createServer(app);
 
@@ -56,7 +56,6 @@ app.use(cors({
     credentials: true
 }));
 
-// RATE LIMIT
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
     max: 100, 
@@ -66,33 +65,7 @@ app.use("/api/", limiter);
 
 app.use(express.json()); 
 
-// DIAGNÓSTICO EMAIL
-app.get('/test-email', async (req, res) => {
-    try {
-        const user = process.env.EMAIL_USER;
-        const pass = process.env.EMAIL_PASS;
-        if (!user || !pass) return res.status(500).send("Faltan variables .env");
-
-        const transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 465, secure: true,
-            auth: { user, pass },
-            tls: { rejectUnauthorized: false },
-            family: 4, connectionTimeout: 10000 
-        });
-        
-        await transporter.verify();
-        await transporter.sendMail({
-            from: `"Test Ninja" <${user}>`, to: user, 
-            subject: "🔔 PRUEBA OK", html: "<h1>Sistema Operativo</h1>"
-        });
-        res.send(`✅ Correo enviado a ${user}`);
-    } catch (error) {
-        res.status(500).send(`❌ Error: ${error.message}`);
-    }
-});
-
-// SERVIR FRONTEND
+// SERVIR FRONTEND (Estáticos)
 app.use(express.static(path.join(__dirname, "public")));
 
 // RUTAS API
@@ -104,8 +77,9 @@ app.use("/api/cycles", cycleRoutes);
 app.use("/api/missions", missionRoutes);
 app.use("/api/users", userRoutes); 
 
-// 🛑 ESCUDO 404 API (NUEVO: Para que devuelva JSON y no HTML en errores)
-app.use("/api/*", (req, res) => {
+// 🛑 ESCUDO 404 API (CORREGIDO: Sin el asterisco conflictivo)
+// Cualquier petición a /api que no haya entrado en las rutas anteriores caerá aquí.
+app.use("/api", (req, res) => {
     res.status(404).json({ 
         error: "Ruta del Templo no encontrada (404)", 
         path: req.originalUrl 
@@ -113,7 +87,8 @@ app.use("/api/*", (req, res) => {
 });
 
 // CATCH-ALL (SPA)
-app.get(/.*/, (req, res) => {
+// Usamos '*' simple que es más compatible que regex complejo en algunas versiones
+app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
