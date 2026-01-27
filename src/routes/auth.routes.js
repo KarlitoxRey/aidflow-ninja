@@ -1,20 +1,19 @@
 import express from 'express';
+// 1. Importamos el controlador (Asegurate de agregar getMe en el controlador en el siguiente paso)
 import { register, login, verifyEmail, getMe } from '../controllers/auth.controller.js';
-// Asegúrate de tener un middleware para proteger rutas (si no lo tienes, avísame)
-// import { protect } from '../middlewares/authMiddleware.js'; 
+
+// 2. Importamos el middleware de seguridad que me acabas de pasar
+import { verifyToken } from '../middlewares/authMiddleware.js'; 
 
 const router = express.Router();
 
-// 1. Ruta para Registrarse (POST /api/auth/register)
+// Rutas Públicas
 router.post('/register', register);
-
-// 2. Ruta para Iniciar Sesión (POST /api/auth/login)
 router.post('/login', login);
-
-// 3. Ruta para Verificar Email (POST /api/auth/verify)
 router.post('/verify', verifyEmail);
 
-// 4. Ruta para obtener perfil (GET /api/auth/me) - Opcional por ahora
-// router.get('/me', protect, getMe);
+// 🔐 RUTA PROTEGIDA (La que faltaba)
+// Usamos 'verifyToken' para asegurar que solo Ninjas autenticados pasen
+router.get('/me', verifyToken, getMe);
 
 export default router;
