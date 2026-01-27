@@ -33,7 +33,7 @@ const UserSchema = new mongoose.Schema({
 
     // 💰 ECONOMÍA NINJA
     balance: { type: Number, default: 0 },
-    level: { type: Number, default: 0 }, // 0=Iniciado, 1=Básico, 2=Elite, 3=Sensei
+    level: { type: Number, default: 0 }, 
     ninjaPassActive: { type: Boolean, default: false },
     daoVotingPower: { type: Number, default: 0 },
     lastDailyBonus: { type: Date, default: null },
@@ -48,7 +48,7 @@ const UserSchema = new mongoose.Schema({
         claimedMilestones: [{ type: Number }]
     },
 
-    // 🔗 SISTEMA DE REFERIDOS (VIRAL)
+    // 🔗 SISTEMA DE REFERIDOS
     referralCode: { type: String, unique: true }, 
     referredBy: { type: String, default: null },  
     referralStats: {
@@ -63,17 +63,11 @@ const UserSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// 👇 CÓDIGO MAESTRO DE ENCRIPTACIÓN 👇
-UserSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next();
-
-    try {
-        const salt = await bcrypt.genSalt(10);
-        this.password = await bcrypt.hash(this.password, salt);
-        next();
-    } catch (error) {
-        next(error);
-    }
+// 👇👇👇 CORRECCIÓN APLICADA AQUÍ 👇👇👇
+UserSchema.pre("save", async function () {
+    if (!this.isModified("password")) return;
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
 });
 
 export default mongoose.model("User", UserSchema);
