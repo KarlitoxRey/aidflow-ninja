@@ -29,19 +29,36 @@ app.set('trust proxy', 1);
 
 const server = http.createServer(app);
 
-// 🔥 CORRECCIÓN CRÍTICA DE SEGURIDAD (CSP) 🔥
-// Aquí habilitamos explícitamente las fuentes de Google y CDN de iconos
+// 🔥 CONFIGURACIÓN DE SEGURIDAD (CSP) CORREGIDA 🔥
+// Se agregan todos los CDN externos que usas (Google, FontAwesome, JSDelivr)
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        // Permitimos scripts propios, inline y sockets
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io"],
-        // 👇 ESTO ARREGLA LA VISUAL: Permitimos estilos de Google Fonts y FontAwesome
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-        // 👇 ESTO ARREGLA LOS ERRORES DE CARGA DE FUENTES
-        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+        // Scripts permitidos: propios, inline, sockets y JSDelivr (Toastify)
+        scriptSrc: [
+            "'self'", 
+            "'unsafe-inline'", 
+            "'unsafe-eval'", 
+            "https://cdn.socket.io", 
+            "https://cdn.jsdelivr.net" // 👈 AGREGADO PARA TOASTIFY
+        ],
+        // Estilos permitidos: propios, inline, Google Fonts, FontAwesome y JSDelivr
+        styleSrc: [
+            "'self'", 
+            "'unsafe-inline'", 
+            "https://fonts.googleapis.com", 
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net" // 👈 AGREGADO PARA TOASTIFY
+        ],
+        // Fuentes permitidas
+        fontSrc: [
+            "'self'", 
+            "data:", 
+            "https://fonts.gstatic.com", 
+            "https://cdnjs.cloudflare.com"
+        ],
         // Conexiones permitidas
         connectSrc: ["'self'", process.env.FRONTEND_URL || "*"],
         // Imágenes permitidas
@@ -66,8 +83,8 @@ app.use(cors({
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            console.log("🚫 Bloqueo CORS:", origin);
-            callback(null, true); // Permitimos temporalmente para evitar bloqueos tontos en dev
+            console.log("🚫 Bloqueo CORS (Info):", origin);
+            callback(null, true); // Permitir temporalmente para evitar bloqueos
         }
     },
     credentials: true
@@ -125,6 +142,6 @@ const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("🔥 MongoDB Conectado");
-    server.listen(PORT, () => console.log(`⚔️ Servidor SHOGUN V4 (Visual Fix) activo en puerto ${PORT}`));
+    server.listen(PORT, () => console.log(`⚔️ Servidor SHOGUN V5 (JSDelivr Fix) activo en puerto ${PORT}`));
   })
   .catch(err => console.error("🚫 Error DB:", err));
