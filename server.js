@@ -19,6 +19,7 @@ import cycleRoutes from "./src/routes/cycles.routes.js";
 import missionRoutes from "./src/routes/mission.routes.js";
 import userRoutes from "./src/routes/users.routes.js";
 
+import financeRoutes from "./src/routes/finance.routes.js";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -75,7 +76,8 @@ app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/cycles", cycleRoutes);
 app.use("/api/missions", missionRoutes);
-app.use("/api/users", userRoutes); 
+app.use("/api/users", userRoutes);
+app.use("/api/finance", financeRoutes); 
 
 // 🛑 ESCUDO 404 API (CORREGIDO: Sin el asterisco conflictivo)
 // Cualquier petición a /api que no haya entrado en las rutas anteriores caerá aquí.
