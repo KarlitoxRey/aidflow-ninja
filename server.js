@@ -111,7 +111,7 @@ const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("🔥 MongoDB Conectado");
-    server.listen(PORT, () => console.log(`⚔️ Servidor en puerto ${PORT}`));
+      server.listen(PORT, () => console.log(`⚔️ Servidor SHOGUN V2 activo en puerto ${PORT}`));
   })
   .catch(err => console.error("🚫 Error DB:", err));
 
