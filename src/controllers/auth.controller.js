@@ -133,22 +133,17 @@ export const verifyEmail = async (req, res) => {
 
 export const getMe = async (req, res) => {
     try {
-        // Buscamos al usuario
-        const user = await User.findById(req.user.id).select("-password");
+        const userId = req.user.userId; // CORRECTO
 
+        const user = await User.findById(userId).select("-password");
         if (!user) {
             return res.status(404).json({ error: "Ninja no encontrado" });
         }
 
-        // 🔓 TRUCO: Convertimos a objeto y FORZAMOS el rango Shogun
-        // Esto ignora lo que diga la base de datos
-        const userBypass = user.toObject();
-        userBypass.role = 'shogun'; 
-
-        // Devolvemos el usuario trucado
-        res.status(200).json(userBypass);
+        res.status(200).json(user);
     } catch (error) {
         console.error("Error en getMe:", error);
         res.status(500).json({ error: "Error interno" });
     }
 };
+
