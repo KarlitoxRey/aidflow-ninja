@@ -29,39 +29,40 @@ app.set('trust proxy', 1);
 
 const server = http.createServer(app);
 
-// 🔥 CONFIGURACIÓN DE SEGURIDAD (CSP) CORREGIDA 🔥
-// Se agregan todos los CDN externos que usas (Google, FontAwesome, JSDelivr)
+// 🔥 CONFIGURACIÓN DE SEGURIDAD (CSP) CORREGIDA V6 🔥
+// Se agrega scriptSrcAttr para permitir los botones 'onclick' del Admin
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        // Scripts permitidos: propios, inline, sockets y JSDelivr (Toastify)
+        // Scripts generales
         scriptSrc: [
             "'self'", 
             "'unsafe-inline'", 
             "'unsafe-eval'", 
             "https://cdn.socket.io", 
-            "https://cdn.jsdelivr.net" // 👈 AGREGADO PARA TOASTIFY
+            "https://cdn.jsdelivr.net"
         ],
-        // Estilos permitidos: propios, inline, Google Fonts, FontAwesome y JSDelivr
+        // 👇 ESTA ES LA LÍNEA QUE ARREGLA LOS BOTONES DEL ADMIN
+        scriptSrcAttr: ["'unsafe-inline'"], 
+        
+        // Estilos
         styleSrc: [
             "'self'", 
             "'unsafe-inline'", 
             "https://fonts.googleapis.com", 
             "https://cdnjs.cloudflare.com",
-            "https://cdn.jsdelivr.net" // 👈 AGREGADO PARA TOASTIFY
+            "https://cdn.jsdelivr.net"
         ],
-        // Fuentes permitidas
+        // Fuentes
         fontSrc: [
             "'self'", 
             "data:", 
             "https://fonts.gstatic.com", 
             "https://cdnjs.cloudflare.com"
         ],
-        // Conexiones permitidas
         connectSrc: ["'self'", process.env.FRONTEND_URL || "*"],
-        // Imágenes permitidas
         imgSrc: ["'self'", "data:", "https:"],
       },
     },
@@ -84,7 +85,7 @@ app.use(cors({
             callback(null, true);
         } else {
             console.log("🚫 Bloqueo CORS (Info):", origin);
-            callback(null, true); // Permitir temporalmente para evitar bloqueos
+            callback(null, true);
         }
     },
     credentials: true
@@ -142,6 +143,6 @@ const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("🔥 MongoDB Conectado");
-    server.listen(PORT, () => console.log(`⚔️ Servidor SHOGUN V5 (JSDelivr Fix) activo en puerto ${PORT}`));
+    server.listen(PORT, () => console.log(`⚔️ Servidor SHOGUN V6 (Admin Buttons Fix) activo en puerto ${PORT}`));
   })
   .catch(err => console.error("🚫 Error DB:", err));
