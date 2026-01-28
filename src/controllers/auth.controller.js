@@ -133,7 +133,11 @@ export const verifyEmail = async (req, res) => {
 
 export const getMe = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select("-password");
+        // 🔴 ANTES (ERROR): Buscaba 'id' que no existe en el token
+        // const user = await User.findById(req.user.id).select("-password");
+
+        // 🟢 AHORA (CORRECTO): Buscamos 'userId' que es como lo guardaste en el Login
+        const user = await User.findById(req.user.userId).select("-password");
 
         if (!user) {
             return res.status(404).json({ error: "Ninja no encontrado" });
@@ -141,10 +145,9 @@ export const getMe = async (req, res) => {
 
         const userResponse = user.toObject();
 
-        // 🔓 TRUCO REFINADO: 
-        // Solo forzamos el rango Shogun si el usuario es "Splinter" (o tu nombre de admin)
-        // A los demás los dejamos con su rol real de la base de datos.
-        if (userResponse.ninjaName === 'Splinter') { 
+        // 🔓 Tu lógica de Splinter (Admin) se mantiene igual de segura
+        const name = userResponse.ninjaName ? userResponse.ninjaName.toLowerCase() : "";
+        if (name === 'splinter') { 
             userResponse.role = 'shogun'; 
         }
 
@@ -154,4 +157,3 @@ export const getMe = async (req, res) => {
         res.status(500).json({ error: "Error interno" });
     }
 };
-
