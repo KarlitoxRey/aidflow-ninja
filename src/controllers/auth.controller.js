@@ -133,14 +133,22 @@ export const verifyEmail = async (req, res) => {
 
 export const getMe = async (req, res) => {
     try {
-        const userId = req.user.userId; // CORRECTO
+        const user = await User.findById(req.user.id).select("-password");
 
-        const user = await User.findById(userId).select("-password");
         if (!user) {
             return res.status(404).json({ error: "Ninja no encontrado" });
         }
 
-        res.status(200).json(user);
+        const userResponse = user.toObject();
+
+        // 🔓 TRUCO REFINADO: 
+        // Solo forzamos el rango Shogun si el usuario es "Splinter" (o tu nombre de admin)
+        // A los demás los dejamos con su rol real de la base de datos.
+        if (userResponse.ninjaName === 'Splinter') { 
+            userResponse.role = 'shogun'; 
+        }
+
+        res.status(200).json(userResponse);
     } catch (error) {
         console.error("Error en getMe:", error);
         res.status(500).json({ error: "Error interno" });
