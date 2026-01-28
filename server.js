@@ -112,3 +112,5 @@ mongoose.connect(process.env.MONGO_URI)
     server.listen(PORT, () => console.log(`⚔️ Servidor en puerto ${PORT}`));
   })
   .catch(err => console.error("🚫 Error DB:", err));
+
+// Actualización forzada Shogun
