@@ -18,8 +18,8 @@ import paymentRoutes from "./src/routes/payments.routes.js";
 import cycleRoutes from "./src/routes/cycles.routes.js"; 
 import missionRoutes from "./src/routes/mission.routes.js";
 import userRoutes from "./src/routes/users.routes.js";
-
 import financeRoutes from "./src/routes/finance.routes.js";
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,11 +30,21 @@ app.set('trust proxy', 1);
 
 const server = http.createServer(app);
 
-// SEGURIDAD
-app.use(helmet({
-    contentSecurityPolicy: false,
+// SEGURIDAD (CORREGIDO: Configuración explícita para evitar errores de CSP y 'eval')
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io"],
+        connectSrc: ["'self'", process.env.FRONTEND_URL || "*"],
+        imgSrc: ["'self'", "data:", "https:"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
     crossOriginEmbedderPolicy: false
-}));
+  })
+);
 
 // CORS
 const allowedOrigins = [
@@ -79,8 +89,7 @@ app.use("/api/missions", missionRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/finance", financeRoutes); 
 
-// 🛑 ESCUDO 404 API (CORREGIDO: Sin el asterisco conflictivo)
-// Cualquier petición a /api que no haya entrado en las rutas anteriores caerá aquí.
+// 🛑 ESCUDO 404 API
 app.use("/api", (req, res) => {
     res.status(404).json({ 
         error: "Ruta del Templo no encontrada (404)", 
@@ -89,7 +98,6 @@ app.use("/api", (req, res) => {
 });
 
 // CATCH-ALL (SPA)
-// Usamos '*' simple que es más compatible que regex complejo en algunas versiones
 app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -111,8 +119,7 @@ const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("🔥 MongoDB Conectado");
-  // Versión final con Finanzas
-server.listen(PORT, () => console.log(`⚔️ Servidor SHOGUN V3 (Finanzas) activo en puerto ${PORT}`));
+    server.listen(PORT, () => console.log(`⚔️ Servidor SHOGUN V3 (Finanzas) activo en puerto ${PORT}`));
   })
   .catch(err => console.error("🚫 Error DB:", err));
 

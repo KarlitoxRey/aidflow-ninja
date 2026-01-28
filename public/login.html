@@ -19,7 +19,6 @@
 
     body {
       background-color: var(--void);
-      /* Un fondo procedural oscuro y sangriento */
       background-image: 
         radial-gradient(circle at 50% 0%, #1a0505 0%, transparent 70%),
         radial-gradient(circle at 85% 90%, #1a0505 0%, transparent 60%),
@@ -33,7 +32,6 @@
       color: #fff;
     }
 
-    /* La presencia del Ninja de fondo */
     .ninja-bg {
       position: absolute;
       top: 50%;
@@ -76,7 +74,6 @@
       );
     }
 
-    /* Efecto de luz roja pulsante detrás */
     .card::before {
       content: '';
       position: absolute;
@@ -123,7 +120,7 @@
       width: 100%;
       background: rgba(0, 0, 0, 0.6);
       border: 1px solid #333;
-      padding: 15px 15px 15px 45px; /* Espacio para icono */
+      padding: 15px 15px 15px 45px;
       color: #fff;
       font-size: 1.1rem;
       font-family: 'Rajdhani', sans-serif;
@@ -137,7 +134,6 @@
       background: rgba(0,0,0,0.8);
     }
 
-    /* Iconos dentro del input */
     .input-icon {
       position: absolute;
       left: 15px;
@@ -245,7 +241,7 @@
         
         <div class="form-group">
           <div class="input-wrapper">
-            <input type="email" id="email" required placeholder=" ">
+            <input type="email" id="email" autocomplete="username" required placeholder=" ">
             <i class="fas fa-envelope input-icon"></i>
             <label for="email">CORREO</label>
           </div>
@@ -253,7 +249,7 @@
 
         <div class="form-group">
           <div class="input-wrapper">
-            <input type="password" id="password" required placeholder=" ">
+            <input type="password" id="password" autocomplete="current-password" required placeholder=" ">
             <i class="fas fa-lock input-icon"></i>
             <label for="password">CLAVE</label>
           </div>
