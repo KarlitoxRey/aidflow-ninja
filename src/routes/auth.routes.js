@@ -4,11 +4,12 @@ import { verifyToken } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
+// Rutas Públicas
 router.post("/register", register);
 router.post("/login", login);
 router.post("/verify-email", verifyEmail);
 
-// 👇 ESTA ES LA LÍNEA QUE SEGURAMENTE FALTA O ESTÁ MAL
+// 👇 ESTA ES LA LÍNEA QUE TE FALTA Y POR ESO TE PATEA
 router.get("/me", verifyToken, getMe);
 
 export default router;
