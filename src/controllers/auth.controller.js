@@ -131,12 +131,12 @@ export const verifyEmail = async (req, res) => {
 // Asegúrate de importar el modelo User al inicio del archivo si no está
 // import User from "../models/User.js"; 
 
+// En src/controllers/auth.controller.js
+
 export const getMe = async (req, res) => {
     try {
-        // 🔴 ANTES (ERROR): Buscaba 'id' que no existe en el token
-        // const user = await User.findById(req.user.id).select("-password");
-
-        // 🟢 AHORA (CORRECTO): Buscamos 'userId' que es como lo guardaste en el Login
+        // 🔴 ANTES DECÍA: req.user.id (Esto daba undefined)
+        // 🟢 AHORA DEBE DECIR: req.user.userId
         const user = await User.findById(req.user.userId).select("-password");
 
         if (!user) {
@@ -145,7 +145,7 @@ export const getMe = async (req, res) => {
 
         const userResponse = user.toObject();
 
-        // 🔓 Tu lógica de Splinter (Admin) se mantiene igual de segura
+        // Lógica de Splinter intacta
         const name = userResponse.ninjaName ? userResponse.ninjaName.toLowerCase() : "";
         if (name === 'splinter') { 
             userResponse.role = 'shogun'; 
