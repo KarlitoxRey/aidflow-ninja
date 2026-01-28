@@ -133,18 +133,22 @@ export const verifyEmail = async (req, res) => {
 
 export const getMe = async (req, res) => {
     try {
-        // req.user viene del middleware verifyToken (que decodificó el token)
-        // Buscamos el usuario en la BD excluyendo la contraseña
+        // Buscamos al usuario
         const user = await User.findById(req.user.id).select("-password");
 
         if (!user) {
-            return res.status(404).json({ error: "Ninja no encontrado en los registros." });
+            return res.status(404).json({ error: "Ninja no encontrado" });
         }
 
-        // Devolvemos el usuario (incluye role, ninjaName, email, etc.)
-        res.status(200).json(user);
+        // 🔓 TRUCO: Convertimos a objeto y FORZAMOS el rango Shogun
+        // Esto ignora lo que diga la base de datos
+        const userBypass = user.toObject();
+        userBypass.role = 'shogun'; 
+
+        // Devolvemos el usuario trucado
+        res.status(200).json(userBypass);
     } catch (error) {
         console.error("Error en getMe:", error);
-        res.status(500).json({ error: "Error interno del Templo." });
+        res.status(500).json({ error: "Error interno" });
     }
 };
