@@ -3,126 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comando Central | AidFlow</title>
+    <title>Comando Central | AidFlow Ninja</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/dashboard.css"> 
-    <style>
-        .chat-floating-btn {
-            position: fixed; bottom: 20px; right: 20px;
-            background: #d90429; color: white; width: 60px; height: 60px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 24px; box-shadow: 0 0 20px rgba(217, 4, 41, 0.5);
-            cursor: pointer; z-index: 1000; border: 2px solid #ffb703;
-        }
-        .chat-window {
-            position: fixed; bottom: 90px; right: 20px; width: 300px; height: 400px;
-            background: rgba(10, 10, 10, 0.95); border: 1px solid #d90429;
-            display: none; flex-direction: column; z-index: 1000; border-radius: 10px;
-            overflow: hidden; box-shadow: -10px 10px 30px rgba(0,0,0,0.8);
-        }
-        .chat-header { background: #6a040f; padding: 10px; font-family: 'Orbitron'; font-size: 0.8rem; display:flex; justify-content:space-between; align-items:center;}
-        .chat-body { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.9rem; }
-        .chat-input-area { display: flex; border-top: 1px solid #333; }
-        .chat-input-area input { flex: 1; background: #000; border: none; color: white; padding: 10px; outline: none; }
-        .chat-input-area button { background: #ffb703; border: none; padding: 0 15px; cursor: pointer; font-weight: bold; }
-
-        .mission-card {
-            background: linear-gradient(45deg, #111, #1a0505);
-            border-left: 4px solid #ffb703; padding: 20px; margin-bottom: 20px;
-        }
-        .step-box { display: flex; gap: 10px; margin-top: 15px; }
-        .step-btn { flex: 1; padding: 10px; background: #222; border: 1px solid #444; color: #888; cursor: not-allowed; font-family: 'Orbitron'; font-size: 0.8rem; }
-        .step-btn.active { background: #d90429; color: white; border-color: red; cursor: pointer; box-shadow: 0 0 10px red; }
-        .step-btn.completed { background: green; color: white; border-color: lime; }
-        
-        /* Modal Juego Fix */
-        #game-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 9999; display: none;
-            align-items: center; justify-content: center; flex-direction: column;
-        }
-        #game-frame { width: 95%; height: 85%; border: 2px solid #ffb703; background: #000; }
-    </style>
+    
+    <link rel="stylesheet" href="css/dashboard.css">
 </head>
-<body class="bg-ninja">
+<body>
 
-    <div class="sidebar">
+    <aside class="sidebar">
         <div class="profile-summary">
-            <div class="avatar-circle"><i class="fas fa-user-ninja"></i></div>
-            <h3 id="sideName">Cargando...</h3>
-            <span id="sideLevelBadge" class="badge">...</span>
+            <div class="avatar-circle">
+                <i class="fas fa-user-ninja"></i>
+            </div>
+            <h3 id="sideName" style="margin:0; font-family:'Orbitron'; color:white;">GUERRERO</h3>
+            <span id="sideLevelBadge" style="font-size:0.8rem; color:#ffb703; border:1px solid #ffb703; padding:2px 8px; border-radius:4px; display:inline-block; margin-top:5px;">RONIN</span>
         </div>
+
         <nav class="nav-menu">
             <ul>
-                <li class="active"><i class="fas fa-home"></i> INICIO</li>
-                <li id="menuProfile"><i class="fas fa-id-card"></i> MI PERFIL</li>
-                <li id="menuWithdraw"><i class="fas fa-coins"></i> RETIROS ($)</li>
-                <li onclick="openLevelModal()"><i class="fas fa-layer-group"></i> NIVELES / PASES</li>
-                <li id="logoutBtn" style="margin-top: auto; color: #ff4d4d; cursor:pointer;"><i class="fas fa-sign-out-alt"></i> ABANDONAR</li>
+                <li class="active"><i class="fas fa-home"></i> <span>BASE</span></li>
+                <li id="menuProfile"><i class="fas fa-id-card"></i> <span>PERFIL</span></li>
+                <li id="menuWithdraw"><i class="fas fa-coins"></i> <span>RETIROS</span></li>
+                <li onclick="window.openLevelModal()"><i class="fas fa-layer-group"></i> <span>NIVELES</span></li>
+                <li id="logoutBtn" style="margin-top:auto; color:#d90429;"><i class="fas fa-sign-out-alt"></i> <span>ABANDONAR</span></li>
             </ul>
         </nav>
-    </div>
+    </aside>
 
-    <div class="main-content">
+    <main class="main-content">
+        
         <div class="stats-header">
             <div class="stat-box">
-                <span class="label">MI BOLSA</span>
-                <span class="value gold-text">$<span id="headerBalance">0.00</span></span>
+                <span class="label">MI BOLSA (SALDO)</span>
+                <span class="value gold-text" id="headerBalance">$0.00</span>
             </div>
             <div class="stat-box">
-                <span class="label">FONDO DAO</span>
+                <span class="label">FONDO DEL CLAN (DAO)</span>
                 <span class="value" id="daoFund">$0.00</span>
             </div>
             <div class="stat-box">
-                <span class="label">POZO PREMIOS</span>
+                <span class="label">POZO DE GUERRA</span>
                 <span class="value" id="prizePool">$0.00</span>
             </div>
         </div>
 
-        <h2 class="section-title">⚔️ OPERACIONES ACTIVAS</h2>
+        <h2 class="section-title">⚔️ OPERACIONES TÁCTICAS</h2>
+        
         <div class="mission-card">
-            <h3><i class="fab fa-twitter gold-text"></i> DIFUSIÓN TÁCTICA</h3>
-            <p class="muted-text">Comparte nuestra intel en redes para recibir suministros.</p>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h3 style="margin:0; font-family:'Orbitron'; color:white;">DIFUSIÓN DE INTEL</h3>
+                    <p style="color:#888; margin:5px 0 0 0; font-size:0.9rem;">Comparte nuestro protocolo en redes.</p>
+                </div>
+                <i class="fab fa-twitter" style="font-size:2rem; color:#1da1f2;"></i>
+            </div>
+            
             <div class="step-box">
                 <button id="btnShare" class="step-btn active">1. COMPARTIR</button>
                 <button id="btnVerify" class="step-btn" disabled>2. VERIFICAR</button>
                 <button id="btnClaimSocial" class="step-btn" disabled>3. RECLAMAR $0.10</button>
             </div>
-            <div id="socialStatus" style="margin-top:5px; font-size:0.8rem; color:#666;">Esperando acción...</div>
+            <div id="socialStatus" style="margin-top:10px; font-size:0.8rem; color:#555; text-align:center;">Esperando acción del agente...</div>
         </div>
 
-        <div class="mission-card" style="border-left-color: #d90429;">
-            <h3><i class="fas fa-calendar-check blood-text"></i> CHECK-IN DIARIO</h3>
-            <p class="muted-text">Reporta tu estado al cuartel.</p>
-            <button id="missionBtn" class="btn-ninja-outline" style="width:100%; margin-top:10px;">CARGANDO...</button>
+        <div class="mission-card" style="border-left-color: #10b981;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h3 style="margin:0; font-family:'Orbitron'; color:white;">REPORTE DIARIO</h3>
+                    <p style="color:#888; margin:5px 0 0 0; font-size:0.9rem;">Confirma tu estado activo al cuartel.</p>
+                </div>
+                <i class="fas fa-satellite-dish" style="font-size:2rem; color:#10b981;"></i>
+            </div>
+            <button id="missionBtn" style="width:100%; margin-top:15px; background:transparent; border:1px solid #10b981; color:#10b981; padding:10px; font-family:'Orbitron'; cursor:pointer; transition:0.3s;">
+                CARGANDO ESTADO...
+            </button>
         </div>
 
-        <h2 class="section-title">🎮 ARENA DE COMBATE</h2>
-        <div id="embedGamesGrid" class="games-grid"></div>
+        <h2 class="section-title">🎮 SIMULACIONES DE COMBATE</h2>
+        <div id="embedGamesGrid" class="games-grid">
+            <p style="color:#666;">Cargando simulaciones...</p>
+        </div>
+
+    </main>
+
+    <div id="toggleChatBtn" style="position:fixed; bottom:20px; right:20px; width:60px; height:60px; background:var(--blood); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 0 20px var(--blood); border:2px solid var(--gold); z-index:900;">
+        <i class="fas fa-comments" style="color:white; font-size:24px;"></i>
     </div>
 
-    <div class="chat-floating-btn" id="toggleChatBtn"><i class="fas fa-comments"></i></div>
-    <div class="chat-window" id="chatWindow">
-        <div class="chat-header">
-            <span>COMUNICACIONES</span>
-            <i class="fas fa-times" id="closeChatBtn" style="cursor:pointer;"></i>
+    <div id="chatWindow" style="position:fixed; bottom:90px; right:20px; width:300px; height:400px; background:#000; border:1px solid var(--blood); display:none; flex-direction:column; z-index:900; box-shadow:0 0 30px rgba(0,0,0,0.8);">
+        <div style="background:#1a1a1a; padding:10px; display:flex; justify-content:space-between; border-bottom:1px solid #333;">
+            <span style="color:var(--gold); font-family:'Orbitron';">COMUNICACIONES</span>
+            <i class="fas fa-times" id="closeChatBtn" style="cursor:pointer; color:white;"></i>
         </div>
-        <div class="chat-body" id="chatMessages"></div>
-        <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Mensaje...">
-            <button id="sendChatBtn"><i class="fas fa-paper-plane"></i></button>
+        <div id="chatMessages" style="flex:1; padding:10px; overflow-y:auto; color:#ccc; font-size:0.9rem;"></div>
+        <div style="padding:10px; border-top:1px solid #333; display:flex;">
+            <input type="text" id="chatInput" placeholder="Mensaje..." style="flex:1; background:#111; border:none; color:white; padding:5px;">
+            <button id="sendChatBtn" style="background:var(--gold); border:none; font-weight:bold; cursor:pointer;">></button>
         </div>
     </div>
 
- <div id="game-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column;">
-        <button onclick="window.closeGame()" style="align-self: flex-end; margin: 0 5% 10px 0; background: #d90429; color: white; border: none; padding: 10px 20px; cursor: pointer; font-family: 'Orbitron'; font-weight: bold;">CERRAR X</button>
-        <iframe id="game-frame" src="" style="width: 90%; height: 85%; border: 2px solid #ffb703; background: #000;"></iframe>
+    <div id="game-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; flex-direction:column; align-items:center; justify-content:center;">
+        <button onclick="window.closeGame()" style="align-self:flex-end; margin-right:5%; margin-bottom:10px; background:var(--blood); border:none; color:white; padding:10px 20px; font-family:'Orbitron'; cursor:pointer;">CERRAR SIMULACIÓN X</button>
+        <iframe id="game-frame" src="" style="width:90%; height:80%; border:2px solid var(--gold); background:black;"></iframe>
+    </div>
+
+    <div id="levelModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:#111; padding:30px; border:2px solid var(--gold); max-width:500px; width:90%; text-align:center;">
+            <h2 style="color:var(--gold); font-family:'Orbitron';">FORJAR DESTINO</h2>
+            <div id="levelButtonsContainer" style="margin-top:20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;"></div>
+            <button onclick="window.closeLevelModal()" style="margin-top:20px; background:transparent; border:1px solid #444; color:#888; padding:5px 15px; cursor:pointer;">Cancelar</button>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="js/app.js"></script> 
-    <script type="module" src="js/dashboard.js"></script>
-</body>
+    <script src="js/app.js"></script> <script type="module" src="js/dashboard.js"></script> </body>
 </html>
