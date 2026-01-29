@@ -42,14 +42,20 @@ async function validateSession() {
 function renderUserInterface() {
     safeText("sideName", currentUser.ninjaName);
     
+    // Rango
     const badge = document.getElementById("sideLevelBadge");
     if(badge) {
         badge.innerText = currentUser.level > 0 ? `RANGO ${currentUser.level}` : "RONIN";
         badge.className = currentUser.level > 0 ? "badge badge-master" : "badge";
     }
     
-    // Renderizado de balances con fallback a $0.00
+    // Balances
     safeText("headerBalance", formatMoney(currentUser.balance));
+    
+    // 🔥 NUEVA LÍNEA: Mostrar Fichas
+    // Si no tiene fichas (undefined), mostramos 0
+    safeText("tokenBalance", currentUser.tournamentTokens || 0); 
+
     safeText("daoFund", formatMoney(currentUser.daoBalance || 0));   
     safeText("prizePool", formatMoney(currentUser.poolBalance || 0));
 
