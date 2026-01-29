@@ -14,8 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function validateSession() {
     const token = localStorage.getItem("token");
-    // FIX SEGURIDAD: Si no hay token, al home.
-    if (!token) return window.location.replace("index.html");
+    if (!token) return window.location.replace("login.html");
 
     try {
         const res = await fetch(`${API_URL}/api/auth/me`, {
@@ -89,11 +88,13 @@ function setupEventListeners() {
         };
     }
 
+    // FIX: Referenciando funciones globales correctamente
     document.getElementById("menuProfile")?.addEventListener("click", () => alert("🚧 Perfil de Ninja en construcción"));
-    document.getElementById("menuWithdraw")?.addEventListener("click", window.procesarRetiro);
+    document.getElementById("menuWithdraw")?.addEventListener("click", () => window.procesarRetiro());
     
-    // FIX LOGOUT: Siempre limpia y va al index
-    document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    // FIX LOGOUT: Siempre limpia y va al index real (Home)
+    document.getElementById("logoutBtn")?.addEventListener("click", (e) => {
+        e.preventDefault();
         localStorage.clear();
         window.location.replace("index.html");
     });
@@ -230,7 +231,7 @@ async function loadUserGames() {
             let thumb = g.thumbnail.startsWith('http') ? g.thumbnail : `${API_URL}/${g.thumbnail}`;
             let url = g.embedUrl.startsWith('http') ? g.embedUrl : `${API_URL}/${g.embedUrl}`;
             return `
-            <div class="mission-card game-card" style="cursor:pointer; border-left-color:#ffb703" onclick="window.playGame('${url}')">
+            <div class="mission-card game-card" style="cursor:pointer; border-left-color:#ffb703; padding: 15px; margin-bottom: 10px;" onclick="window.playGame('${url}')">
                 <div class="thumb-wrapper" style="width:100%; height:100px; overflow:hidden; border-radius:4px;">
                     <img src="${thumb}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/300x200?text=Game'">
                 </div>
@@ -273,10 +274,10 @@ function initChat() {
 }
 
 function applyAccessLogic() {
-    // Espacio para lógica de ciclos/pases futura
+    // Espacio para lógica futura
 }
 
-// FUNCIONES GLOBALES (Window)
+// FUNCIONES GLOBALES (Sincronizadas con app.js)
 window.openLevelModal = () => { 
     const m = document.getElementById("levelModal");
     if(m) { m.style.display = "flex"; renderLevelButtons(); }
