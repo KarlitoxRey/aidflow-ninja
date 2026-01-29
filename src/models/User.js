@@ -13,8 +13,14 @@ const UserSchema = new mongoose.Schema({
     balance: { type: Number, default: 0 },
     level: { type: Number, default: 0 }, 
     ninjaPassActive: { type: Boolean, default: false },
-    speedMultiplier: { type: Number, default: 1.0 }, // x1, x1.5, x2 (NUEVO)
     
+    // 🔥 NUEVOS CAMPOS AGREGADOS
+    speedMultiplier: { type: Number, default: 1.0 }, 
+    tournamentTokens: { type: Number, default: 0 }, // Fichas (1 = $0.03)
+
+    daoVotingPower: { type: Number, default: 0 },
+    lastDailyBonus: { type: Date, default: null },
+
     // 🔄 SISTEMA DE CICLOS
     cycle: {
         active: { type: Boolean, default: false },
@@ -25,18 +31,18 @@ const UserSchema = new mongoose.Schema({
         claimedMilestones: [{ type: Number }]
     },
 
-    // 🔗 SISTEMA DE REFERIDOS (MEJORADO)
+    // 🔗 SISTEMA DE REFERIDOS
     referralCode: { type: String, unique: true }, 
     
-    // CAMBIO IMPORTANTE: Guardamos el ID del Usuario padre, no solo el código string
-    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, 
+    // FIX: Cambiado a ObjectId para poder hacer populate y pagarle
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },  
     
-    // Lista de hijos (A quién invité)
+    // Lista de hijos
     referrals: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
     referralStats: {
         count: { type: Number, default: 0 },
-        totalEarned: { type: Number, default: 0 } // Cuánto gané por referir
+        totalEarned: { type: Number, default: 0 } // earnings original + comisiones
     },
 
     // 🔐 SEGURIDAD
@@ -46,7 +52,6 @@ const UserSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// Encriptación automática
 UserSchema.pre("save", async function (next) {
     if (!this.isModified("password")) return next();
     const salt = await bcrypt.genSalt(10);
