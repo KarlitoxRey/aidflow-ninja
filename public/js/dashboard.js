@@ -82,73 +82,135 @@ async function handleGameMessage(event) {
 
 async function loadUserGames() {
     const container = document.getElementById('embedGamesGrid');
-    if(!container) return;
+    if(!container) return; // Si no existe el div en el HTML, salimos
+
+    container.innerHTML = "<p class='blink'>📡 Buscando juegos en el Dojo...</p>";
 
     try {
         const res = await fetch(`${API_URL}/api/games`);
-        if(!res.ok) return;
-        const games = await res.json();
-        
-        if(games.length === 0) {
-            container.innerHTML = "<p class='muted-text'>Dojo vacío.</p>";
+        if(!res.ok) {
+            container.innerHTML = "<p class='error-text'>⚠️ Error conectando con la Arena.</p>";
             return;
         }
+        
+        const games = await res.json();
+        console.log("🎮 Juegos encontrados:", games); // MIRA LA CONSOLA (F12)
+
+        if(games.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding: 20px; border: 1px dashed #444;">
+                    <i class="fas fa-ghost" style="font-size: 2rem; color: #666;"></i>
+                    <p class="muted-text">La Arena está vacía.<br>Dile a Splinter que agregue juegos a la DB.</p>
+                </div>`;
+            return;
+        }
+
+        // Renderizado
         container.innerHTML = games.map(g => {
+            // Aseguramos que la imagen tenga ruta completa si es local
             let cleanThumb = g.thumbnail.startsWith('http') ? g.thumbnail : `${API_URL}/${g.thumbnail}`;
+            // Aseguramos que la URL del juego sea correcta
             let cleanUrl = g.embedUrl.startsWith('http') ? g.embedUrl : `${API_URL}/${g.embedUrl}`;
+            
             return `
             <div class="game-card shadow-glow" onclick="playGame('${cleanUrl}')">
-                <div class="thumb-wrapper"><img src="${cleanThumb}" alt="${g.title}"></div>
-                <div class="info"><h4>${g.title}</h4></div>
+                <div class="thumb-wrapper">
+                    <img src="${cleanThumb}" alt="${g.title}" onerror="this.src='https://via.placeholder.com/300x200?text=NinjaGame'">
+                </div>
+                <div class="info">
+                    <h4>${g.title}</h4>
+                    <span class="play-btn">JUGAR ▶</span>
+                </div>
             </div>`;
         }).join('');
-    } catch (error) { console.error("Error cargando juegos", error); }
+
+    } catch (error) { 
+        console.error("Error cargando juegos", error);
+        container.innerHTML = "<p class='error-text'>🚫 Error de red al cargar juegos.</p>";
+    }
 }
 
 // ==========================================
 // 3. LOGICA DE CICLOS Y NIVELES
 // ==========================================
+// ==========================================
+// LÓGICA DE NIVELES INTELIGENTE (Progresiva)
+// ==========================================
+
 window.openLevelModal = () => {
-    const el = document.getElementById("levelModal");
-    if(el) el.style.display = "flex";
-};
-window.closeLevelModal = () => {
-    const el = document.getElementById("levelModal");
-    if(el) el.style.display = "none";
-};
-
-window.selectLevel = async (lvl) => {
-    if(!confirm(`⚠️ ¿Confirmas forjar el Pase Nivel ${lvl}?`)) return;
-    
-    const modalContent = document.querySelector("#levelModal .modal-content");
-    const originalHtml = modalContent ? modalContent.innerHTML : "";
-    if(modalContent) modalContent.innerHTML = "<h3 class='gold-text blinking'>FORJANDO PASE...</h3>";
-
-    try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/cycles/start`, { 
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ level: lvl })
-        });
-        const data = await res.json();
-        
-        if (res.ok) {
-            alert("⛩️ " + data.message);
-            window.location.reload();
-        } else {
-            alert("🚫 " + (data.message || "Error"));
-            if(modalContent) modalContent.innerHTML = originalHtml;
-        }
-    } catch (error) {
-        alert("Error de conexión");
-        if(modalContent) modalContent.innerHTML = originalHtml;
+    const modal = document.getElementById("levelModal");
+    if(modal) {
+        modal.style.display = "flex";
+        renderLevelButtons(); // 👇 AQUÍ LLAMAMOS A LA NUEVA LÓGICA
     }
 };
 
+function renderLevelButtons() {
+    // Buscamos el contenedor donde van los botones dentro del modal
+    // Asegúrate de tener un <div id="levelOptions"></div> o similar en tu HTML del modal
+    // Si no tienes ID, usamos querySelector para buscar el contenedor de botones
+    const container = document.querySelector("#levelModal .modal-body") || document.querySelector("#levelModal .content"); 
+    
+    if (!container) return;
+
+    // Limpiamos lo que haya antes
+    container.innerHTML = "<h3>SELECCIONA TU CAMINO</h3>";
+
+    const currentLevel = currentUser.level || 0; // 0 = Ronin
+    const cyclePercent = currentUser.cyclePercent || 0;
+    const isCompleted = cyclePercent >= 100;
+
+    // CREAMOS LOS BOTONES DINÁMICAMENTE
+    let buttonsHTML = '<div class="levels-grid" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">';
+
+    // --- LÓGICA NIVEL 1 ---
+    if (currentLevel === 0) {
+        // Usuario nuevo: Solo puede comprar Nivel 1
+        buttonsHTML += createBtn(1, "FORJAR PASE NIVEL 1 ($10)", true);
+        buttonsHTML += createBtn(2, "NIVEL 2 (BLOQUEADO)", false);
+        buttonsHTML += createBtn(3, "NIVEL 3 (BLOQUEADO)", false);
+    } 
+    else if (currentLevel === 1) {
+        if (isCompleted) {
+            // Completó Nivel 1: Puede Repetir Nivel 1 O Avanzar a Nivel 2
+            buttonsHTML += createBtn(1, "♻️ REPETIR NIVEL 1", true);
+            buttonsHTML += createBtn(2, "🔥 ASCENDER A NIVEL 2 ($20)", true, "gold-btn");
+        } else {
+            // Está cursando Nivel 1: No puede comprar nada
+            buttonsHTML += `<p class="info-text">⚠️ Debes completar tu ciclo actual (${Math.floor(cyclePercent)}%) para adquirir nuevos pases.</p>`;
+        }
+    }
+    else if (currentLevel === 2) {
+        if (isCompleted) {
+            // Completó Nivel 2: Puede Repetir Nivel 2 O Avanzar a Nivel 3
+            buttonsHTML += createBtn(2, "♻️ REPETIR NIVEL 2", true);
+            buttonsHTML += createBtn(3, "🐉 ASCENDER A NIVEL 3 ($50)", true, "blood-btn");
+        } else {
+             buttonsHTML += `<p class="info-text">Completa tu entrenamiento de Nivel 2 para avanzar.</p>`;
+        }
+    }
+    else if (currentLevel >= 3) {
+        if (isCompleted) {
+             buttonsHTML += createBtn(3, "♻️ REPETIR NIVEL 3 (MÁXIMO)", true, "blood-btn");
+        } else {
+             buttonsHTML += `<p class="info-text">Estás en la cima. Completa el ciclo.</p>`;
+        }
+    }
+
+    buttonsHTML += '</div>';
+    buttonsHTML += '<button onclick="closeLevelModal()" class="btn-close" style="margin-top:20px;">CANCELAR</button>';
+    
+    container.innerHTML = buttonsHTML;
+}
+
+// Función auxiliar para crear el HTML del botón bonito
+function createBtn(level, text, active, extraClass = "") {
+    if (!active) {
+        return `<button class="btn-disabled" disabled style="opacity: 0.5; cursor: not-allowed;">🔒 NIVEL ${level}</button>`;
+    }
+    // La clase puede ser 'btn-ninja' o la que uses en tu CSS
+    return `<button class="btn-submit ${extraClass}" onclick="selectLevel(${level})" style="margin:5px;">${text}</button>`;
+}
 // ==========================================
 // 4. MISIONES Y UI (Blindado)
 // ==========================================
