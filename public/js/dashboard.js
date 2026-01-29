@@ -16,17 +16,28 @@ async function validateSession() {
     if (!token) return window.location.replace("login.html");
 
     try {
+        console.log("📡 Conectando con el Templo...");
         const res = await fetch(`${API_URL}/api/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!res.ok) throw new Error("Sesión expirada");
+        if (!res.ok) {
+            // Si el servidor dice 401/404, ahí sí es error real
+            throw new Error("Sesión inválida o expirada");
+        }
         
         currentUser = await res.json();
+        console.log("✅ Ninja identificado:", currentUser.ninjaName);
         
-        renderUserHeader();
-        applyAccessLogic();
-        initMissionLogic();
+        // 🛡️ RENDER SEGURO: Si falla algo visual, NO te saca del panel
+        try {
+            renderUserHeader();
+            applyAccessLogic();
+            initMissionLogic();
+        } catch (renderError) {
+            console.warn("⚠️ Error visual (No crítico):", renderError);
+        }
+
         loadUserGames(); 
         initChat();      
         
@@ -34,7 +45,7 @@ async function validateSession() {
         if(loader) loader.style.display = "none";
 
     } catch (error) {
-        console.error("Error de sesión:", error);
+        console.error("❌ Error FATAL de sesión:", error);
         localStorage.clear();
         window.location.replace("login.html");
     }
@@ -60,8 +71,9 @@ async function handleGameMessage(event) {
         });
         const data = await res.json();
         if (res.ok) {
-            if(data.newBalance !== undefined) {
-                document.getElementById("headerBalance").innerText = Number(data.newBalance).toFixed(2);
+            const balanceEl = document.getElementById("headerBalance");
+            if(balanceEl && data.newBalance !== undefined) {
+                balanceEl.innerText = Number(data.newBalance).toFixed(2);
             }
             alert(`🏆 COMBATE REGISTRADO: ${score} Pts`);
         }
@@ -74,7 +86,9 @@ async function loadUserGames() {
 
     try {
         const res = await fetch(`${API_URL}/api/games`);
+        if(!res.ok) return;
         const games = await res.json();
+        
         if(games.length === 0) {
             container.innerHTML = "<p class='muted-text'>Dojo vacío.</p>";
             return;
@@ -88,22 +102,27 @@ async function loadUserGames() {
                 <div class="info"><h4>${g.title}</h4></div>
             </div>`;
         }).join('');
-    } catch (error) { console.error(error); }
+    } catch (error) { console.error("Error cargando juegos", error); }
 }
 
 // ==========================================
-// 3. LOGICA DE CICLOS Y NIVELES (RESTAURADA) ⚠️
+// 3. LOGICA DE CICLOS Y NIVELES
 // ==========================================
-window.openLevelModal = () => document.getElementById("levelModal").style.display = "flex";
-window.closeLevelModal = () => document.getElementById("levelModal").style.display = "none";
+window.openLevelModal = () => {
+    const el = document.getElementById("levelModal");
+    if(el) el.style.display = "flex";
+};
+window.closeLevelModal = () => {
+    const el = document.getElementById("levelModal");
+    if(el) el.style.display = "none";
+};
 
 window.selectLevel = async (lvl) => {
     if(!confirm(`⚠️ ¿Confirmas forjar el Pase Nivel ${lvl}?`)) return;
     
-    // UI Feedback
     const modalContent = document.querySelector("#levelModal .modal-content");
-    const originalHtml = modalContent.innerHTML;
-    modalContent.innerHTML = "<h3 class='gold-text blinking'>FORJANDO PASE...</h3>";
+    const originalHtml = modalContent ? modalContent.innerHTML : "";
+    if(modalContent) modalContent.innerHTML = "<h3 class='gold-text blinking'>FORJANDO PASE...</h3>";
 
     try {
         const token = localStorage.getItem("token");
@@ -122,16 +141,16 @@ window.selectLevel = async (lvl) => {
             window.location.reload();
         } else {
             alert("🚫 " + (data.message || "Error"));
-            modalContent.innerHTML = originalHtml; // Restaurar si falla
+            if(modalContent) modalContent.innerHTML = originalHtml;
         }
     } catch (error) {
         alert("Error de conexión");
-        modalContent.innerHTML = originalHtml;
+        if(modalContent) modalContent.innerHTML = originalHtml;
     }
 };
 
 // ==========================================
-// 4. MISIONES Y UI
+// 4. MISIONES Y UI (Blindado)
 // ==========================================
 function initMissionLogic() {
     const missionBtn = document.getElementById("missionBtn");
@@ -153,8 +172,10 @@ function initMissionLogic() {
 
 async function claimMission() {
     const btn = document.getElementById("missionBtn");
-    btn.innerText = "⏳ ...";
-    btn.disabled = true;
+    if(btn) {
+        btn.innerText = "⏳ ...";
+        btn.disabled = true;
+    }
     try {
         const res = await fetch(`${API_URL}/api/missions/daily`, {
             method: "POST",
@@ -163,33 +184,38 @@ async function claimMission() {
         const data = await res.json();
         if (res.ok) {
             alert(data.message);
-            document.getElementById("headerBalance").innerText = Number(data.newBalance).toFixed(2);
-            btn.innerText = "✅ COMPLETADO";
+            const bal = document.getElementById("headerBalance");
+            if(bal) bal.innerText = Number(data.newBalance).toFixed(2);
+            if(btn) btn.innerText = "✅ COMPLETADO";
         } else {
             alert(data.error || "Error");
-            btn.disabled = false;
-            btn.innerText = "⚔️ REINTENTAR";
+            if(btn) {
+                btn.disabled = false;
+                btn.innerText = "⚔️ REINTENTAR";
+            }
         }
-    } catch (e) { btn.disabled = false; }
+    } catch (e) { if(btn) btn.disabled = false; }
 }
 
 function renderUserHeader() {
-    document.getElementById("sideName").innerText = currentUser.ninjaName;
-    document.getElementById("headerBalance").innerText = Number(currentUser.balance || 0).toFixed(2);
+    // 🛡️ Usamos ayudantes seguros para no romper si falta un ID
+    setText("sideName", currentUser.ninjaName);
+    setText("headerBalance", Number(currentUser.balance || 0).toFixed(2));
     
     const badge = document.getElementById("sideLevelBadge");
-    if (currentUser.level > 0) {
-        badge.innerText = `RANGO: ${currentUser.level}`;
-        badge.className = "badge badge-master";
-    } else {
-        badge.innerText = "RONIN";
+    if (badge) {
+        if (currentUser.level > 0) {
+            badge.innerText = `RANGO: ${currentUser.level}`;
+            badge.className = "badge badge-master";
+        } else {
+            badge.innerText = "RONIN";
+        }
     }
     
     // Stats
-    const refCount = document.getElementById("myReferrals");
-    if(refCount) refCount.innerText = currentUser.referralStats?.count || 0;
-    const refEarn = document.getElementById("referralEarnings");
-    if(refEarn) refEarn.innerText = Number(currentUser.referralStats?.earnings || 0).toFixed(2);
+    const stats = currentUser.referralStats || {};
+    setText("myReferrals", stats.count || 0);
+    setText("referralEarnings", Number(stats.earnings || 0).toFixed(2));
 }
 
 function applyAccessLogic() {
@@ -198,7 +224,7 @@ function applyAccessLogic() {
 
     if (!currentUser.hasNinjaPass || currentUser.level === 0) {
         if(cycleContainer) cycleContainer.style.display = "none";
-        if(promoBanner) promoBanner.style.display = "block"; // Mostrar botón para comprar pase
+        if(promoBanner) promoBanner.style.display = "block"; 
     } else {
         if(cycleContainer) cycleContainer.style.display = "block";
         if(promoBanner) promoBanner.style.display = "none";
@@ -209,8 +235,11 @@ function applyAccessLogic() {
 function renderCycleProgress() {
     const percent = currentUser.cyclePercent || 0;
     const claimed = currentUser.claimedMilestones || [];
-    document.getElementById("trackFill").style.width = `${percent}%`;
-    document.getElementById("cyclePercentText").innerText = `${Math.floor(percent)}%`;
+    
+    const track = document.getElementById("trackFill");
+    if(track) track.style.width = `${percent}%`;
+    
+    setText("cyclePercentText", `${Math.floor(percent)}%`);
 
     [25, 50, 75, 100].forEach(p => {
         const cp = document.getElementById(`cp${p}`);
@@ -224,6 +253,8 @@ function renderCycleProgress() {
 
 function updateWithdrawButton(percent, claimed) {
     const btn = document.getElementById("btnRetiro");
+    if(!btn) return;
+
     let nextMilestone = 0;
     if (percent >= 25 && !claimed.includes(25)) nextMilestone = 25;
     else if (percent >= 50 && !claimed.includes(50)) nextMilestone = 50;
@@ -243,12 +274,17 @@ function updateWithdrawButton(percent, claimed) {
 }
 
 // ==========================================
-// 5. FUNCIONES GLOBALES
+// 5. FUNCIONES GLOBALES & AYUDANTES
 // ==========================================
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if(el) el.innerText = text;
+}
+
 window.procesarRetiro = async () => {
     if(!confirm("¿Retirar ganancias?")) return;
     const btn = document.getElementById("btnRetiro");
-    btn.innerText = "PROCESANDO...";
+    if(btn) btn.innerText = "PROCESANDO...";
     try {
         const res = await fetch(`${API_URL}/api/payments/withdraw`, {
             method: "POST",
@@ -269,14 +305,18 @@ window.copyReferralLink = function() {
 window.playGame = (url) => {
     const modal = document.getElementById('game-modal');
     const iframe = document.getElementById('game-frame');
-    iframe.src = url; 
-    modal.style.display = 'flex'; 
-    modal.classList.remove('hidden');
+    if(modal && iframe) {
+        iframe.src = url; 
+        modal.style.display = 'flex'; 
+        modal.classList.remove('hidden');
+    }
 };
 
 window.closeGame = () => {
-    document.getElementById('game-frame').src = '';
-    document.getElementById('game-modal').style.display = 'none';
+    const modal = document.getElementById('game-modal');
+    const iframe = document.getElementById('game-frame');
+    if(iframe) iframe.src = '';
+    if(modal) modal.style.display = 'none';
 };
 
 // Chat Socket
@@ -287,6 +327,8 @@ function initChat() {
     const sendBtn = document.getElementById("sendChatBtn");
     const chatBox = document.getElementById("chatMessages");
 
+    if(!chatBox) return; // Si no hay chat, no hacemos nada
+
     socket.on("chat message", (msg) => {
         const div = document.createElement("div");
         div.className = "chat-msg";
@@ -295,13 +337,15 @@ function initChat() {
         chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    sendBtn.onclick = () => {
-        const text = chatInput.value.trim();
-        if (text && currentUser) {
-            socket.emit("chat message", { user: currentUser.ninjaName, text });
-            chatInput.value = "";
-        }
-    };
+    if(sendBtn && chatInput) {
+        sendBtn.onclick = () => {
+            const text = chatInput.value.trim();
+            if (text && currentUser) {
+                socket.emit("chat message", { user: currentUser.ninjaName, text });
+                chatInput.value = "";
+            }
+        };
+    }
 }
 
 document.getElementById("logoutBtn")?.addEventListener("click", () => {
