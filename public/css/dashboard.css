@@ -248,3 +248,48 @@ body {
     .nav-menu span { display: none; } /* Ocultar texto en móvil, solo iconos */
     .step-box { flex-direction: column; border-radius: 10px; }
 }
+
+/* --- BARRA DE ACCIÓN (RECARGA/RETIRO) --- */
+.action-bar {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    margin-top: 10px;
+}
+
+.btn-action {
+    flex: 1; /* Ocupan 50% cada uno */
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Orbitron';
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-transform: uppercase;
+}
+
+.btn-deposit {
+    background: linear-gradient(45deg, var(--gold), #d48806);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(255, 183, 3, 0.3);
+}
+
+.btn-withdraw {
+    background: transparent;
+    border: 1px solid var(--text-muted);
+    color: var(--text-muted);
+}
+
+.btn-action:active { transform: scale(0.95); }
+
+/* En móvil, que se vean bien grandes */
+@media (max-width: 768px) {
+    .action-bar { flex-direction: column; } /* Uno abajo del otro si prefieres, o row si quieres lado a lado */
+    .btn-action { width: 100%; padding: 18px; }
+}
