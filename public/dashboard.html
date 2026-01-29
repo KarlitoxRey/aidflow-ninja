@@ -38,6 +38,34 @@
         <span class="label">MI BOLSA (SALDO)</span>
         <span class="value gold-text">$<span id="headerBalance">0.00</span></span>
     </div>
+            </div>
+
+        <div class="action-bar">
+            <button onclick="openDepositModal()" class="btn-action btn-deposit">
+                <i class="fas fa-plus-circle"></i> RECARGAR SALDO
+            </button>
+            <button onclick="openWithdrawModal()" class="btn-action btn-withdraw">
+                <i class="fas fa-hand-holding-usd"></i> RETIRAR GANANCIAS
+            </button>
+        </div>
+
+        <div id="depositModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; align-items:center; justify-content:center;">
+        <div class="modal-content" style="background:#111; padding:30px; border:2px solid var(--gold); width:90%; max-width:400px; text-align:center; border-radius:8px;">
+            <h2 style="color:var(--gold); font-family:'Orbitron'; margin-top:0;">RECARGA TÁCTICA</h2>
+            <p style="color:#ccc; font-size:0.9rem;">Envía tu tributo por Mercado Pago y reporta aquí la operación.</p>
+            
+            <div style="background:#222; padding:10px; margin:15px 0; border-radius:4px;">
+                <p style="color:#fff; margin:0;">ALIAS: <strong style="color:var(--blood);">TU.ALIAS.MP</strong></p>
+                <p style="color:#fff; margin:5px 0 0 0;">CVU: <strong style="color:var(--blood);">0000003123123</strong></p>
+            </div>
+
+            <input type="number" id="depAmount" placeholder="Monto ($)" style="width:100%; padding:10px; margin-bottom:10px; background:#000; border:1px solid #444; color:white;">
+            <input type="text" id="depRef" placeholder="ID de Operación MP" style="width:100%; padding:10px; margin-bottom:20px; background:#000; border:1px solid #444; color:white;">
+            
+            <button onclick="submitDeposit()" class="btn-ninja-primary" style="width:100%; padding:12px;">INFORMAR PAGO</button>
+            <button onclick="closeDepositModal()" style="margin-top:15px; background:none; border:none; color:#666; cursor:pointer;">Cancelar</button>
+        </div>
+    </div>
     
     <div class="stat-box" style="border-color: #00d4ff;">
         <span class="label" style="color:#00d4ff;">FICHAS DE COMBATE</span>
