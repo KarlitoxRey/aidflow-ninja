@@ -81,30 +81,78 @@ body {
 }
 
 /* HUD (Stats Header) */
+/* --- HUD (Stats Header) REFACTORIZADO --- */
+
 .stats-header {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 40px;
+    display: flex;
+    gap: 25px; /* Más espacio entre cajas */
+    overflow-x: auto; /* Permite scroll horizontal en pantallas chicas */
+    padding: 5px 5px 20px 5px; /* Un poco de aire abajo */
+    
+    /* Ocultar la barra de scroll fea para un look más limpio */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE/Edge */
+    
+    /* Efecto de "frenado" al deslizar en móvil (opcional pero recomendado) */
+    scroll-snap-type: x mandatory; 
+}
+
+/* Ocultar barra scroll en Chrome/Safari */
+.stats-header::-webkit-scrollbar {
+    display: none;
 }
 
 .stat-box {
     background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
     border: 1px solid #333;
-    padding: 20px;
-    border-radius: 8px;
+    padding: 25px 20px; /* Un poco más de padding vertical */
+    border-radius: 12px; /* Bordes un poco más suaves */
     position: relative;
     overflow: hidden;
+    
+    /* CRÍTICO PARA MÓVIL: */
+    min-width: 240px; /* Ancho mínimo garantizado para que no se aplasten */
+    flex: 1 0 auto; /* Crece si hay espacio, pero no se encoge menos del mínimo */
+    scroll-snap-align: start; /* Para el efecto de frenado */
+    
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: transform 0.3s, border-color 0.3s;
+}
+
+/* Efecto hover para escritorio */
+.stat-box:hover {
+    transform: translateY(-5px);
+    border-color: var(--text-muted);
 }
 
 .stat-box::before {
     content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
-    background: var(--gold);
+    background: var(--gold); /* Color por defecto (se sobreescribe en el HTML para fichas) */
 }
 
-.stat-box .label { font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
-.stat-box .value { font-size: 1.8rem; font-family: 'Orbitron'; font-weight: 700; color: var(--text-main); }
-.gold-text { color: var(--gold) !important; text-shadow: 0 0 10px rgba(255, 183, 3, 0.3); }
+.stat-box .label {
+    font-size: 0.75rem; color: var(--text-muted); display: block;
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;
+}
+
+.stat-box .value {
+    font-size: 2rem; /* Números más grandes */
+    font-family: 'Orbitron'; font-weight: 700; color: var(--text-main);
+    display: block;
+}
+
+/* AJUSTE PARA ESCRITORIOS GRANDES */
+@media (min-width: 1200px) {
+    .stats-header {
+        /* En pantallas muy grandes, volvemos a grid fijo para que queden perfectas */
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        overflow-x: visible;
+    }
+    .stat-box {
+        min-width: auto; /* Reseteamos el ancho mínimo */
+    }
+}
 
 /* SECCIONES */
 .section-title {
