@@ -359,3 +359,61 @@ window.selectLevel = async (lvl) => {
         window.location.reload();
     } catch(e) { alert("Error al conectar con el servidor."); }
 };
+
+// --- AGREGAR ESTAS FUNCIONES AL FINAL DE dashboard.js O EN EL SCOPE GLOBAL ---
+
+// 1. ABRIR/CERRAR MODAL RECARGA
+window.openDepositModal = () => {
+    document.getElementById("depositModal").style.display = "flex";
+};
+
+window.closeDepositModal = () => {
+    document.getElementById("depositModal").style.display = "none";
+};
+
+// 2. ENVIAR RECARGA AL BACKEND
+window.submitDeposit = async () => {
+    const amount = document.getElementById("depAmount").value;
+    const ref = document.getElementById("depRef").value;
+    const btn = document.querySelector("#depositModal button.btn-ninja-primary");
+
+    if(!amount || !ref) return alert("❌ Faltan datos del comprobante.");
+
+    btn.innerText = "ENVIANDO...";
+    btn.disabled = true;
+
+    try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/payments/deposit`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ amount, referenceId: ref })
+        });
+
+        const data = await res.json();
+        
+        if(res.ok) {
+            alert("✅ " + data.message);
+            closeDepositModal();
+            // Limpiar inputs
+            document.getElementById("depAmount").value = "";
+            document.getElementById("depRef").value = "";
+        } else {
+            alert("⚠️ " + data.message);
+        }
+    } catch (e) {
+        alert("Error de conexión");
+    } finally {
+        btn.innerText = "INFORMAR PAGO";
+        btn.disabled = false;
+    }
+};
+
+// 3. ABRIR MODAL RETIRO (Por ahora simple alerta o modal similar)
+window.openWithdrawModal = () => {
+    alert("🏦 Sistema de Retiros: \n\nPara retirar, envía un mensaje al soporte con tu CBU.\n(Próximamente automático)");
+    // Opcional: Podés crear un withdrawModal igual al de depósito
+};
