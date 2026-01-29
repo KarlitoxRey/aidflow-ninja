@@ -405,3 +405,44 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+/* --- MODAL DE JUEGO --- */
+#game-modal {
+    display: none; /* Inicialmente oculto */
+}
+
+/* --- RESPONSIVE NINJA --- */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 15px;
+        margin-top: 70px; /* Espacio para el header fijo */
+    }
+
+    .grid-ninja {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 15px;
+    }
+
+    .ninja-social-hub {
+        grid-template-columns: 1fr; /* Chat y Ranking uno sobre otro */
+    }
+
+    .shogun-title-mini { font-size: 1.1rem; }
+    
+    #game-frame {
+        width: 100% !important;
+        height: 70vh !important;
+        border: none;
+    }
+}
+
+/* Estilo para las tarjetas de juego */
+.game-card {
+    transition: transform 0.2s ease, border-color 0.2s;
+    border: 1px solid #222;
+}
+
+.game-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--shogun-gold);
+}
