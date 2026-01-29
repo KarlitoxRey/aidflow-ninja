@@ -1,29 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
-  initParticles();
+  if (typeof initParticles === "function") initParticles();
 });
 
-// Fix: Forzamos el display para evitar conflictos con clases CSS
-window.openGame = function(src) {
-  const modal = document.getElementById('game-modal');
-  const frame = document.getElementById('game-frame');
-  if(modal && frame) {
-    frame.src = src;
-    modal.style.display = 'flex'; 
-    document.body.style.overflow = 'hidden'; // Bloquea scroll de fondo
-  }
-}
-
-window.closeGame = function() {
-  const modal = document.getElementById('game-modal');
-  const frame = document.getElementById('game-frame');
-  if(modal && frame) {
-    frame.src = '';
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-  }
-}
-
-/* Partículas livianas (Mantenido) */
+/* Partículas livianas */
 function initParticles(){
   const canvas = document.getElementById('particles-canvas');
   if(!canvas) return;
@@ -44,8 +23,7 @@ function initParticles(){
     particles.forEach(p=>{
       ctx.beginPath();
       ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle=p.c;
-      ctx.fill();
+      ctx.fillStyle=p.c; ctx.fill();
       p.y+=p.s;
       if(p.y>canvas.height)p.y=0;
     });
