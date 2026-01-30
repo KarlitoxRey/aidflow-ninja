@@ -210,3 +210,39 @@ export const getPendingTransactions = async (req, res) => {
         res.status(500).json({ message: "Error obteniendo pendientes." });
     }
 };
+
+// ==========================================
+// 📤 7. SOLICITAR RETIRO EXTERNO (A BANCO/MP)
+// ==========================================
+export const requestPayout = async (req, res) => {
+    try {
+        const { amount, cbu, alias } = req.body;
+        const userId = req.user.userId; // Asegúrate de usar userId
+
+        if (!amount || amount <= 0) return res.status(400).json({ message: "Monto inválido." });
+        if (!cbu && !alias) return res.status(400).json({ message: "Indica CBU o Alias." });
+
+        const user = await User.findById(userId);
+        if (user.balance < amount) return res.status(400).json({ message: "Saldo insuficiente en tu Bolsa." });
+
+        // Descontamos del saldo temporalmente (reserva)
+        user.balance -= amount;
+        await user.save();
+
+        // Creamos la solicitud pendiente
+        await Transaction.create({
+            user: userId,
+            type: 'withdrawal_external', // Diferente al interno
+            amount: Number(amount), // Negativo o positivo según tu lógica visual, aquí positivo para indicar monto solicitado
+            status: 'pending',
+            description: `Solicitud Retiro a: ${alias || cbu}`,
+            referenceId: `OUT-${Date.now()}` // ID interno temporal
+        });
+
+        res.json({ message: "⏳ Solicitud enviada al Tesorero.", newBalance: user.balance });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error al procesar la solicitud." });
+    }
+};
