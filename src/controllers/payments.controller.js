@@ -248,8 +248,3 @@ export const requestPayout = async (req, res) => {
 };
 
 
-GTX 1660 Super Uruguay”
-
-“RTX 3050 Uruguay”
-
-“RX 6500 XT
