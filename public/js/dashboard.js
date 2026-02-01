@@ -417,3 +417,111 @@ window.openWithdrawModal = () => {
     alert("🏦 Sistema de Retiros: \n\nPara retirar, envía un mensaje al soporte con tu CBU.\n(Próximamente automático)");
     // Opcional: Podés crear un withdrawModal igual al de depósito
 };
+
+/* ==========================================
+   LÓGICA DE PERFIL & REFERIDOS
+   ========================================== */
+window.openProfileModal = () => {
+    document.getElementById("profileModal").style.display = "flex";
+    
+    // Llenar datos (currentUser ya está cargado en dashboard.js)
+    if(currentUser) {
+        document.getElementById("profName").innerText = currentUser.ninjaName;
+        document.getElementById("profEmail").innerText = currentUser.email;
+        document.getElementById("profLevel").innerText = currentUser.level > 0 ? `NIVEL ${currentUser.level}` : "RONIN";
+        
+        // Link de referido
+        const link = `${window.location.origin}/register.html?ref=${currentUser.referralCode}`;
+        document.getElementById("referralLink").value = link;
+
+        // Stats (Si el backend los manda, sino 0)
+        const stats = currentUser.referralStats || { count: 0, totalEarned: 0 };
+        document.getElementById("profRefCount").innerText = stats.count;
+        document.getElementById("profRefEarn").innerText = formatMoney(stats.totalEarned);
+    }
+};
+
+window.closeProfileModal = () => document.getElementById("profileModal").style.display = "none";
+
+window.copyReferral = () => {
+    const input = document.getElementById("referralLink");
+    input.select();
+    document.execCommand("copy");
+    alert("📋 Enlace copiado al portapapeles");
+};
+
+/* ==========================================
+   LÓGICA DE RETIROS (Tabs y Acciones)
+   ========================================== */
+window.openWithdrawModal = () => {
+    document.getElementById("withdrawModal").style.display = "flex";
+    // Actualizar monto disponible para cosecha
+    const harvestVal = currentUser.cycle ? currentUser.cycle.earnings : 0;
+    document.getElementById("harvestAmount").innerText = formatMoney(harvestVal);
+};
+
+window.closeWithdrawModal = () => document.getElementById("withdrawModal").style.display = "none";
+
+// Cambio de pestañas
+window.showTab = (tab) => {
+    const btnH = document.getElementById("tabHarvest");
+    const btnB = document.getElementById("tabBank");
+    const viewH = document.getElementById("viewHarvest");
+    const viewB = document.getElementById("viewBank");
+
+    if(tab === 'harvest') {
+        viewH.style.display = "block"; viewB.style.display = "none";
+        btnH.style.color = "white"; btnH.style.borderBottom = "2px solid #10b981";
+        btnB.style.color = "#666"; btnB.style.borderBottom = "none";
+    } else {
+        viewH.style.display = "none"; viewB.style.display = "block";
+        btnB.style.color = "white"; btnB.style.borderBottom = "2px solid var(--blood)";
+        btnH.style.color = "#666"; btnH.style.borderBottom = "none";
+    }
+};
+
+// ACCIÓN 1: COSECHAR (Interno)
+window.doHarvest = async () => {
+    try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/payments/withdraw`, { // withdrawCycle
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if(res.ok) {
+            alert(data.message);
+            window.location.reload(); // Recargar para ver saldo actualizado
+        } else {
+            alert("⚠️ " + data.error);
+        }
+    } catch(e) { alert("Error de red"); }
+};
+
+// ACCIÓN 2: RETIRAR A BANCO (Externo)
+window.doPayout = async () => {
+    const amount = document.getElementById("outAmount").value;
+    const alias = document.getElementById("outAlias").value;
+
+    if(!amount || !alias) return alert("Completa todos los campos");
+
+    try {
+        const token = localStorage.getItem("token");
+        // Asegúrate de haber creado esta ruta en el backend (Paso 1)
+        const res = await fetch(`${API_URL}/api/payments/payout`, { 
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": `Bearer ${token}` 
+            },
+            body: JSON.stringify({ amount, alias })
+        });
+        const data = await res.json();
+        if(res.ok) {
+            alert("✅ " + data.message);
+            window.location.reload();
+        } else {
+            alert("⚠️ " + (data.message || data.error));
+        }
+    } catch(e) { alert("Error conectando con Tesorería"); }
+};
