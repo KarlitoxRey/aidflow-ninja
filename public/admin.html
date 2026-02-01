@@ -252,27 +252,7 @@
         </section>
 
     </main> ```
-
----
-
-### 2. `js/admin.js` (Lógica de Aprobación)
-Agregá estas funciones al final de tu archivo `admin.js`. También necesitamos llamar a `loadPendingDeposits()` cuando cargue la página.
-
-**Paso A: Actualizar el inicio (validateAccess)**
-Busca tu función `validateAccess` al principio de `admin.js` y agregá la llamada:
-
-```javascript
-// ... dentro de validateAccess ...
-        } else {
-            console.log("⚔️ Shogun identificado:", user.ninjaName);
-            loadAdminGames(); 
-            loadAdminTournaments();
-            
-            // 🔥 AGREGAR ESTA LÍNEA:
-            loadPendingDeposits(); 
-        }
-// ...
-            
+   
         </main>
     </div>
 
