@@ -224,6 +224,55 @@
                 </div>
             </section>
 
+<section class="card-dark full-width" style="margin-top: 30px; border-left: 4px solid #10b981;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                <div style="display:flex; gap:15px; align-items:center;">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2454/2454269.png" width="40" style="filter: invert(1);">
+                    <h2 class="gold-text" style="margin:0;">CONTROL DE TESORERÍA</h2>
+                </div>
+                <button onclick="loadPendingDeposits()" class="btn-ninja-outline" style="font-size: 0.8rem;">🔄 REFRESCAR</button>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="ninja-table" style="width:100%; border-collapse: collapse; text-align: left; color: #ccc;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #333; color: var(--gold);">
+                            <th style="padding:10px;">FECHA</th>
+                            <th style="padding:10px;">GUERRERO</th>
+                            <th style="padding:10px;">REFERENCIA (MP)</th>
+                            <th style="padding:10px;">MONTO</th>
+                            <th style="padding:10px; text-align:right;">ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingDepositsList">
+                        <tr><td colspan="5" style="padding:20px; text-align:center;">Cargando tributos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main> ```
+
+---
+
+### 2. `js/admin.js` (Lógica de Aprobación)
+Agregá estas funciones al final de tu archivo `admin.js`. También necesitamos llamar a `loadPendingDeposits()` cuando cargue la página.
+
+**Paso A: Actualizar el inicio (validateAccess)**
+Busca tu función `validateAccess` al principio de `admin.js` y agregá la llamada:
+
+```javascript
+// ... dentro de validateAccess ...
+        } else {
+            console.log("⚔️ Shogun identificado:", user.ninjaName);
+            loadAdminGames(); 
+            loadAdminTournaments();
+            
+            // 🔥 AGREGAR ESTA LÍNEA:
+            loadPendingDeposits(); 
+        }
+// ...
+            
         </main>
     </div>
 
