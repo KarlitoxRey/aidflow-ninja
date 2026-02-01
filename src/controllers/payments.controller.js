@@ -246,3 +246,10 @@ export const requestPayout = async (req, res) => {
         res.status(500).json({ message: "Error al procesar la solicitud." });
     }
 };
+
+
+GTX 1660 Super Uruguay”
+
+“RTX 3050 Uruguay”
+
+“RX 6500 XT
