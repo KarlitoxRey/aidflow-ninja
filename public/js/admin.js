@@ -290,3 +290,98 @@ async function loadUsersList() {
 // ==========================================
 function getVal(id) { const el = document.getElementById(id); return el ? el.value : ''; }
 function setText(id, txt) { const el = document.getElementById(id); if(el) el.innerText = txt; }
+
+// ==========================================
+// 💰 GESTIÓN DE TESORERÍA (DEPÓSITOS)
+// ==========================================
+
+window.loadPendingDeposits = async function() {
+    const container = document.getElementById('pendingDepositsList');
+    if(!container) return;
+
+    try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/payments/pending`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if(!res.ok) throw new Error("Error al cargar finanzas");
+        
+        const transactions = await res.json();
+
+        if (transactions.length === 0) {
+            container.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:#666;">📭 No hay tributos pendientes.</td></tr>`;
+            return;
+        }
+
+        container.innerHTML = transactions.map(tx => `
+            <tr style="border-bottom: 1px solid #222;">
+                <td style="padding:15px; color:#888; font-size:0.9rem;">
+                    ${new Date(tx.createdAt).toLocaleDateString()} ${new Date(tx.createdAt).toLocaleTimeString()}
+                </td>
+                <td style="padding:15px;">
+                    <strong style="color:white;">${tx.user?.ninjaName || 'Desconocido'}</strong><br>
+                    <small style="color:#666;">${tx.user?.email || ''}</small>
+                </td>
+                <td style="padding:15px; color:#00d4ff; font-family:'Orbitron';">
+                    ${tx.referenceId}
+                </td>
+                <td style="padding:15px; font-size:1.2rem; color:#10b981;">
+                    $${tx.amount}
+                </td>
+                <td style="padding:15px; text-align:right;">
+                    <button onclick="processDeposit('${tx._id}', 'approve')" 
+                        style="background:#10b981; border:none; color:black; padding:5px 10px; cursor:pointer; font-weight:bold; margin-right:5px; border-radius:4px;">
+                        ✓ APROBAR
+                    </button>
+                    <button onclick="processDeposit('${tx._id}', 'reject')" 
+                        style="background:#d90429; border:none; color:white; padding:5px 10px; cursor:pointer; border-radius:4px;">
+                        ✕
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (error) {
+        console.error(error);
+        container.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error de conexión con la bóveda.</td></tr>`;
+    }
+};
+
+window.processDeposit = async function(id, action) {
+    if(!confirm(action === 'approve' ? "¿Confirmas que recibiste el dinero real?" : "¿Rechazar solicitud?")) return;
+
+    const btn = event.target; // Capturamos el botón para deshabilitarlo
+    btn.disabled = true;
+    btn.innerText = "...";
+
+    try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/payments/manage`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                transactionId: id, 
+                action: action, // 'approve' o 'reject'
+                comment: action === 'approve' ? "Aprobado por Shogun" : "Comprobante inválido"
+            })
+        });
+
+        const data = await res.json();
+        
+        if(res.ok) {
+            alert(`✅ Operación ${action.toUpperCase()} exitosa.`);
+            loadPendingDeposits(); // Recargamos la tabla
+        } else {
+            alert("⚠️ " + data.message);
+            btn.disabled = false;
+        }
+
+    } catch (e) {
+        alert("Error de red");
+        btn.disabled = false;
+    }
+};
