@@ -37,6 +37,7 @@ async function initAdmin() {
             loadGamesList();
             loadUsersList();
             loadTournamentsList();
+            loadPendingDeposits(); 
         }
     } catch (error) {
         console.error("🔥 Error crítico de acceso:", error);
