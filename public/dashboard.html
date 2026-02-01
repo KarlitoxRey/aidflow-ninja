@@ -23,8 +23,8 @@
         <nav class="nav-menu">
             <ul>
                 <li class="active"><i class="fas fa-home"></i> <span>BASE</span></li>
-                <li id="menuProfile"><i class="fas fa-id-card"></i> <span>PERFIL</span></li>
-                <li id="menuWithdraw"><i class="fas fa-coins"></i> <span>RETIROS</span></li>
+                <li onclick="window.openProfileModal()"><i class="fas fa-id-card"></i> <span>PERFIL</span></li>
+                <li onclick="window.openWithdrawModal()"><i class="fas fa-coins"></i> <span>RETIROS</span></li>
                 <li onclick="window.openLevelModal()"><i class="fas fa-layer-group"></i> <span>NIVELES</span></li>
                 <li id="logoutBtn" style="margin-top:auto; color:#d90429;"><i class="fas fa-sign-out-alt"></i> <span>ABANDONAR</span></li>
             </ul>
@@ -35,53 +35,34 @@
         
         <div class="stats-header">
             <div class="stat-box">
-        <span class="label">MI BOLSA (SALDO)</span>
-        <span class="value gold-text">$<span id="headerBalance">0.00</span></span>
-    </div>
+                <span class="label">MI BOLSA (SALDO)</span>
+                <span class="value gold-text">$<span id="headerBalance">0.00</span></span>
+            </div>
+            
+            <div class="stat-box" style="border-color: #00d4ff;">
+                <span class="label" style="color:#00d4ff;">FICHAS COMBATE</span>
+                <span class="value" id="tokenBalance" style="color: #fff; text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);">0</span>
             </div>
 
+            <div class="stat-box">
+                <span class="label">FONDO CLAN (DAO)</span>
+                <span class="value" id="daoFund">$0.00</span>
+            </div>
+            
+            <div class="stat-box">
+                <span class="label">POZO GUERRA</span>
+                <span class="value" id="prizePool">$0.00</span>
+            </div>
+        </div>
+
         <div class="action-bar">
-            <button onclick="openDepositModal()" class="btn-action btn-deposit">
+            <button onclick="window.openDepositModal()" class="btn-action btn-deposit">
                 <i class="fas fa-plus-circle"></i> RECARGAR SALDO
             </button>
-            <button onclick="openWithdrawModal()" class="btn-action btn-withdraw">
+            <button onclick="window.openWithdrawModal()" class="btn-action btn-withdraw">
                 <i class="fas fa-hand-holding-usd"></i> RETIRAR GANANCIAS
             </button>
         </div>
-
-        <div id="depositModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; align-items:center; justify-content:center;">
-        <div class="modal-content" style="background:#111; padding:30px; border:2px solid var(--gold); width:90%; max-width:400px; text-align:center; border-radius:8px;">
-            <h2 style="color:var(--gold); font-family:'Orbitron'; margin-top:0;">RECARGA TÁCTICA</h2>
-            <p style="color:#ccc; font-size:0.9rem;">Envía tu tributo por Mercado Pago y reporta aquí la operación.</p>
-            
-            <div style="background:#222; padding:10px; margin:15px 0; border-radius:4px;">
-                <p style="color:#fff; margin:0;">ALIAS: <strong style="color:var(--blood);">TU.ALIAS.MP</strong></p>
-                <p style="color:#fff; margin:5px 0 0 0;">CVU: <strong style="color:var(--blood);">0000003123123</strong></p>
-            </div>
-
-            <input type="number" id="depAmount" placeholder="Monto ($)" style="width:100%; padding:10px; margin-bottom:10px; background:#000; border:1px solid #444; color:white;">
-            <input type="text" id="depRef" placeholder="ID de Operación MP" style="width:100%; padding:10px; margin-bottom:20px; background:#000; border:1px solid #444; color:white;">
-            
-            <button onclick="submitDeposit()" class="btn-ninja-primary" style="width:100%; padding:12px;">INFORMAR PAGO</button>
-            <button onclick="closeDepositModal()" style="margin-top:15px; background:none; border:none; color:#666; cursor:pointer;">Cancelar</button>
-        </div>
-    </div>
-    
-    <div class="stat-box" style="border-color: #00d4ff;">
-        <span class="label" style="color:#00d4ff;">FICHAS DE COMBATE</span>
-        <span class="value" id="tokenBalance" style="color: #fff; text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);">0</span>
-    </div>
-
-    <div class="stat-box">
-        <span class="label">FONDO DEL CLAN (DAO)</span>
-        <span class="value" id="daoFund">$0.00</span>
-    </div>
-    
-    <div class="stat-box">
-        <span class="label">POZO DE GUERRA</span>
-        <span class="value" id="prizePool">$0.00</span>
-    </div>
-      
 
         <h2 class="section-title">⚔️ OPERACIONES TÁCTICAS</h2>
         
@@ -122,28 +103,93 @@
 
     </main>
 
-    <div id="toggleChatBtn" style="position:fixed; bottom:20px; right:20px; width:60px; height:60px; background:var(--blood); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 0 20px var(--blood); border:2px solid var(--gold); z-index:900;">
-        <i class="fas fa-comments" style="color:white; font-size:24px;"></i>
+    <div id="toggleChatBtn" class="chat-floating-btn">
+        <i class="fas fa-comments"></i>
+    </div>
+    <div id="chatWindow" class="chat-window">
+        <div class="chat-header">
+            <span>COMUNICACIONES</span>
+            <i class="fas fa-times" id="closeChatBtn" style="cursor:pointer;"></i>
+        </div>
+        <div id="chatMessages" class="chat-body"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Mensaje...">
+            <button id="sendChatBtn"><i class="fas fa-paper-plane"></i></button>
+        </div>
     </div>
 
-    <div id="chatWindow" style="position:fixed; bottom:90px; right:20px; width:300px; height:400px; background:#000; border:1px solid var(--blood); display:none; flex-direction:column; z-index:900; box-shadow:0 0 30px rgba(0,0,0,0.8);">
-        <div style="background:#1a1a1a; padding:10px; display:flex; justify-content:space-between; border-bottom:1px solid #333;">
-            <span style="color:var(--gold); font-family:'Orbitron';">COMUNICACIONES</span>
-            <i class="fas fa-times" id="closeChatBtn" style="cursor:pointer; color:white;"></i>
-        </div>
-        <div id="chatMessages" style="flex:1; padding:10px; overflow-y:auto; color:#ccc; font-size:0.9rem;"></div>
-        <div style="padding:10px; border-top:1px solid #333; display:flex;">
-            <input type="text" id="chatInput" placeholder="Mensaje..." style="flex:1; background:#111; border:none; color:white; padding:5px;">
-            <button id="sendChatBtn" style="background:var(--gold); border:none; font-weight:bold; cursor:pointer;">></button>
+    <div id="depositModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; align-items:center; justify-content:center;">
+        <div class="modal-content" style="background:#111; padding:30px; border:2px solid var(--gold); width:90%; max-width:400px; text-align:center; border-radius:8px;">
+            <h2 style="color:var(--gold); font-family:'Orbitron'; margin-top:0;">RECARGA TÁCTICA</h2>
+            <p style="color:#ccc; font-size:0.9rem;">Envía tu tributo por Mercado Pago y reporta aquí la operación.</p>
+            <div style="background:#222; padding:10px; margin:15px 0; border-radius:4px;">
+                <p style="color:#fff; margin:0;">ALIAS: <strong style="color:var(--blood);">TU.ALIAS.MP</strong></p>
+                <p style="color:#fff; margin:5px 0 0 0;">CVU: <strong style="color:var(--blood);">0000003123123</strong></p>
+            </div>
+            <input type="number" id="depAmount" placeholder="Monto ($)" style="width:100%; padding:10px; margin-bottom:10px; background:#000; border:1px solid #444; color:white;">
+            <input type="text" id="depRef" placeholder="ID de Operación MP" style="width:100%; padding:10px; margin-bottom:20px; background:#000; border:1px solid #444; color:white;">
+            <button onclick="window.submitDeposit()" class="btn-ninja-primary" style="width:100%; padding:12px;">INFORMAR PAGO</button>
+            <button onclick="window.closeDepositModal()" style="margin-top:15px; background:none; border:none; color:#666; cursor:pointer;">Cancelar</button>
         </div>
     </div>
 
-    <div id="game-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; flex-direction:column; align-items:center; justify-content:center;">
+    <div id="profileModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2000; align-items:center; justify-content:center;">
+        <div class="modal-content" style="background:#111; padding:30px; border:2px solid var(--blood); width:90%; max-width:450px; border-radius:8px; position:relative;">
+            <span onclick="window.closeProfileModal()" style="position:absolute; top:10px; right:15px; color:#666; cursor:pointer; font-size:1.5rem;">&times;</span>
+            <h2 style="color:var(--blood); font-family:'Orbitron'; text-align:center; margin-top:0;">EXPEDIENTE NINJA</h2>
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="width:80px; height:80px; background:#000; border:2px solid var(--gold); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:30px; color:var(--gold);">
+                    <i class="fas fa-user-secret"></i>
+                </div>
+                <h3 id="profName" style="color:white; margin:0;">...</h3>
+                <p id="profEmail" style="color:#666; font-size:0.9rem; margin:5px 0;">...</p>
+            </div>
+            <div style="background:#1a1a1a; padding:15px; border-radius:6px; border:1px solid #333; margin-bottom:15px;">
+                <label style="color:var(--gold); font-size:0.7rem; font-family:'Orbitron';">TU ENLACE DE RECLUTAMIENTO</label>
+                <div style="display:flex; gap:10px; margin-top:5px;">
+                    <input type="text" id="referralLink" readonly style="flex:1; background:#000; border:1px solid #444; color:#fff; padding:8px; font-size:0.8rem;">
+                    <button onclick="window.copyReferral()" style="background:var(--blood); border:none; color:white; padding:0 15px; cursor:pointer; font-weight:bold;">COPIAR</button>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; text-align:center;">
+                <div><span style="display:block; color:#666; font-size:0.7rem;">RANGO</span><strong id="profLevel" style="color:white;">...</strong></div>
+                <div><span style="display:block; color:#666; font-size:0.7rem;">REFERIDOS</span><strong id="profRefCount" style="color:white;">0</strong></div>
+                <div><span style="display:block; color:#666; font-size:0.7rem;">GANANCIAS</span><strong id="profRefEarn" style="color:#10b981;">$0.00</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="withdrawModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2000; align-items:center; justify-content:center;">
+        <div class="modal-content" style="background:#111; padding:30px; border:2px solid #10b981; width:90%; max-width:450px; border-radius:8px; position:relative;">
+            <span onclick="window.closeWithdrawModal()" style="position:absolute; top:10px; right:15px; color:#666; cursor:pointer; font-size:1.5rem;">&times;</span>
+            <h2 style="color:#10b981; font-family:'Orbitron'; text-align:center; margin-top:0;">BÓVEDA DE RETIRO</h2>
+            <div style="display:flex; border-bottom:1px solid #333; margin-bottom:20px;">
+                <button onclick="window.showTab('harvest')" id="tabHarvest" style="flex:1; background:none; border:none; color:white; padding:10px; border-bottom:2px solid #10b981; cursor:pointer;">COSECHAR CICLO</button>
+                <button onclick="window.showTab('bank')" id="tabBank" style="flex:1; background:none; border:none; color:#666; padding:10px; cursor:pointer;">RETIRAR A BANCO</button>
+            </div>
+            <div id="viewHarvest">
+                <p style="color:#ccc; text-align:center;">Mueve tus ganancias del ciclo activo a tu saldo principal.</p>
+                <div style="text-align:center; margin:20px 0;">
+                    <span style="color:#666; font-size:0.8rem;">DISPONIBLE</span>
+                    <div id="harvestAmount" style="font-size:2rem; color:#10b981; font-family:'Orbitron';">$0.00</div>
+                </div>
+                <button onclick="window.doHarvest()" class="btn-ninja-primary" style="width:100%; background:#10b981; color:black;">RECOLECTAR GANANCIAS</button>
+            </div>
+            <div id="viewBank" style="display:none;">
+                <p style="color:#ccc; text-align:center; font-size:0.9rem;">Solicita el envío de tu Saldo Principal a tu cuenta externa.</p>
+                <input type="number" id="outAmount" placeholder="Monto a retirar ($)" style="width:100%; padding:10px; margin-bottom:10px; background:#000; border:1px solid #444; color:white;">
+                <input type="text" id="outAlias" placeholder="Tu CBU / ALIAS / MP" style="width:100%; padding:10px; margin-bottom:20px; background:#000; border:1px solid #444; color:white;">
+                <button onclick="window.doPayout()" class="btn-ninja-primary" style="width:100%;">SOLICITAR PAGO</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; flex-direction:column; align-items:center; justify-content:center;">
         <button onclick="window.closeGame()" style="align-self:flex-end; margin-right:5%; margin-bottom:10px; background:var(--blood); border:none; color:white; padding:10px 20px; font-family:'Orbitron'; cursor:pointer;">CERRAR SIMULACIÓN X</button>
         <iframe id="game-frame" src="" style="width:90%; height:80%; border:2px solid var(--gold); background:black;"></iframe>
     </div>
 
-    <div id="levelModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; align-items:center; justify-content:center;">
+    <div id="levelModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; align-items:center; justify-content:center;">
         <div style="background:#111; padding:30px; border:2px solid var(--gold); max-width:500px; width:90%; text-align:center;">
             <h2 style="color:var(--gold); font-family:'Orbitron';">FORJAR DESTINO</h2>
             <div id="levelButtonsContainer" style="margin-top:20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;"></div>
@@ -152,5 +198,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="js/app.js"></script> <script type="module" src="js/dashboard.js"></script> </body>
+    <script src="js/app.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
+</body>
 </html>
