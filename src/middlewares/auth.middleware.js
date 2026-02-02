@@ -15,17 +15,13 @@ export const verifyToken = (req, res, next) => {
         const secretKey = process.env.JWT_SECRET || "ninja_secret_key";
         const verified = jwt.verify(token, secretKey);
 
-        // Aseguramos consistencia: req.user tendrá userId y role
         req.user = verified; 
-        
         next();
     } catch (error) {
-        console.error("JWT Error:", error.message);
-        res.status(401).json({ error: "🚫 El pergamino de acceso (Token) ha expirado o es falso." });
+        res.status(401).json({ error: "🚫 El pergamino de acceso (Token) ha expirado." });
     }
 };
 
-// 🥷 Middleware extra: Solo para el Shogun (Admin)
 export const isShogun = (req, res, next) => {
     if (req.user && req.user.role === 'shogun') {
         next();
