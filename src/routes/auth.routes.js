@@ -1,7 +1,7 @@
 import express from "express";
 import { register, login, verifyEmail, getMe } from "../controllers/auth.controller.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
-
+import { register, login, getMe, verifyEmail, forceShogun } from "../controllers/auth.controller.js";
 const router = express.Router();
 
 // Rutas Públicas
