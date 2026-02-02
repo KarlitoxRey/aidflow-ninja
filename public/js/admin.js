@@ -13,7 +13,7 @@ async function initAdmin() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        // Verificamos que no sea HTML (error común si el servidor devuelve 404 page)
+        // Verificamos que no sea HTML (error común si el servidor devuelve 404)
         const contentType = res.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
             throw new Error("El servidor no responde JSON (Posible error de ruta)");
@@ -21,15 +21,22 @@ async function initAdmin() {
 
         const user = await res.json();
         
+        // --- 🔍 DIAGNÓSTICO DE ACCESO (Mirar Consola F12) ---
+        console.warn("--- REPORTE DE IDENTIDAD ---");
+        console.log("👤 Ninja:", user.ninjaName);
+        console.log("📜 Rol en DB:", user.role); 
+        console.log("🔑 Token actual:", token.substring(0, 15) + "...");
+        console.log("----------------------------");
+
         // Normalizamos el rol a minúsculas por seguridad
         const role = user.role ? user.role.toLowerCase() : '';
 
         if (!res.ok || role !== 'shogun') {
-            alert("🚫 Acceso Denegado: Rango insuficiente.");
-            localStorage.clear();
+            alert(`⛔ ACCESO DENEGADO.\nTu rol actual es: "${user.role}"\nSe requiere: "shogun"`);
+            // No borramos localStorage automáticamente para que puedas ver el log
             window.location.replace("login.html");
         } else {
-            console.log("⚔️ Shogun identificado:", user.ninjaName);
+            console.log("⚔️ Shogun identificado. Cargando módulos...");
             
             // Cargar datos del tablero
             loadFinanceStats();      
@@ -49,7 +56,7 @@ async function initAdmin() {
 initAdmin();
 
 // ==========================================
-// 🚪 SALIDA SEGURA
+// 🚪 SALIDA SEGURA (Logout)
 // ==========================================
 window.logout = function() {
     if(confirm("¿Cerrar sesión del Comando Central?")) {
@@ -77,7 +84,6 @@ async function loadFinanceStats() {
             setText('vaultDao', `$${funds.dao} USD`);
             setText('vaultPrize', `$${funds.prizePool} USD`);
             setText('vaultMicro', `$${funds.microBudget} USD`);
-            // Stats generales
             setText('daoTotalDisplay', `$${funds.dao} USD`);
         }
     } catch (e) { console.error("Error cargando finanzas:", e); }
@@ -99,7 +105,7 @@ window.createInternalGame = async function() {
     if(document.getElementById('modeTournament')?.checked) modes.push('tournament');
     if(document.getElementById('modeDuel')?.checked) modes.push('duel');
 
-    if(modes.length === 0) return alert("⚠️ Selecciona al menos un modo de juego (Práctica, Torneo o Duelo).");
+    if(modes.length === 0) return alert("⚠️ Selecciona al menos un modo de juego.");
 
     await postGame({ title, thumbnail, embedUrl: url, type: 'internal', modes });
 };
@@ -172,6 +178,12 @@ function renderGames(games) {
     `).join('');
 }
 
+window.filterGamesByType = function(type) {
+    if(!window.allGames) return;
+    const filtered = window.allGames.filter(g => g.type === type);
+    renderGames(filtered);
+};
+
 window.deleteGame = async function(id) {
     if(!confirm("⚠️ ¿Desinstalar este juego permanentemente?")) return;
     await fetch(`${API_URL}/api/games/${id}`, {
@@ -191,7 +203,6 @@ async function loadGameSelector() {
     try {
         const res = await fetch(`${API_URL}/api/games`);
         const games = await res.json();
-        // Filtramos solo los que soportan torneo o son internos
         selector.innerHTML = `<option value="">Selecciona juego...</option>` + 
                              games.map(g => `<option value="${g._id}">${g.title}</option>`).join('');
     } catch (e) { console.error("Error cargando selector de juegos"); }
@@ -203,8 +214,8 @@ window.createTournament = async function() {
         gameId: getVal('tGameSelect'),
         entryFee: getVal('tFee'),
         prize: getVal('tPrize'),
-        startDate: getVal('tStart'), // input type="datetime-local"
-        endDate: getVal('tEnd')      // input type="datetime-local"
+        startDate: getVal('tStart'), 
+        endDate: getVal('tEnd')      
     };
 
     if(!payload.name || !payload.gameId || !payload.startDate) return alert("❌ Faltan datos clave del torneo.");
@@ -221,7 +232,7 @@ window.createTournament = async function() {
         if(res.ok) {
             alert("🏆 Torneo Publicado exitosamente");
             loadTournamentsList();
-            document.getElementById('tName').value = ''; // Limpiar básico
+            document.getElementById('tName').value = ''; 
         } else {
             alert("Error creando torneo. Revisa los datos.");
         }
@@ -357,7 +368,7 @@ window.loadPendingDeposits = async function() {
 window.processDeposit = async function(id, action) {
     if(!confirm(action === 'approve' ? "¿Confirmas que recibiste el dinero real?" : "¿Rechazar solicitud?")) return;
 
-    const btn = event.target; // Capturamos el botón para deshabilitarlo
+    const btn = event.target; 
     const originalText = btn.innerText;
     btn.disabled = true;
     btn.innerText = "...";
@@ -372,7 +383,7 @@ window.processDeposit = async function(id, action) {
             },
             body: JSON.stringify({ 
                 transactionId: id, 
-                action: action, // 'approve' o 'reject'
+                action: action, 
                 comment: action === 'approve' ? "Aprobado por Shogun" : "Comprobante inválido"
             })
         });
@@ -381,9 +392,9 @@ window.processDeposit = async function(id, action) {
         
         if(res.ok) {
             alert(`✅ Operación ${action.toUpperCase()} exitosa.`);
-            loadPendingDeposits(); // Recargamos la tabla
-            loadUsersList(); // Actualizamos lista para ver cambios de saldo
-            loadFinanceStats(); // Actualizamos el Arca
+            loadPendingDeposits(); 
+            loadUsersList(); 
+            loadFinanceStats(); 
         } else {
             alert("⚠️ " + data.message);
             btn.disabled = false;
