@@ -1,27 +1,17 @@
 import mongoose from "mongoose";
-import { registerMicropayment } from "../utils/micropayment.js";
 
-const duelSchema = new mongoose.Schema({
-  playerOne: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  playerTwo: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  betAmount: { type: Number, required: true },
-  winner: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-  status: { type: String, enum: ["pending", "active", "finished"], default: "pending" },
+const DuelSchema = new mongoose.Schema({
+    challenger: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    opponent: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // Se llena al aceptar
+    betAmount: { type: Number, required: true },
+    status: { 
+        type: String, 
+        enum: ["waiting", "active", "completed", "cancelled"], 
+        default: "waiting" 
+    },
+    winner: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    roomCode: { type: String, unique: true }, // Para vincular el socket del juego
+    feeAmount: { type: Number, default: 0 }    // Lo que se quedó el Clan
 }, { timestamps: true });
 
-async function payDuelEntry(user, duel) {
-  try {
-    const micropayment = await registerMicropayment({
-      userId: user._id,
-      amount: 10,
-      eventType: "duelo",
-      referenceId: duel._id.toString(),
-      notes: "Entrada duelo diario"
-    });
-    console.log(micropayment ? "Micropago registrado ✅" : "Ya registró su micropago diario. Participación permitida.");
-  } catch (err) { throw err; }
-}
-
-const Duel = mongoose.model("Duel", duelSchema);
-export default Duel;
-export { payDuelEntry };
+export default mongoose.model("Duel", DuelSchema);
