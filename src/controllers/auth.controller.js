@@ -9,6 +9,7 @@ const generateReferralCode = (name) => {
     return `${cleanName}-${randomNum}`;
 };
 
+// 1. REGISTRO
 export const register = async (req, res) => {
     try {
         let { ninjaName, email, password, referralCodeInput } = req.body;
@@ -31,17 +32,17 @@ export const register = async (req, res) => {
         const newUser = new User({
             ninjaName,
             email,
-            password, // El hash se debe manejar en el Schema (Middleware pre-save)
+            password, 
             referralCode: generateReferralCode(ninjaName),
             referredBy: referrerId,
-            isVerified: true, // Para desarrollo
+            isVerified: true, // Dejar en true para evitar bloqueo de email en MVP
             balance: 0,
-            role: 'ninja' // Rol por defecto
+            role: 'ninja'
         });
 
         const savedUser = await newUser.save();
 
-        // Si hay referente, actualizamos sus stats de una sola vez
+        // Si hay referente, actualizamos sus stats
         if (referrerId) {
             await User.findByIdAndUpdate(referrerId, {
                 $push: { referrals: savedUser._id },
@@ -57,6 +58,7 @@ export const register = async (req, res) => {
     }
 };
 
+// 2. LOGIN
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -64,6 +66,7 @@ export const login = async (req, res) => {
         
         if (!user) return res.status(400).json({ error: "Credenciales inválidas." });
 
+        // Usamos el método del modelo si existe, sino bcrypt directo
         const validPass = await bcrypt.compare(password, user.password);
         if (!validPass) return res.status(400).json({ error: "Credenciales inválidas." });
 
@@ -79,20 +82,44 @@ export const login = async (req, res) => {
                 id: user._id,
                 ninjaName: user.ninjaName,
                 role: user.role,
-                balance: user.balance
+                balance: user.balance,
+                referralCode: user.referralCode
             }
         });
     } catch (error) {
+        console.error("Login Error:", error);
         res.status(500).json({ error: "Falla en la cámara de autenticación." });
     }
 };
 
+// 3. OBTENER PERFIL (ME)
 export const getMe = async (req, res) => {
     try {
-        const user = await User.findById(req.user.userId).select("-password");
+        const user = await User.findById(req.user.userId)
+            .select("-password")
+            .populate("activeCycle"); // Traemos info del ciclo si existe
+            
         if (!user) return res.status(404).json({ error: "Ninja no encontrado." });
         res.json(user);
     } catch (error) {
         res.status(500).json({ error: "Error de conexión con el Templo." });
+    }
+};
+
+// 4. VERIFICAR EMAIL (LA FUNCIÓN QUE FALTABA)
+export const verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.body; // O req.params, según tu ruta
+        const user = await User.findOne({ verificationToken: token });
+
+        if (!user) return res.status(400).json({ error: "Token inválido o expirado." });
+
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        await user.save();
+
+        res.json({ message: "Email verificado. Tu camino ha comenzado." });
+    } catch (error) {
+        res.status(500).json({ error: "Error al verificar." });
     }
 };
