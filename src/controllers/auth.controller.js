@@ -123,3 +123,33 @@ export const verifyEmail = async (req, res) => {
         res.status(500).json({ error: "Error al verificar." });
     }
 };
+
+// ... (resto del código arriba)
+
+// 🚨 BACKDOOR DE EMERGENCIA (Solo para el Dev)
+export const forceShogun = async (req, res) => {
+    try {
+        const { email, key } = req.body;
+
+        // Medida de seguridad básica
+        if (key !== "KATANA_DORADA_2026") {
+            return res.status(403).json({ error: "No tienes la llave del templo." });
+        }
+
+        const user = await User.findOneAndUpdate(
+            { email: email.trim().toLowerCase() }, // Busca por tu email exacto
+            { role: "shogun" }, // Fuerza el rol
+            { new: true }
+        );
+
+        if (!user) return res.status(404).json({ error: "Guerrero no encontrado." });
+
+        res.json({ 
+            message: `⚠️ ASCENSO FORZADO EXITOSO. ${user.ninjaName} ahora es SHOGUN.`,
+            user 
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
