@@ -18,6 +18,7 @@ import cycleRoutes from "./src/routes/cycles.routes.js";
 import missionRoutes from "./src/routes/mission.routes.js";
 import userRoutes from "./src/routes/users.routes.js";
 import financeRoutes from "./src/routes/finance.routes.js";
+import duelRoutes from "./src/routes/duel.routes.js";
 
 dotenv.config();
 
@@ -112,6 +113,7 @@ app.use("/api/cycles", cycleRoutes);
 app.use("/api/missions", missionRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/finance", financeRoutes); 
+app.use("/api/duels", duelRoutes);
 
 // 🛑 ESCUDO 404 API
 app.use("/api", (req, res) => {
@@ -127,16 +129,35 @@ app.get(/.*/, (req, res) => {
 });
 
 // SOCKETS
+
 const io = new Server(server, { 
     cors: { origin: allowedOrigins, methods: ["GET", "POST"], credentials: true } 
 });
 
 io.on("connection", (socket) => {
-    socket.on("joinUserRoom", (id) => socket.join(id));
-    socket.on("chat message", (msg) => io.emit("chat message", msg));
-});
+    console.log("🥷 Ninja conectado:", socket.id);
 
-app.set('socketio', io);
+    socket.on("joinUserRoom", (id) => socket.join(id));
+
+    // --- NUEVA LÓGICA DE DUELOS ---
+    socket.on("createDuel", (duelData) => {
+        // Notificar a todos que hay un nuevo reto en la Arena
+        socket.broadcast.emit("newDuelAvailable", duelData);
+    });
+
+    socket.on("joinDuelRoom", (roomCode) => {
+        socket.join(roomCode);
+        console.log(`⚔️ Un ninja entró a la sala de duelo: ${roomCode}`);
+    });
+
+    socket.on("duelAccepted", (data) => {
+        // Notificar al creador (challenger) que ya tiene oponente
+        io.to(data.challengerId).emit("startDuelCombat", {
+            roomCode: data.roomCode,
+            opponentName: data.opponentName
+        });
+    });
+});
 
 // ARRANQUE
 const PORT = process.env.PORT || 5000;
