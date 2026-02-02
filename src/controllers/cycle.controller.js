@@ -4,80 +4,74 @@ import Dao from "../models/Dao.js";
 
 export const startCycle = async (req, res) => {
   try {
-    // Esto ahora funcionará porque el middleware setea req.user
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: "Ninja no encontrado" });
+    // IMPORTANTE: Asegurate que tu authMiddleware use 'userId'
+    const user = await User.findById(req.user.userId); 
+    if (!user) return res.status(404).json({ error: "Ninja no encontrado en el templo." });
 
     if (user.activeCycle) {
-      return res.status(400).json({ message: "Ya tenés un combate (ciclo) en curso." });
+      return res.status(400).json({ error: "Ya tienes un combate (ciclo) en curso." });
     }
 
-    // 1. Configuración de Costos
+    // Configuración de niveles (Escalabilidad Ninja)
     const levels = {
-      1: { cost: 10, target: 50 },
-      2: { cost: 20, target: 100 },
-      3: { cost: 40, target: 200 }
+      0: { cost: 10, target: 50 }, // Nivel inicial
+      1: { cost: 20, target: 100 },
+      2: { cost: 40, target: 200 }
     };
 
-    const config = levels[user.level || 1];
-    if (!config) return res.status(400).json({ message: "Nivel de usuario inválido" });
-
-    // 2. Validación de Saldo
+    const config = levels[user.level || 0];
+    
     if (user.balance < config.cost) {
-      return res.status(400).json({ message: `Necesitás NC ${config.cost} para iniciar Nivel ${user.level}` });
+      return res.status(400).json({ 
+        error: `Balance insuficiente. Necesitas NC ${config.cost} para el Nivel ${user.level || 0}.` 
+      });
     }
 
-    // 3. CÁLCULO DE DISTRIBUCIÓN (40/30/30)
+    // 💰 DISTRIBUCIÓN 40/30/30
     const daoShare = config.cost * 0.40;
     const poolShare = config.cost * 0.30;
     const devShare = config.cost * 0.30;
 
-    // Ejecutar Cobro
-    user.balance -= config.cost;
-
-    // Crear Ciclo
+    // Crear el Ciclo
     const cycle = await Cycle.create({
       user: user._id,
-      level: user.level,
+      level: user.level || 0,
       targetAmount: config.target,
       earnedAmount: 0,
       cost: config.cost,
       daoContribution: daoShare,
-      micropaymentPool: poolShare,
-      maintenanceFee: devShare, 
       status: "active"
     });
 
-    // 4. Alimentar DAO
-    await Dao.findOneAndUpdate(
-      { isTreasuryRecord: true },
-      { $inc: { totalReserve: daoShare } },
-      { upsert: true }
-    );
-
+    // Actualizar Guerrero
+    user.balance -= config.cost;
     user.activeCycle = cycle._id;
     await user.save();
 
-    res.json({
-      message: `¡Nivel ${user.level} iniciado! Aportes: DAO $${daoShare} | Misiones $${poolShare}`,
+    // Alimentar la Gran Tesorería (DAO)
+    await Dao.findOneAndUpdate(
+      { isTreasuryRecord: true },
+      { $inc: { totalReserve: daoShare, poolMicropayments: poolShare } },
+      { upsert: true, new: true }
+    );
+
+    res.status(201).json({
+      message: "Ciclo forjado con éxito.",
       cycle,
-      newBalance: user.balance
+      balance: user.balance
     });
 
   } catch (error) {
-    console.error("Start cycle error:", error);
-    res.status(500).json({ message: "Error al iniciar ciclo económico" });
+    console.error("❌ Error Cycle Start:", error);
+    res.status(500).json({ error: "Falla en la cámara de ciclos." });
   }
 };
 
 export const getActiveCycle = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).populate("activeCycle");
-    if (!user || !user.activeCycle) {
-      return res.json({ cycle: null });
-    }
-    res.json({ cycle: user.activeCycle });
+    const user = await User.findById(req.user.userId).populate("activeCycle");
+    res.json({ cycle: user?.activeCycle || null });
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener ciclo activo" });
+    res.status(500).json({ error: "Error al consultar el oráculo." });
   }
 };
