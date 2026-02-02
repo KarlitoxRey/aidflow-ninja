@@ -8,8 +8,11 @@ let socket = null;
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
     await validateSession();
-    setupEventListeners();
-    initSocialMissionLogic();
+    // Solo si hay usuario, activamos listeners
+    if (currentUser) {
+        setupEventListeners();
+        initSocialMissionLogic();
+    }
 });
 
 async function validateSession() {
@@ -30,9 +33,6 @@ async function validateSession() {
         initChat(); // Inicializa el socket
         initDuelArena(); // <--- ⚔️ INICIA LA ESCUCHA DE DUELOS
         
-        // Cargar duelos existentes si hubiera un endpoint para ello (opcional)
-        // loadActiveDuels(); 
-
         const loader = document.getElementById("loadingScreen");
         if(loader) loader.style.display = "none";
 
@@ -59,11 +59,11 @@ function renderUserInterface() {
     // 🔥 Mostrar Fichas
     safeText("tokenBalance", currentUser.tournamentTokens || 0); 
 
-    safeText("daoFund", formatMoney(currentUser.daoBalance || 0));   
+    safeText("daoFund", formatMoney(currentUser.daoBalance || 0));    
     safeText("prizePool", formatMoney(currentUser.poolBalance || 0));
 
     initDailyMissionBtn();
-    applyAccessLogic();
+    applyAccessLogic(); // <--- AQUI SE EJECUTA LA LÓGICA DE PODER
 }
 
 function formatMoney(amount) {
@@ -194,7 +194,7 @@ function renderizarDueloEnLista(duel) {
 
     const card = document.createElement('div');
     card.id = `duel-${duel._id}`;
-    card.className = "duel-card fade-in"; // Asegurate de tener una clase fade-in en CSS para efecto
+    card.className = "duel-card fade-in"; 
     card.style = `
         background: #0f0f0f; 
         border-left: 3px solid var(--blood); 
@@ -239,7 +239,7 @@ window.aceptarDuelo = async (duelId) => {
         const data = await res.json();
         if (res.ok) {
             // Actualizar balance local
-            currentUser.balance -= data.duel.betAmount; // Asumiendo que data trae el duelo actualizado
+            currentUser.balance -= data.duel.betAmount; 
             safeText("headerBalance", formatMoney(currentUser.balance));
 
             // Notificar al server para que avise al creador
@@ -435,8 +435,42 @@ function initChat() {
     }
 }
 
+// ==========================================
+// 🚨 LÓGICA DE ACCESO (ADMIN VS USER) - ¡INTEGRADA!
+// ==========================================
 function applyAccessLogic() {
-    // Espacio para lógica futura
+    // Si el rol es shogun, inyectamos el botón de mando
+    if (currentUser && currentUser.role === 'shogun') {
+        console.log("⚔️ Shogun detectado en el Dojo.");
+        
+        // Evitamos duplicar el botón si la función se llama varias veces
+        if(document.getElementById("btnAdminFloating")) return;
+
+        const btnAdmin = document.createElement("button");
+        btnAdmin.id = "btnAdminFloating";
+        btnAdmin.innerText = "⚙️ COMANDO SHOGUN";
+        btnAdmin.className = "btn-ninja-primary"; // Clase existente
+        
+        // Estilos forzados para garantizar visibilidad
+        Object.assign(btnAdmin.style, {
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            zIndex: "9999",
+            boxShadow: "0 0 15px var(--red)",
+            border: "2px solid var(--gold)",
+            padding: "12px 24px",
+            fontWeight: "bold",
+            fontSize: "12px",
+            cursor: "pointer"
+        });
+        
+        btnAdmin.onclick = () => {
+            window.location.href = "admin.html";
+        };
+        
+        document.body.appendChild(btnAdmin);
+    }
 }
 
 // ==========================================
