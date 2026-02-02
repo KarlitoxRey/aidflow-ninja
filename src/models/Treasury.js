@@ -1,19 +1,17 @@
+
 import mongoose from "mongoose";
 
 const TreasurySchema = new mongoose.Schema({
     identifier: { type: String, default: "MASTER_VAULT", unique: true },
-    
+     
     // 💵 CAPA FIAT (Distribución de los $10 USD)
     funds: {
-        profit: { type: Number, default: 0 },      // Tu ganancia y mantenimiento (30%)
-        dao: { type: Number, default: 0 },         // Fondo Comunitario (10%)
-        microBudget: { type: Number, default: 0 }, // Presupuesto para pagos diarios (30%)
-        prizePool: { type: Number, default: 0 }    // Pozo para premios de torneos (30%)
+        profit: { type: Number, default: 0 },       // 30% Mantenimiento
+        dao: { type: Number, default: 0 },          // 10% DAO
+        microBudget: { type: Number, default: 0 },  // 30% Micropagos
+        prizePool: { type: Number, default: 0 }     // 30% Premios
     },
-
-    // 🪙 CAPA ECONOMÍA INTERNA
-    circulatingSupply: { type: Number, default: 0 }, // Total de Ninja Coins emitidas
-
+    circulatingSupply: { type: Number, default: 0 }, // Total de NC en manos de ninjas
     lastUpdated: { type: Date, default: Date.now }
 });
 
