@@ -64,6 +64,26 @@
             </button>
         </div>
 
+         <section class="card-dark" style="margin-top: 20px; border: 1px solid var(--shogun-gold);">
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+        <img src="images/icon-duel.png" width="40" alt="Duelo">
+        <h2 class="gold-text" style="font-family: 'Orbitron'; margin: 0;">ARENA DE DUELOS</h2>
+    </div>
+
+    <div class="bet-panel" style="background: #0a0a0a; padding: 20px; border-radius: 8px; border: 1px solid #222;">
+        <p class="muted-text" style="font-size: 0.9rem; margin-bottom: 10px;">PREPARA TU APUESTA (NC)</p>
+        <div style="display: flex; gap: 10px;">
+            <input type="number" id="betAmount" value="10" min="5" step="5" 
+                   style="background: #000; border: 1px solid var(--blood); color: white; padding: 10px; flex: 1; font-family: 'Orbitron';">
+            <button onclick="crearReto()" class="btn-ninja-primary" style="padding: 10px 20px;">PUBLICAR RETO</button>
+        </div>
+        <p style="font-size: 0.75rem; color: #666; margin-top: 8px;">* El Clan cobra un 10% de comisión sobre el pozo total.</p>
+    </div>
+
+    <div id="duelsList" style="margin-top: 20px; display: grid; gap: 10px;">
+        <p class="muted-text text-center">Buscando oponentes en las sombras...</p>
+    </div>
+</section>
         <h2 class="section-title">⚔️ OPERACIONES TÁCTICAS</h2>
         
         <div class="mission-card">
