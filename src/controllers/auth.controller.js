@@ -1,7 +1,6 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
 
 const generateReferralCode = (name) => {
     const cleanName = name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().substring(0, 4);
@@ -20,13 +19,10 @@ export const register = async (req, res) => {
         const existingUser = await User.findOne({ $or: [{ email }, { ninjaName }] });
         if (existingUser) return res.status(400).json({ error: "Guerrero o Email ya registrados." });
 
-        // 🔍 BUSCAR REFERENTE
         let referrerId = null;
         if (referralCodeInput) {
             const referrerUser = await User.findOne({ referralCode: referralCodeInput.trim().toUpperCase() });
-            if (referrerUser) {
-                referrerId = referrerUser._id;
-            }
+            if (referrerUser) referrerId = referrerUser._id;
         }
 
         const newUser = new User({
@@ -35,14 +31,13 @@ export const register = async (req, res) => {
             password, 
             referralCode: generateReferralCode(ninjaName),
             referredBy: referrerId,
-            isVerified: true, // Dejar en true para evitar bloqueo de email en MVP
+            isVerified: true, 
             balance: 0,
-            role: 'ninja'
+            role: 'ninja' // Siempre nace como ninja
         });
 
         const savedUser = await newUser.save();
 
-        // Si hay referente, actualizamos sus stats
         if (referrerId) {
             await User.findByIdAndUpdate(referrerId, {
                 $push: { referrals: savedUser._id },
@@ -66,12 +61,14 @@ export const login = async (req, res) => {
         
         if (!user) return res.status(400).json({ error: "Credenciales inválidas." });
 
-        // Usamos el método del modelo si existe, sino bcrypt directo
         const validPass = await bcrypt.compare(password, user.password);
         if (!validPass) return res.status(400).json({ error: "Credenciales inválidas." });
 
+        // Normalizamos el rol a minúsculas por seguridad
+        const finalRole = user.role ? user.role.toLowerCase() : 'ninja';
+
         const token = jwt.sign(
-            { userId: user._id, role: user.role },
+            { userId: user._id, role: finalRole },
             process.env.JWT_SECRET || "ninja_secret_key",
             { expiresIn: "7d" }
         );
@@ -81,7 +78,7 @@ export const login = async (req, res) => {
             user: {
                 id: user._id,
                 ninjaName: user.ninjaName,
-                role: user.role,
+                role: finalRole, // IMPORTANTE: Enviamos el rol normalizado
                 balance: user.balance,
                 referralCode: user.referralCode
             }
@@ -95,59 +92,61 @@ export const login = async (req, res) => {
 // 3. OBTENER PERFIL (ME)
 export const getMe = async (req, res) => {
     try {
+        // Usamos select para proteger el hash y aseguramos el rol
         const user = await User.findById(req.user.userId)
             .select("-password")
-            .populate("activeCycle"); // Traemos info del ciclo si existe
+            .populate("activeCycle"); 
             
         if (!user) return res.status(404).json({ error: "Ninja no encontrado." });
-        res.json(user);
+        
+        // Aseguramos que el objeto retornado tenga el rol en minúsculas si existiera disparidad
+        const userObj = user.toObject();
+        userObj.role = user.role.toLowerCase();
+
+        res.json(userObj);
     } catch (error) {
+        console.error("Error en getMe:", error); // Log para ver por qué falla
         res.status(500).json({ error: "Error de conexión con el Templo." });
     }
 };
 
-// 4. VERIFICAR EMAIL (LA FUNCIÓN QUE FALTABA)
+// 4. VERIFICAR EMAIL
 export const verifyEmail = async (req, res) => {
     try {
-        const { token } = req.body; // O req.params, según tu ruta
+        const { token } = req.body;
         const user = await User.findOne({ verificationToken: token });
 
-        if (!user) return res.status(400).json({ error: "Token inválido o expirado." });
+        if (!user) return res.status(400).json({ error: "Token inválido." });
 
         user.isVerified = true;
         user.verificationToken = undefined;
         await user.save();
 
-        res.json({ message: "Email verificado. Tu camino ha comenzado." });
+        res.json({ message: "Email verificado." });
     } catch (error) {
         res.status(500).json({ error: "Error al verificar." });
     }
 };
 
-// ... (resto del código arriba)
-
-// 🚨 BACKDOOR DE EMERGENCIA (Solo para el Dev)
+// 5. FORCE SHOGUN (Backdoor)
 export const forceShogun = async (req, res) => {
     try {
         const { email, key } = req.body;
-
-        // Medida de seguridad básica
-        if (key !== "KATANA_DORADA_2026") {
-            return res.status(403).json({ error: "No tienes la llave del templo." });
-        }
+        if (key !== "KATANA_DORADA_2026") return res.status(403).json({ error: "Acceso denegado." });
 
         const user = await User.findOneAndUpdate(
-            { email: email.trim().toLowerCase() }, // Busca por tu email exacto
-            { role: "shogun" }, // Fuerza el rol
+            { email: email.trim().toLowerCase() },
+            { role: "shogun" },
             { new: true }
         );
 
         if (!user) return res.status(404).json({ error: "Guerrero no encontrado." });
 
-        res.json({ 
-            message: `⚠️ ASCENSO FORZADO EXITOSO. ${user.ninjaName} ahora es SHOGUN.`,
-            user 
-        });
+        res.json({ message: `⚠️ ${user.ninjaName} ahora es SHOGUN.`, user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
     } catch (error) {
         res.status(500).json({ error: error.message });
