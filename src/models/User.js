@@ -59,4 +59,14 @@ UserSchema.pre("save", async function (next) {
     next();
 });
 
+// Cálculo automático de progreso del ciclo
+UserSchema.virtual('cycleProgress').get(function() {
+    if (!this.cycle.active || this.cycle.target === 0) return 0;
+    return Math.min(100, (this.cycle.earnings / this.cycle.target) * 100);
+});
+
+// Asegurar que los virtuales se incluyan en el JSON enviado al front
+UserSchema.set('toJSON', { virtuals: true });
+UserSchema.set('toObject', { virtuals: true });
+
 export default mongoose.model("User", UserSchema);
