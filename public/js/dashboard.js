@@ -27,7 +27,11 @@ async function validateSession() {
         
         renderUserInterface();
         loadUserGames(); 
-        initChat();      
+        initChat(); // Inicializa el socket
+        initDuelArena(); // <--- ⚔️ INICIA LA ESCUCHA DE DUELOS
+        
+        // Cargar duelos existentes si hubiera un endpoint para ello (opcional)
+        // loadActiveDuels(); 
 
         const loader = document.getElementById("loadingScreen");
         if(loader) loader.style.display = "none";
@@ -52,8 +56,7 @@ function renderUserInterface() {
     // Balances
     safeText("headerBalance", formatMoney(currentUser.balance));
     
-    // 🔥 NUEVA LÍNEA: Mostrar Fichas
-    // Si no tiene fichas (undefined), mostramos 0
+    // 🔥 Mostrar Fichas
     safeText("tokenBalance", currentUser.tournamentTokens || 0); 
 
     safeText("daoFund", formatMoney(currentUser.daoBalance || 0));   
@@ -94,11 +97,9 @@ function setupEventListeners() {
         };
     }
 
-    // FIX: Referenciando funciones globales correctamente
-    document.getElementById("menuProfile")?.addEventListener("click", () => alert("🚧 Perfil de Ninja en construcción"));
-    document.getElementById("menuWithdraw")?.addEventListener("click", () => window.procesarRetiro());
+    document.getElementById("menuProfile")?.addEventListener("click", () => window.openProfileModal());
+    document.getElementById("menuWithdraw")?.addEventListener("click", () => window.openWithdrawModal());
     
-    // FIX LOGOUT: Siempre limpia y va al index real (Home)
     document.getElementById("logoutBtn")?.addEventListener("click", (e) => {
         e.preventDefault();
         localStorage.clear();
@@ -107,7 +108,164 @@ function setupEventListeners() {
 }
 
 // ==========================================
-// 3. LÓGICA DE MISIÓN SOCIAL
+// ⚔️ 3. LÓGICA DE DUELOS 1vs1 (NUEVO)
+// ==========================================
+
+function initDuelArena() {
+    // Solo iniciamos si el socket existe (creado en initChat)
+    if (socket) {
+        console.log("⚔️ Arena de Duelos conectada al Socket");
+
+        // Escuchar cuando alguien crea un reto nuevo
+        socket.on("newDuelAvailable", (duel) => {
+            renderizarDueloEnLista(duel);
+        });
+
+        // Escuchar cuando aceptan MI reto o yo acepto uno
+        socket.on("startDuelCombat", (data) => {
+            alert(`⚔️ ¡EN GUARDIA! Rival: ${data.opponentName}`);
+            // Usamos la función global para abrir el juego con el roomCode
+            window.playGame(`games/ninja-combat/?room=${data.roomCode}`); 
+        });
+    }
+}
+
+// Función Global para el botón "PUBLICAR RETO"
+window.crearReto = async () => {
+    const amountInput = document.getElementById('betAmount');
+    if(!amountInput) return;
+    
+    const amount = Number(amountInput.value);
+    const token = localStorage.getItem("token");
+
+    if (amount < 5) return alert("❌ La apuesta mínima es de 5 NC.");
+    if (currentUser.balance < amount) return alert("❌ Oro insuficiente. Necesitas recargar.");
+
+    // Feedback visual inmediato
+    const btn = document.querySelector("button[onclick='crearReto()']");
+    const originalText = btn.innerText;
+    btn.innerText = "FORJANDO...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/api/duels/create`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ amount })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert("⚔️ Reto publicado en la Arena. Esperando rival...");
+            
+            // Emitir al socket para que otros lo vean al instante
+            socket.emit("createDuel", data.duel);
+            
+            // Actualizar balance localmente sin recargar
+            currentUser.balance -= amount;
+            safeText("headerBalance", formatMoney(currentUser.balance));
+        } else {
+            alert(data.error);
+        }
+    } catch (err) {
+        alert("Error al conectar con la Arena.");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+};
+
+// Función para pintar la tarjeta en el HTML
+function renderizarDueloEnLista(duel) {
+    const list = document.getElementById('duelsList');
+    if(!list) return;
+
+    // Limpiar mensaje de "buscando" si existe
+    if (list.innerText.includes("Buscando")) list.innerHTML = '';
+
+    // Evitar duplicados si el socket manda doble señal
+    if (document.getElementById(`duel-${duel._id}`)) return;
+
+    // No mostrar mis propios duelos en la lista de "aceptar"
+    if (currentUser && duel.challenger === currentUser._id) return;
+
+    const card = document.createElement('div');
+    card.id = `duel-${duel._id}`;
+    card.className = "duel-card fade-in"; // Asegurate de tener una clase fade-in en CSS para efecto
+    card.style = `
+        background: #0f0f0f; 
+        border-left: 3px solid var(--blood); 
+        padding: 15px; 
+        margin-bottom: 10px; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        border-radius: 4px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    `;
+    
+    card.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div style="background:#222; padding:8px; border-radius:50%; color:var(--gold);">
+                <i class="fas fa-khanda"></i>
+            </div>
+            <div>
+                <span style="color: var(--gold); font-family: 'Orbitron'; font-weight: bold; font-size: 1.1rem;">${duel.betAmount} NC</span>
+                <p style="font-size: 0.75rem; color: #888; margin: 0;">RETO ABIERTO</p>
+            </div>
+        </div>
+        <button onclick="aceptarDuelo('${duel._id}')" class="btn-ninja-outline" style="padding: 5px 20px; font-size: 0.8rem; border-color:var(--gold); color:var(--gold);">
+            ACEPTAR
+        </button>
+    `;
+    list.prepend(card);
+}
+
+// Función Global para Aceptar
+window.aceptarDuelo = async (duelId) => {
+    if(!confirm("¿Aceptas este duelo a muerte? Tu saldo será descontado.")) return;
+
+    const token = localStorage.getItem("token");
+    
+    try {
+        const res = await fetch(`${API_URL}/api/duels/accept/${duelId}`, {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            // Actualizar balance local
+            currentUser.balance -= data.duel.betAmount; // Asumiendo que data trae el duelo actualizado
+            safeText("headerBalance", formatMoney(currentUser.balance));
+
+            // Notificar al server para que avise al creador
+            socket.emit("duelAccepted", {
+                challengerId: data.duel.challenger,
+                roomCode: data.duel.roomCode,
+                opponentName: currentUser.ninjaName
+            });
+            
+            // Entrar al juego
+            window.playGame(`games/ninja-combat/?room=${data.duel.roomCode}`);
+            
+            // Remover la tarjeta de la lista visualmente
+            const card = document.getElementById(`duel-${duelId}`);
+            if(card) card.remove();
+
+        } else {
+            alert(data.error);
+        }
+    } catch (err) {
+        alert("Error al entrar al combate.");
+    }
+};
+
+// ==========================================
+// 4. MISION SOCIAL, DIARIA Y JUEGOS
 // ==========================================
 function initSocialMissionLogic() {
     const btnShare = document.getElementById("btnShare");
@@ -176,9 +334,6 @@ function initSocialMissionLogic() {
     }
 }
 
-// ==========================================
-// 4. MISION DIARIA Y JUEGOS
-// ==========================================
 function initDailyMissionBtn() {
     const btn = document.getElementById("missionBtn");
     if(!btn) return;
@@ -248,11 +403,12 @@ async function loadUserGames() {
 }
 
 // ==========================================
-// 5. CHAT Y NIVELES
+// 5. CHAT Y SÓCKETS GENERALES
 // ==========================================
 function initChat() {
     if(typeof io === 'undefined') return;
-    socket = io(API_URL);
+    socket = io(API_URL); // ESTE ES EL SOCKET QUE USAMOS PARA DUELOS TAMBIÉN
+    
     const input = document.getElementById("chatInput");
     const send = document.getElementById("sendChatBtn");
     const box = document.getElementById("chatMessages");
@@ -283,7 +439,9 @@ function applyAccessLogic() {
     // Espacio para lógica futura
 }
 
-// FUNCIONES GLOBALES (Sincronizadas con app.js)
+// ==========================================
+// 6. FUNCIONES GLOBALES (VENTANAS Y MODALES)
+// ==========================================
 window.openLevelModal = () => { 
     const m = document.getElementById("levelModal");
     if(m) { m.style.display = "flex"; renderLevelButtons(); }
@@ -360,8 +518,6 @@ window.selectLevel = async (lvl) => {
     } catch(e) { alert("Error al conectar con el servidor."); }
 };
 
-// --- AGREGAR ESTAS FUNCIONES AL FINAL DE dashboard.js O EN EL SCOPE GLOBAL ---
-
 // 1. ABRIR/CERRAR MODAL RECARGA
 window.openDepositModal = () => {
     document.getElementById("depositModal").style.display = "flex";
@@ -398,7 +554,6 @@ window.submitDeposit = async () => {
         if(res.ok) {
             alert("✅ " + data.message);
             closeDepositModal();
-            // Limpiar inputs
             document.getElementById("depAmount").value = "";
             document.getElementById("depRef").value = "";
         } else {
@@ -412,11 +567,21 @@ window.submitDeposit = async () => {
     }
 };
 
-// 3. ABRIR MODAL RETIRO (Por ahora simple alerta o modal similar)
+// 3. ABRIR MODAL RETIRO
 window.openWithdrawModal = () => {
-    alert("🏦 Sistema de Retiros: \n\nPara retirar, envía un mensaje al soporte con tu CBU.\n(Próximamente automático)");
-    // Opcional: Podés crear un withdrawModal igual al de depósito
+    const modal = document.getElementById("withdrawModal");
+    if(modal) {
+        modal.style.display = "flex";
+        // Actualizar monto disponible para cosecha
+        const harvestVal = currentUser.cycle ? currentUser.cycle.earnings : 0;
+        const el = document.getElementById("harvestAmount");
+        if(el) el.innerText = formatMoney(harvestVal);
+    } else {
+        alert("🏦 Función de retiros en construcción.");
+    }
 };
+
+window.closeWithdrawModal = () => document.getElementById("withdrawModal").style.display = "none";
 
 /* ==========================================
    LÓGICA DE PERFIL & REFERIDOS
@@ -424,17 +589,14 @@ window.openWithdrawModal = () => {
 window.openProfileModal = () => {
     document.getElementById("profileModal").style.display = "flex";
     
-    // Llenar datos (currentUser ya está cargado en dashboard.js)
     if(currentUser) {
         document.getElementById("profName").innerText = currentUser.ninjaName;
         document.getElementById("profEmail").innerText = currentUser.email;
         document.getElementById("profLevel").innerText = currentUser.level > 0 ? `NIVEL ${currentUser.level}` : "RONIN";
         
-        // Link de referido
         const link = `${window.location.origin}/register.html?ref=${currentUser.referralCode}`;
         document.getElementById("referralLink").value = link;
 
-        // Stats (Si el backend los manda, sino 0)
         const stats = currentUser.referralStats || { count: 0, totalEarned: 0 };
         document.getElementById("profRefCount").innerText = stats.count;
         document.getElementById("profRefEarn").innerText = formatMoney(stats.totalEarned);
@@ -453,16 +615,6 @@ window.copyReferral = () => {
 /* ==========================================
    LÓGICA DE RETIROS (Tabs y Acciones)
    ========================================== */
-window.openWithdrawModal = () => {
-    document.getElementById("withdrawModal").style.display = "flex";
-    // Actualizar monto disponible para cosecha
-    const harvestVal = currentUser.cycle ? currentUser.cycle.earnings : 0;
-    document.getElementById("harvestAmount").innerText = formatMoney(harvestVal);
-};
-
-window.closeWithdrawModal = () => document.getElementById("withdrawModal").style.display = "none";
-
-// Cambio de pestañas
 window.showTab = (tab) => {
     const btnH = document.getElementById("tabHarvest");
     const btnB = document.getElementById("tabBank");
@@ -480,25 +632,23 @@ window.showTab = (tab) => {
     }
 };
 
-// ACCIÓN 1: COSECHAR (Interno)
 window.doHarvest = async () => {
     try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/payments/withdraw`, { // withdrawCycle
+        const res = await fetch(`${API_URL}/api/payments/withdraw`, { 
             method: "POST",
             headers: { "Authorization": `Bearer ${token}` }
         });
         const data = await res.json();
         if(res.ok) {
             alert(data.message);
-            window.location.reload(); // Recargar para ver saldo actualizado
+            window.location.reload(); 
         } else {
             alert("⚠️ " + data.error);
         }
     } catch(e) { alert("Error de red"); }
 };
 
-// ACCIÓN 2: RETIRAR A BANCO (Externo)
 window.doPayout = async () => {
     const amount = document.getElementById("outAmount").value;
     const alias = document.getElementById("outAlias").value;
@@ -507,7 +657,6 @@ window.doPayout = async () => {
 
     try {
         const token = localStorage.getItem("token");
-        // Asegúrate de haber creado esta ruta en el backend (Paso 1)
         const res = await fetch(`${API_URL}/api/payments/payout`, { 
             method: "POST",
             headers: { 
