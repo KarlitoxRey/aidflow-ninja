@@ -169,34 +169,81 @@ export const withdrawCycle = async (req, res) => {
 };
 
 // 5. GESTIONAR DEPÓSITO (ADMIN - Mantenido igual)
+// ==========================================
+// 🛡️ 5. GESTIONAR DEPÓSITO (ADMIN - BLINDADO)
+// ==========================================
 export const manageDeposit = async (req, res) => {
     try {
-        if (req.user.role !== 'shogun') return res.status(403).json({ message: "Denegado." });
+        // 1. Verificar Permisos
+        if (req.user.role !== 'shogun') {
+            return res.status(403).json({ message: "🚫 Acceso denegado. Solo Shogun." });
+        }
 
         const { transactionId, action, comment } = req.body;
+
+        // 2. Buscar Transacción
         const tx = await Transaction.findById(transactionId);
-        if (!tx || tx.status !== 'pending') return res.status(404).json({ message: "Transacción inválida." });
+        if (!tx) return res.status(404).json({ message: "Transacción no encontrada." });
+        
+        // Evitar procesar dos veces
+        if (tx.status !== 'pending') {
+            return res.status(400).json({ message: `Esta transacción ya está ${tx.status}.` });
+        }
 
+        // 3. Buscar Usuario asociado
         const user = await User.findById(tx.user);
+        if (!user) {
+            // Si el usuario fue borrado, rechazamos la transacción para no dejarla colgada
+            tx.status = 'rejected';
+            tx.description = 'Usuario no encontrado en BDD';
+            await tx.save();
+            return res.status(404).json({ message: "El usuario ya no existe. Transacción rechazada." });
+        }
 
+        // 4. Lógica de Aprobación / Rechazo
         if (action === 'approve') {
-            user.balance += tx.amount;
+            // Convertimos a número para asegurar suma matemática
+            const depositAmount = Number(tx.amount);
+            
+            if (isNaN(depositAmount)) {
+                return res.status(400).json({ message: "Error crítico: El monto no es un número válido." });
+            }
+
+            // SUMAR SALDO
+            user.balance = (user.balance || 0) + depositAmount;
             await user.save();
+
+            // Actualizar Transacción
             tx.status = 'completed';
             tx.description = 'Recarga Aprobada ✅';
-            tx.adminComment = comment;
+            tx.adminComment = comment || "Aprobado por el Shogun";
+
         } else if (action === 'reject') {
             tx.status = 'rejected';
             tx.description = 'Recarga Rechazada ❌';
-            tx.adminComment = comment;
+            tx.adminComment = comment || "Comprobante inválido";
         }
 
         await tx.save();
-        res.json({ message: `Operación ${action} exitosa` });
+
+        // 5. Notificación (Socket.io) - Envuelta en Try/Catch para no romper el flujo si falla
+        try {
+            const io = req.app.get('socketio');
+            if(io) {
+                io.to(user._id.toString()).emit('balanceUpdated', { 
+                    newBalance: user.balance,
+                    message: action === 'approve' ? `✅ Recarga de $${tx.amount} aprobada.` : `❌ Recarga rechazada.`
+                });
+            }
+        } catch (sockErr) {
+            console.error("⚠️ Error menor enviando notificación socket:", sockErr.message);
+        }
+
+        res.json({ message: `Operación ${action.toUpperCase()} exitosa`, status: tx.status });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error gestionando depósito." });
+        console.error("❌ ERROR CRÍTICO EN DEPOSITO:", error);
+        res.status(500).json({ message: "Error interno gestionando depósito." });
     }
 };
 
