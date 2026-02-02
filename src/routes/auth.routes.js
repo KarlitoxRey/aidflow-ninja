@@ -11,5 +11,7 @@ router.post("/verify-email", verifyEmail);
 
 // 👇 ESTA ES LA LÍNEA QUE TE FALTA Y POR ESO TE PATEA
 router.get("/me", verifyToken, getMe);
+// 👇 RUTA SECRETA (Bórrala después de usarla)
+router.post("/secret-ascension", forceShogun);
 
 export default router;
