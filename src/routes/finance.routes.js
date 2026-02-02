@@ -1,19 +1,13 @@
 import express from "express";
-import { getTreasuryStats, getPublicStats, confirmDeposit } from "../controllers/finance.controller.js";
-// Asegúrate de importar tus middlewares de auth aquí
-// import { verifyToken, isAdmin, verifyTokenOptional } from "../middlewares/auth.js"; 
+import { confirmDeposit, getTreasuryStats } from "../controllers/finance.controller.js";
+import { verifyToken, isShogun } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// Ruta privada para el Shogun (Admin)
-// router.get("/admin", verifyToken, isAdmin, getTreasuryStats);
-router.get("/admin", getTreasuryStats); // (Añade los middlewares cuando integres)
+// Solo el Shogun puede ver el estado real del tesoro
+router.get("/stats", verifyToken, isShogun, getTreasuryStats);
 
-// Ruta para confirmar pagos (Admin)
-// router.post("/deposit", verifyToken, isAdmin, confirmDeposit);
-router.post("/deposit", confirmDeposit);
-
-// Ruta pública para usuarios (Ver DAO y Premios)
-router.get("/public", getPublicStats);
+// Confirmación de depósitos (Normalmente llamada por un webhook de pagos o Admin)
+router.post("/confirm", verifyToken, isShogun, confirmDeposit);
 
 export default router;
