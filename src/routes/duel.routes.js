@@ -1,11 +1,12 @@
 import express from "express";
-import { createDuel, resolveDuel } from "../controllers/duel.controller.js";
-import { protect } from "../middlewares/auth.middleware.js";
+import { createDuel, acceptDuel, resolveDuel } from "../controllers/duel.controller.js";
+// 👇 CORRECCIÓN AQUÍ: Usamos verifyToken
+import { verifyToken, isShogun } from "../middlewares/auth.middleware.js"; 
 
 const router = express.Router();
-router.use(protect);
 
-router.post("/create", createDuel);
-router.post("/resolve/:id", resolveDuel);
+router.post("/create", verifyToken, createDuel);
+router.put("/accept/:duelId", verifyToken, acceptDuel);
+router.post("/resolve", verifyToken, isShogun, resolveDuel); 
 
 export default router;
