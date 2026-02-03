@@ -1,19 +1,24 @@
 import User from "../models/User.js";
 import Transaction from "../models/Transaction.js";
+import Cycle from "../models/Cycle.js"; // Necesario para la lógica de juego
 import { LEVEL_PRICES, SPEED_MULTIPLIERS, LEVEL_TOKENS, calculateCommissions } from "../utils/economyRules.js";
 
-// 1. DETALLES BILLETERA (Mantenido igual, fix userId)
+// ==========================================
+// 1. GESTIÓN DE BILLETERA (USUARIO)
+// ==========================================
+
+// Obtener detalles completos
 export const getWalletDetails = async (req, res) => {
     try {
-        const user = await User.findById(req.user.userId);
+        const user = await User.findById(req.user.userId).populate('activeCycle');
         if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
 
         const history = await Transaction.find({ user: req.user.userId }).sort({ createdAt: -1 }).limit(10);
 
         res.json({ 
             balance: user.balance, 
-            tournamentTokens: user.tournamentTokens || 0, // Mostramos las fichas
-            cycle: user.cycle,
+            tournamentTokens: user.tournamentTokens || 0,
+            cycle: user.activeCycle || null,
             history 
         });
     } catch (error) {
@@ -22,7 +27,7 @@ export const getWalletDetails = async (req, res) => {
     }
 };
 
-// 2. SOLICITAR DEPÓSITO (Mantenido igual)
+// Solicitar Depósito
 export const requestDeposit = async (req, res) => {
     try {
         const { amount, referenceId } = req.body;
@@ -32,239 +37,30 @@ export const requestDeposit = async (req, res) => {
         if (!referenceId) return res.status(400).json({ message: "Falta ID comprobante." });
 
         const exists = await Transaction.findOne({ referenceId });
-        if (exists) return res.status(400).json({ message: "Comprobante ya procesado." });
+        if (exists) return res.status(400).json({ message: "Ese comprobante ya fue enviado." });
 
         await Transaction.create({
             user: userId,
-            type: 'deposit_manual',
+            type: 'deposit',
             amount: Number(amount),
             status: 'pending',
-            description: 'Recarga MercadoPago (En Revisión)',
+            description: 'Recarga de Saldo',
             referenceId
         });
 
-        res.json({ message: "⏳ Comprobante enviado al Shogun." });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error al reportar pago." });
-    }
-};
-
-// 3. COMPRAR PASE (🔥 LÓGICA AUTOMÁTICA NUEVA)
-export const buyPass = async (req, res) => {
-    try {
-        const { level } = req.body; 
-        const userId = req.user.userId;
-
-        const cost = LEVEL_PRICES[level];
-        if (!cost) return res.status(400).json({ error: "Nivel inválido" });
-
-        const user = await User.findById(userId).populate("referredBy");
-        if (!user) return res.status(404).json({ error: "Guerrero no encontrado" });
-
-        if (user.balance < cost) {
-            return res.status(400).json({ error: "Saldo insuficiente. Recarga primero." });
-        }
-
-        // --- LÓGICA DE REPARTO ---
-        let referrer = user.referredBy; 
-        const refLevel = referrer ? referrer.level : 0;
-        const refCount = referrer ? referrer.referralStats.count : 0;
-
-        const dist = calculateCommissions(refLevel, refCount, cost);
-
-        // A) Actualizar Comprador
-        user.balance -= cost;
-        user.level = level;
-        user.ninjaPassActive = true;
-        user.speedMultiplier = SPEED_MULTIPLIERS[level];
-        
-        // Asignar Fichas (Regla: 100 fichas = $3, acá damos bonos)
-        const bonusTokens = LEVEL_TOKENS[level] || 0;
-        user.tournamentTokens += bonusTokens;
-        
-        user.role = "ninja";
-        user.cycle = {
-            active: true,
-            investedAmount: cost,
-            earnings: 0,
-            target: cost * 2,
-            startDate: new Date(),
-            claimedMilestones: []
-        };
-        await user.save();
-
-        // B) Pagar al Referente
-        if (referrer && dist.referrerShare > 0) {
-            referrer.balance += dist.referrerShare;
-            referrer.referralStats.totalEarned += dist.referrerShare;
-            await referrer.save();
-
-            await Transaction.create({
-                user: referrer._id,
-                type: 'referral_bonus',
-                amount: dist.referrerShare,
-                status: 'completed',
-                description: `Bono por recluta: ${user.ninjaName}`
-            });
-        }
-
-        // C) Registrar Transacción Comprador
-        await Transaction.create({
-            user: userId,
-            type: 'purchase_pass',
-            amount: -cost,
-            status: 'completed',
-            description: `Compra Pase Nivel ${level} (+${bonusTokens} Fichas)`
-        });
-
-        // Debug Log
-        console.log(`💰 REPARTO - Admin: $${dist.adminShare} | DAO: $${dist.daoShare}`);
-
-        res.json({ 
-            message: `🥷 Nivel ${level} forjado. Recibiste ${bonusTokens} Fichas.`,
-            newBalance: user.balance,
-            tokens: user.tournamentTokens
-        });
+        res.json({ message: "⏳ Depósito informado. Esperando al Tesorero." });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Error al procesar el pase" });
+        res.status(500).json({ message: "Error procesando depósito." });
     }
 };
 
-// 4. RETIRAR (Mantenido igual)
-export const withdrawCycle = async (req, res) => {
-    try {
-        const userId = req.user.userId;
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
-
-        // Nota: Asegúrate que user.cycle.earnings se llene con la lógica diaria después
-        const amount = user.cycle.earnings; 
-
-        if (amount <= 0) return res.status(400).json({ error: "Sin fondos para retirar." });
-
-        user.balance += amount;
-        user.cycle.earnings = 0; 
-        await user.save();
-
-        await Transaction.create({
-            user: userId,
-            type: 'withdrawal',
-            amount: amount,
-            status: 'completed',
-            description: 'Retiro de ganancias del ciclo'
-        });
-
-        res.json({ 
-            message: `✅ Ganancias ($${amount.toFixed(2)}) movidas a saldo principal.`,
-            newBalance: user.balance 
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error interno" });
-    }
-};
-
-// 5. GESTIONAR DEPÓSITO (ADMIN - Mantenido igual)
-// ==========================================
-// 🛡️ 5. GESTIONAR DEPÓSITO (ADMIN - BLINDADO)
-// ==========================================
-export const manageDeposit = async (req, res) => {
-    try {
-        // 1. Verificar Permisos
-        if (req.user.role !== 'shogun') {
-            return res.status(403).json({ message: "🚫 Acceso denegado. Solo Shogun." });
-        }
-
-        const { transactionId, action, comment } = req.body;
-
-        // 2. Buscar Transacción
-        const tx = await Transaction.findById(transactionId);
-        if (!tx) return res.status(404).json({ message: "Transacción no encontrada." });
-        
-        // Evitar procesar dos veces
-        if (tx.status !== 'pending') {
-            return res.status(400).json({ message: `Esta transacción ya está ${tx.status}.` });
-        }
-
-        // 3. Buscar Usuario asociado
-        const user = await User.findById(tx.user);
-        if (!user) {
-            // Si el usuario fue borrado, rechazamos la transacción para no dejarla colgada
-            tx.status = 'rejected';
-            tx.description = 'Usuario no encontrado en BDD';
-            await tx.save();
-            return res.status(404).json({ message: "El usuario ya no existe. Transacción rechazada." });
-        }
-
-        // 4. Lógica de Aprobación / Rechazo
-        if (action === 'approve') {
-            // Convertimos a número para asegurar suma matemática
-            const depositAmount = Number(tx.amount);
-            
-            if (isNaN(depositAmount)) {
-                return res.status(400).json({ message: "Error crítico: El monto no es un número válido." });
-            }
-
-            // SUMAR SALDO
-            user.balance = (user.balance || 0) + depositAmount;
-            await user.save();
-
-            // Actualizar Transacción
-            tx.status = 'completed';
-            tx.description = 'Recarga Aprobada ✅';
-            tx.adminComment = comment || "Aprobado por el Shogun";
-
-        } else if (action === 'reject') {
-            tx.status = 'rejected';
-            tx.description = 'Recarga Rechazada ❌';
-            tx.adminComment = comment || "Comprobante inválido";
-        }
-
-        await tx.save();
-
-        // 5. Notificación (Socket.io) - Envuelta en Try/Catch para no romper el flujo si falla
-        try {
-            const io = req.app.get('socketio');
-            if(io) {
-                io.to(user._id.toString()).emit('balanceUpdated', { 
-                    newBalance: user.balance,
-                    message: action === 'approve' ? `✅ Recarga de $${tx.amount} aprobada.` : `❌ Recarga rechazada.`
-                });
-            }
-        } catch (sockErr) {
-            console.error("⚠️ Error menor enviando notificación socket:", sockErr.message);
-        }
-
-        res.json({ message: `Operación ${action.toUpperCase()} exitosa`, status: tx.status });
-
-    } catch (error) {
-        console.error("❌ ERROR CRÍTICO EN DEPOSITO:", error);
-        res.status(500).json({ message: "Error interno gestionando depósito." });
-    }
-};
-
-// 6. OBTENER PENDIENTES (ADMIN - Mantenido igual)
-export const getPendingTransactions = async (req, res) => {
-    try {
-        if (req.user.role !== 'shogun') return res.status(403).json({ message: "Denegado." });
-        const pending = await Transaction.find({ status: 'pending' }).populate('user', 'ninjaName email');
-        res.json(pending);
-    } catch (error) {
-        res.status(500).json({ message: "Error obteniendo pendientes." });
-    }
-};
-
-// ==========================================
-// 📤 7. SOLICITAR RETIRO EXTERNO (A BANCO/MP)
-// ==========================================
+// Solicitar Retiro Externo (Payout)
 export const requestPayout = async (req, res) => {
     try {
         const { amount, cbu, alias } = req.body;
-        const userId = req.user.userId; // Asegúrate de usar userId
+        const userId = req.user.userId;
 
         if (!amount || amount <= 0) return res.status(400).json({ message: "Monto inválido." });
         if (!cbu && !alias) return res.status(400).json({ message: "Indica CBU o Alias." });
@@ -272,25 +68,231 @@ export const requestPayout = async (req, res) => {
         const user = await User.findById(userId);
         if (user.balance < amount) return res.status(400).json({ message: "Saldo insuficiente en tu Bolsa." });
 
-        // Descontamos del saldo temporalmente (reserva)
+        // Descontamos del saldo inmediatamente (Reserva)
         user.balance -= amount;
         await user.save();
 
-        // Creamos la solicitud pendiente
         await Transaction.create({
             user: userId,
-            type: 'withdrawal_external', // Diferente al interno
-            amount: Number(amount), // Negativo o positivo según tu lógica visual, aquí positivo para indicar monto solicitado
+            type: 'withdrawal_external',
+            amount: Number(amount),
             status: 'pending',
             description: `Solicitud Retiro a: ${alias || cbu}`,
-            referenceId: `OUT-${Date.now()}` // ID interno temporal
+            referenceId: `OUT-${Date.now()}`
         });
 
         res.json({ message: "⏳ Solicitud enviada al Tesorero.", newBalance: user.balance });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Error al procesar la solicitud." });
+        res.status(500).json({ message: "Error interno." });
+    }
+};
+
+// ==========================================
+// 2. LÓGICA DEL JUEGO (NIVELES Y CICLOS)
+// ==========================================
+// Estas son las funciones que probablemente te faltaban y bajaban las líneas
+
+export const buyLevel = async (req, res) => {
+    try {
+        const { level } = req.body; // Nivel 1, 2, 3...
+        const userId = req.user.userId;
+
+        const price = LEVEL_PRICES[level];
+        if (!price) return res.status(400).json({ error: "Nivel no existente." });
+
+        const user = await User.findById(userId).populate('activeCycle');
+        
+        // Validaciones
+        if (user.balance < price) return res.status(400).json({ error: "Oro insuficiente." });
+        if (user.level >= level && (!user.activeCycle || user.activeCycle.progress < 100)) {
+            return res.status(400).json({ error: "Debes completar tu ciclo actual antes de recomprar." });
+        }
+
+        // 1. Cobrar
+        user.balance -= price;
+        user.level = level;
+        
+        // 2. Dar Fichas de Torneo (Bonus)
+        const tokens = LEVEL_TOKENS ? LEVEL_TOKENS[level] : 0;
+        user.tournamentTokens = (user.tournamentTokens || 0) + tokens;
+
+        // 3. Crear Ciclo
+        const newCycle = new Cycle({
+            user: userId,
+            level: level,
+            investedAmount: price,
+            startTime: new Date(),
+            progress: 0,
+            earnings: 0,
+            status: 'active'
+        });
+        await newCycle.save();
+        
+        user.activeCycle = newCycle._id;
+
+        // 4. Pagar Referidos (Comisiones)
+        if (user.referredBy) {
+            await distributeCommissions(user.referredBy, price, 1);
+        }
+
+        // 5. Registrar Transacción
+        await Transaction.create({
+            user: userId,
+            type: 'cycle_buy',
+            amount: -price,
+            status: 'completed',
+            description: `Compra Nivel ${level}`
+        });
+
+        await user.save();
+        res.json({ message: `🔥 Nivel ${level} adquirido. ¡Honor!`, cycle: newCycle, newBalance: user.balance });
+
+    } catch (error) {
+        console.error("Error buyLevel:", error);
+        res.status(500).json({ error: "Error comprando nivel." });
+    }
+};
+
+// Cosechar Ganancias (Harvest)
+export const harvestEarnings = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId).populate('activeCycle');
+        if (!user || !user.activeCycle) return res.status(400).json({ error: "No hay ciclo activo." });
+
+        const cycle = await Cycle.findById(user.activeCycle._id);
+        
+        // Lógica simple: Si está al 100% o tiene ganancias pendientes
+        // Aquí asumo que hay un worker o lógica que actualiza 'earnings'
+        // Si es manual, aquí calculamos basado en el tiempo.
+        
+        if (cycle.earnings <= 0) return res.status(400).json({ error: "Nada para cosechar aún." });
+
+        const amount = cycle.earnings;
+        
+        // Mover al saldo principal
+        user.balance += amount;
+        cycle.earnings = 0; // Reset o marcar como reclamado
+        
+        // Si el ciclo terminó
+        if (cycle.progress >= 100) {
+            cycle.status = 'completed';
+        }
+
+        await cycle.save();
+        await user.save();
+
+        await Transaction.create({
+            user: user._id,
+            type: 'harvest',
+            amount: amount,
+            status: 'completed',
+            description: `Cosecha Nivel ${cycle.level}`
+        });
+
+        res.json({ message: `🌾 Cosechados $${amount}`, newBalance: user.balance });
+
+    } catch (error) {
+        res.status(500).json({ error: "Error en cosecha." });
+    }
+};
+
+// Función auxiliar para referidos
+async function distributeCommissions(sponsorId, amount, depth) {
+    if (depth > 3 || !sponsorId) return; // Máximo 3 niveles
+
+    try {
+        const sponsor = await User.findById(sponsorId);
+        if (!sponsor) return;
+
+        // Porcentajes hardcodeados o desde economyRules
+        const rates = [0.10, 0.05, 0.02]; // 10%, 5%, 2%
+        const commission = amount * rates[depth - 1];
+
+        if (commission > 0) {
+            sponsor.balance += commission;
+            sponsor.referralStats.totalEarned += commission;
+            await sponsor.save();
+
+            await Transaction.create({
+                user: sponsorId,
+                type: 'referral_bonus',
+                amount: commission,
+                status: 'completed',
+                description: `Comisión Nivel ${depth}`
+            });
+        }
+
+        // Recursividad hacia arriba
+        if (sponsor.referredBy) {
+            await distributeCommissions(sponsor.referredBy, amount, depth + 1);
+        }
+    } catch (e) {
+        console.error("Error repartiendo referidos:", e);
+    }
+}
+
+// ==========================================
+// 3. GESTIÓN DE TESORERÍA (ADMIN - LA PARTE NUEVA)
+// ==========================================
+
+// Obtener Pendientes
+export const getPendingTransactions = async (req, res) => {
+    try {
+        const pending = await Transaction.find({ status: "pending" })
+            .populate("user", "ninjaName email")
+            .sort({ createdAt: 1 });
+            
+        res.json(pending);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error obteniendo tesorería." });
+    }
+};
+
+// Aprobar/Rechazar
+export const manageDeposit = async (req, res) => {
+    try {
+        const { transactionId, action, comment } = req.body; 
+        
+        const tx = await Transaction.findById(transactionId).populate("user");
+        if (!tx) return res.status(404).json({ error: "Transacción no encontrada." });
+        if (tx.status !== "pending") return res.status(400).json({ error: "Ya fue procesada." });
+
+        if (action === "approve") {
+            tx.status = "completed";
+            tx.description += " (Aprobado)";
+            
+            // Si es depósito, sumamos saldo
+            if (tx.type === 'deposit') {
+                const user = await User.findById(tx.user._id);
+                user.balance += tx.amount;
+                await user.save();
+            }
+            // Si es retiro, ya se descontó al pedirlo.
+
+            await tx.save();
+            res.json({ message: "✅ Operación aprobada." });
+
+        } else {
+            tx.status = "rejected";
+            tx.description += ` (Rechazado: ${comment || 'Sin motivo'})`;
+            
+            // Si era retiro y se rechaza, DEVOLVER el dinero a la bolsa
+            if (tx.type === 'withdrawal_external') {
+                 const user = await User.findById(tx.user._id);
+                 user.balance += tx.amount; 
+                 await user.save();
+            }
+
+            await tx.save();
+            res.json({ message: "❌ Operación rechazada." });
+        }
+
+    } catch (error) {
+        console.error("Error manageDeposit:", error);
+        res.status(500).json({ error: "Error interno gestionando fondos." });
     }
 };
 
