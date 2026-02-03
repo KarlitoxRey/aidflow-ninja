@@ -8,85 +8,51 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
-    
     <style>
-        /* === CORRECCIÓN CRÍTICA DE SCROLL Y LAYOUT === */
-        html, body {
-            height: 100%;
-            margin: 0;
-            overflow-y: auto !important; /* FORZAR SCROLL */
-            background-color: #000;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 300px 1fr; /* Sidebar fija, contenido flexible */
-            gap: 20px;
-            max-width: 1400px;
-            margin: 80px auto 20px auto;
-            padding: 0 20px;
-            align-items: start; /* Evita que se estire */
-        }
-
-        /* En móviles, poner una columna */
-        @media (max-width: 768px) {
-            .dashboard-grid { grid-template-columns: 1fr; }
-        }
-
-        /* Estilos de la Barra de Progreso ($12.50) */
-        .cycle-progress-container {
-            background: #111; border: 1px solid #333; padding: 20px; 
-            border-radius: 8px; margin-bottom: 20px; 
-            box-shadow: 0 0 15px rgba(0,0,0,0.5); border-left: 4px solid var(--gold);
-        }
-        .progress-track { width: 100%; height: 25px; background: #222; border-radius: 12px; overflow: hidden; margin: 15px 0; border: 1px solid #444; position: relative; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #d90429, #ffb400); width: 0%; transition: width 0.5s ease; }
+        html, body { height: 100%; margin: 0; overflow-y: auto !important; background-color: #000; }
+        .dashboard-grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; max-width: 1400px; margin: 80px auto 20px; padding: 0 20px; }
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
         
-        /* Chat Flotante */
-        .chat-btn-floating { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; border: 2px solid #fff; color: #000; font-size: 1.5rem; }
-        .chat-window { position: fixed; bottom: 100px; right: 30px; width: 320px; height: 400px; background: rgba(10, 10, 10, 0.95); border: 1px solid var(--gold); border-radius: 10px; display: none; flex-direction: column; z-index: 1000; overflow: hidden; }
-        .chat-body { flex: 1; padding: 10px; overflow-y: auto; color: #ddd; font-size: 0.9rem; }
+        .chat-btn-floating { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; color: #000; font-size: 1.5rem; border: 2px solid white; transition: transform 0.2s; }
+        .chat-btn-floating:hover { transform: scale(1.1); }
+        .chat-window { position: fixed; bottom: 100px; right: 30px; width: 320px; height: 400px; background: rgba(10,10,10,0.95); border: 1px solid var(--gold); border-radius: 10px; display: none; flex-direction: column; z-index: 1000; }
+        .chat-header { padding: 10px; background: #111; display: flex; justify-content: space-between; border-bottom: 1px solid #333; }
+        .chat-body { flex: 1; overflow-y: auto; padding: 10px; }
+        .chat-input { display: flex; padding: 10px; border-top: 1px solid #333; }
+        .chat-input input { flex: 1; padding: 5px; background: #222; border: none; color: white; margin-right: 5px; }
+
+        .cycle-progress-container { background: #111; padding: 20px; border: 1px solid #333; border-left: 4px solid var(--gold); margin-bottom: 20px; border-radius: 5px; }
+        .progress-track { width: 100%; height: 20px; background: #222; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #d90429, #ffb400); width: 0%; transition: width 0.5s; }
     </style>
 </head>
 <body class="bg-ninja">
-
     <header class="dashboard-header">
         <div class="container flex-between">
             <h1 class="shogun-title-mini">AIDFLOW <span class="red-text">NINJA</span></h1>
             <div class="user-menu">
-                <span class="gold-text" style="margin-right:15px; font-weight:bold;">
-                    <i class="fas fa-coins"></i> <span id="headerBalance">0.00</span>
-                </span>
+                <span class="gold-text" style="margin-right:15px;"><i class="fas fa-coins"></i> <span id="headerBalance">0.00</span></span>
                 <button onclick="logout()" class="btn-icon"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </div>
     </header>
 
     <div class="dashboard-grid">
-        
         <aside class="sidebar-profile">
             <div class="profile-card card-dark">
                 <div class="avatar-circle"><i class="fas fa-user-ninja"></i></div>
                 <h2 id="userName">Guerrero</h2>
                 <p id="userRank" style="color:var(--gold); font-size:0.9rem;">Ronin</p>
-                
-                <div style="margin-top:20px; border-top:1px solid #333; padding-top:15px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                        <span>Fichas Torneo:</span> <strong id="userTokens" style="color:var(--red)">0</strong>
-                    </div>
+                <div style="margin-top:20px; padding-top:15px; border-top:1px solid #333;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Fichas:</span> <strong id="userTokens" style="color:var(--red)">0</strong></div>
                 </div>
-
-                <div class="action-buttons" style="margin-top:20px;">
-                    <button onclick="openDepositModal()" class="btn-ninja-primary full-width mb-1">RECARGAR / ACTIVAR PASE</button>
-                    <button id="menuProfile" class="btn-ninja-outline full-width">PERFIL</button>
-                </div>
+                <button onclick="openDepositModal()" class="btn-ninja-primary full-width" style="margin-top:20px;">RECARGAR / ACTIVAR</button>
             </div>
         </aside>
 
         <main class="main-content">
-            
             <div id="cycleContainer" class="cycle-progress-container" style="display:none;">
-                <h3 class="gold-text"><i class="fas fa-chart-line"></i> PROGRESO DE RETIRO</h3>
+                <h3 class="gold-text" style="margin:0 0 10px 0;">PROGRESO DE RETIRO</h3>
                 <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#ccc;">
                     <span>PASE ACTIVO</span> <span>META: <strong style="color:var(--gold);">$12.50</strong></span>
                 </div>
@@ -94,16 +60,16 @@
                 <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#aaa;">
                     <span>Acumulado: <strong id="cycleEarnings" style="color:white;">$0.00</strong></span> <span id="cyclePercent">0%</span>
                 </div>
-                <button id="harvestBtn" class="btn-ninja-primary full-width" style="margin-top:15px; display:none;">RETIRAR FONDOS</button>
+                <button id="harvestBtn" class="btn-ninja-primary full-width" style="margin-top:10px; display:none;">RETIRAR FONDOS</button>
             </div>
 
-            <div id="buyAlert" class="card-dark" style="border:1px solid #333; display:none; text-align:center; margin-bottom:20px; padding:20px;">
+            <div id="buyAlert" class="card-dark" style="display:none; text-align:center; padding:30px; border:1px dashed #444; margin-bottom:20px;">
                 <h3 style="color:var(--gold);">⚠️ PASE INACTIVO</h3>
-                <p style="color:#aaa;">Recarga saldo para recibir 100 Fichas y habilitar retiros.</p>
+                <p>Recarga para activar beneficios.</p>
                 <button onclick="openDepositModal()" class="btn-ninja-outline">ACTIVAR</button>
             </div>
 
-            <section style="margin-bottom: 30px;">
+            <section style="margin-bottom:30px;">
                 <h3 class="section-title gold-text">ARENA DE DUELOS</h3>
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
                     <input type="number" id="betAmount" placeholder="Apuesta (NC)" class="input-ninja" style="flex:1;">
@@ -114,17 +80,14 @@
 
             <section>
                 <h3 class="section-title gold-text">JUEGOS</h3>
-                <div id="embedGamesGrid" class="games-grid">
-                    <p style="color:#666;">Cargando juegos...</p>
-                </div>
+                <div id="embedGamesGrid" class="games-grid"><p style="color:#666;">Cargando juegos...</p></div>
             </section>
-
         </main>
     </div>
 
     <div onclick="toggleChat()" class="chat-btn-floating"><i class="fas fa-comment-dots"></i></div>
     <div id="chatWindow" class="chat-window">
-        <div class="chat-header"><span class="gold-text">CHAT</span> <button onclick="toggleChat()" style="background:none;border:none;color:white;">X</button></div>
+        <div class="chat-header"><span class="gold-text">CHAT</span> <button onclick="toggleChat()" style="background:none; border:none; color:white;">X</button></div>
         <div id="chatMessages" class="chat-body custom-scroll"></div>
         <div class="chat-input"><input type="text" id="chatMsg"><button onclick="sendChat()" class="btn-ninja-primary">></button></div>
     </div>
