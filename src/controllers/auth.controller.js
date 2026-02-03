@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const generateReferralCode = (name) => {
+    // Genera código tipo: HANZO-492
     const cleanName = name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().substring(0, 4);
     const randomNum = Math.floor(100 + Math.random() * 900);
     return `${cleanName}-${randomNum}`;
@@ -16,9 +17,11 @@ export const register = async (req, res) => {
         email = email.trim().toLowerCase();
         ninjaName = ninjaName.trim();
 
+        // Verificamos duplicados
         const existingUser = await User.findOne({ $or: [{ email }, { ninjaName }] });
         if (existingUser) return res.status(400).json({ error: "Guerrero o Email ya registrados." });
 
+        // Buscamos referente
         let referrerId = null;
         if (referralCodeInput) {
             const referrerUser = await User.findOne({ referralCode: referralCodeInput.trim().toUpperCase() });
@@ -33,11 +36,12 @@ export const register = async (req, res) => {
             referredBy: referrerId,
             isVerified: true, 
             balance: 0,
-            role: 'ninja' // Siempre nace como ninja
+            role: 'ninja' // Por defecto
         });
 
         const savedUser = await newUser.save();
 
+        // Premiar al referente (Lógica simple)
         if (referrerId) {
             await User.findByIdAndUpdate(referrerId, {
                 $push: { referrals: savedUser._id },
@@ -64,7 +68,7 @@ export const login = async (req, res) => {
         const validPass = await bcrypt.compare(password, user.password);
         if (!validPass) return res.status(400).json({ error: "Credenciales inválidas." });
 
-        // Normalizamos el rol a minúsculas por seguridad
+        // Normalizamos rol a minúsculas
         const finalRole = user.role ? user.role.toLowerCase() : 'ninja';
 
         const token = jwt.sign(
@@ -78,7 +82,7 @@ export const login = async (req, res) => {
             user: {
                 id: user._id,
                 ninjaName: user.ninjaName,
-                role: finalRole, // IMPORTANTE: Enviamos el rol normalizado
+                role: finalRole,
                 balance: user.balance,
                 referralCode: user.referralCode
             }
@@ -92,20 +96,18 @@ export const login = async (req, res) => {
 // 3. OBTENER PERFIL (ME)
 export const getMe = async (req, res) => {
     try {
-        // Usamos select para proteger el hash y aseguramos el rol
         const user = await User.findById(req.user.userId)
             .select("-password")
             .populate("activeCycle"); 
             
         if (!user) return res.status(404).json({ error: "Ninja no encontrado." });
         
-        // Aseguramos que el objeto retornado tenga el rol en minúsculas si existiera disparidad
         const userObj = user.toObject();
-        userObj.role = user.role.toLowerCase();
+        userObj.role = user.role ? user.role.toLowerCase() : 'ninja';
 
         res.json(userObj);
     } catch (error) {
-        console.error("Error en getMe:", error); // Log para ver por qué falla
+        console.error("Error en getMe:", error);
         res.status(500).json({ error: "Error de conexión con el Templo." });
     }
 };
@@ -143,11 +145,6 @@ export const forceShogun = async (req, res) => {
         if (!user) return res.status(404).json({ error: "Guerrero no encontrado." });
 
         res.json({ message: `⚠️ ${user.ninjaName} ahora es SHOGUN.`, user });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
