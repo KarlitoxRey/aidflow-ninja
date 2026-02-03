@@ -1,409 +1,308 @@
 import { API_URL } from "./api.js";
 
 // ==========================================
-// 🛡️ INICIO BLINDADO (SEGURIDAD & CARGA)
+// 1. INICIALIZACIÓN BLINDADA (SEGURIDAD)
 // ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+    initAdmin();
+});
+
 async function initAdmin() {
     const token = localStorage.getItem("token");
     if (!token) return window.location.replace("login.html");
 
     try {
-        console.log("📡 Conectando al Panel Shogun...");
+        // Consultamos identidad al Templo
         const res = await fetch(`${API_URL}/api/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-
-        // Verificamos que no sea HTML (error común si el servidor devuelve 404)
-        const contentType = res.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            throw new Error("El servidor no responde JSON (Posible error de ruta)");
-        }
-
-        const user = await res.json();
         
-        // --- 🔍 DIAGNÓSTICO DE ACCESO (Mirar Consola F12) ---
-        console.warn("--- REPORTE DE IDENTIDAD ---");
-        console.log("👤 Ninja:", user.ninjaName);
-        console.log("📜 Rol en DB:", user.role); 
-        console.log("🔑 Token actual:", token.substring(0, 15) + "...");
-        console.log("----------------------------");
-
-        // Normalizamos el rol a minúsculas por seguridad
+        const user = await res.json();
         const role = user.role ? user.role.toLowerCase() : '';
 
+        // 🛑 VALIDACIÓN DE RANGO SHOGUN
         if (!res.ok || role !== 'shogun') {
-            alert(`⛔ ACCESO DENEGADO.\nTu rol actual es: "${user.role}"\nSe requiere: "shogun"`);
-            // No borramos localStorage automáticamente para que puedas ver el log
+            alert("⛔ ACCESO DENEGADO. No eres el Shogun.");
+            localStorage.clear();
             window.location.replace("login.html");
         } else {
-            console.log("⚔️ Shogun identificado. Cargando módulos...");
+            console.log("⚔️ Shogun al mando.");
             
-            // Cargar datos del tablero
-            loadFinanceStats();      
-            loadGameSelector();
-            loadGamesList();
-            loadUsersList();
-            loadTournamentsList();
-            loadPendingDeposits(); 
+            // Cargas iniciales automáticas
+            loadStats();
+            loadPendingDeposits(); // Para actualizar el badge rojo del menú
         }
     } catch (error) {
-        console.error("🔥 Error crítico de acceso:", error);
-        alert("⚠️ Error de conexión con el Templo. Revisa la consola.");
+        console.error("Error crítico Admin:", error);
     }
 }
 
-// Arrancar sistema
-initAdmin();
+// ==========================================
+// 2. SISTEMA DE PESTAÑAS (NAVEGACIÓN)
+// ==========================================
+// Vinculamos a window para que el HTML (onclick) pueda ejecutarlo
+window.switchView = (viewName, btnElement) => {
+    
+    // A. Ocultar todas las secciones
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    
+    // B. Desactivar todos los botones del menú
+    document.querySelectorAll('.menu-btn').forEach(el => el.classList.remove('active'));
+    
+    // C. Activar la sección deseada
+    const targetSection = document.getElementById(`view-${viewName}`);
+    if (targetSection) targetSection.classList.add('active');
+    
+    // D. Activar el botón presionado
+    if (btnElement) btnElement.classList.add('active');
 
-// ==========================================
-// 🚪 SALIDA SEGURA (Logout)
-// ==========================================
-window.logout = function() {
-    if(confirm("¿Cerrar sesión del Comando Central?")) {
-        localStorage.clear();
-        window.location.replace("login.html");
+    // E. LÓGICA DE CARGA BAJO DEMANDA (Para no saturar)
+    if (viewName === 'treasury') {
+        loadPendingDeposits();
+    } 
+    else if (viewName === 'command') { // Centro de Mando
+        loadAdminGames(); 
+        loadAdminTournaments();
+    }
+    else if (viewName === 'users') {
+        loadUsersList();
+    }
+    else if (viewName === 'dashboard') {
+        loadStats();
     }
 };
 
 // ==========================================
-// 💰 FINANZAS (ESTADÍSTICAS DEL CLAN)
+// 3. TESORERÍA (DEPÓSITOS Y RETIROS)
 // ==========================================
-async function loadFinanceStats() {
-    const token = localStorage.getItem("token");
+window.loadPendingDeposits = async () => {
+    const list = document.getElementById("depositList");
+    const empty = document.getElementById("emptyTreasury");
+    const badge = document.getElementById("treasuryBadge");
+    
+    if(list) list.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Consultando bóveda...</td></tr>';
+
     try {
-        const res = await fetch(`${API_URL}/api/finance/admin`, {
+        const res = await fetch(`${API_URL}/api/payments/pending`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+
+        if(!res.ok) throw new Error("Error API Tesorería");
+        const txs = await res.json();
+        
+        if(list) list.innerHTML = '';
+
+        // Actualizar Badge (Contador Rojo)
+        if (badge) {
+            if(txs.length > 0) {
+                badge.style.display = "inline-block";
+                badge.innerText = txs.length;
+                if(empty) empty.style.display = "none";
+            } else {
+                badge.style.display = "none";
+                if(empty) empty.style.display = "block";
+                return; // Si no hay nada, terminamos aquí
+            }
+        }
+
+        // Renderizar Filas
+        txs.forEach(tx => {
+            const row = document.createElement("tr");
+            const isDep = tx.type === 'deposit';
+            row.className = isDep ? 'row-deposit' : 'row-withdraw';
+            const date = new Date(tx.createdAt).toLocaleDateString();
+            
+            row.innerHTML = `
+                <td>${date}</td>
+                <td>${tx.user ? tx.user.ninjaName : 'Anon'}</td>
+                <td style="color:${isDep ? '#4caf50' : '#f44336'}">
+                    <strong>${isDep ? '📥 DEPOSITO' : '📤 RETIRO'}</strong>
+                </td>
+                <td style="font-weight:bold; color:var(--gold);">$${tx.amount}</td>
+                <td style="font-size:0.8rem; color:#aaa;">${tx.referenceId || tx.description}</td>
+                <td>
+                    <button onclick="processDeposit('${tx._id}', 'approve')" class="btn-ninja-primary" style="font-size:0.7rem; padding:5px 10px; margin-right:5px;" title="Aprobar">✔</button>
+                    <button onclick="processDeposit('${tx._id}', 'reject')" class="btn-ninja-outline" style="font-size:0.7rem; padding:5px 10px; color:var(--red); border-color:var(--red);" title="Rechazar">✖</button>
+                </td>
+            `;
+            list.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error(error);
+        if(list) list.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Error de conexión.</td></tr>';
+    }
+};
+
+window.processDeposit = async (id, action) => {
+    const actionText = action === 'approve' ? "APROBAR" : "RECHAZAR";
+    if(!confirm(`¿Estás seguro de ${actionText} esta operación?`)) return;
+
+    try {
+        const res = await fetch(`${API_URL}/api/payments/manage`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify({ transactionId: id, action })
+        });
+
+        const data = await res.json();
+        if(res.ok) {
+            alert(`✅ ${data.message}`);
+            loadPendingDeposits(); // Recargar lista al instante
+            loadStats(); // Actualizar stats globales
+        } else {
+            alert("⚠️ " + data.error);
+        }
+    } catch (e) {
+        alert("Error de red al procesar.");
+    }
+};
+
+// ==========================================
+// 4. CENTRO DE MANDO: JUEGOS
+// ==========================================
+window.createGame = async function() {
+    const title = document.getElementById('gTitle').value;
+    const embedUrl = document.getElementById('gUrl').value;
+    const thumbnail = document.getElementById('gThumb').value;
+
+    if(!title || !embedUrl) return alert("❌ Faltan datos del juego.");
+
+    try {
+        const res = await fetch(`${API_URL}/api/games`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify({ title, embedUrl, thumbnail })
+        });
+        
+        if(res.ok) {
+            alert("🕹️ Juego desplegado en el Dojo.");
+            // Limpiar inputs
+            document.getElementById('gTitle').value = "";
+            document.getElementById('gUrl').value = "";
+            document.getElementById('gThumb').value = "";
+            loadAdminGames(); // Recargar lista
+        } else {
+            alert("Error al crear juego.");
+        }
+    } catch(e) { console.error(e); }
+};
+
+async function loadAdminGames() {
+    const container = document.getElementById("adminGames");
+    if(!container) return;
+    
+    container.innerHTML = '<p class="muted-text">Cargando...</p>';
+
+    try {
+        const res = await fetch(`${API_URL}/api/games`);
+        const games = await res.json();
+        
+        if(games.length === 0) {
+            container.innerHTML = '<p class="muted-text">Inventario vacío.</p>';
+            return;
+        }
+
+        container.innerHTML = games.map(g => `
+            <div class="list-item">
+                <span>🕹️ ${g.title}</span>
+                <span style="color:var(--gold); font-size:0.7rem;">ACTIVO</span>
+            </div>
+        `).join('');
+    } catch(e) {
+        container.innerHTML = '<p style="color:red">Error cargando juegos.</p>';
+    }
+}
+
+// ==========================================
+// 5. CENTRO DE MANDO: TORNEOS
+// ==========================================
+window.createTournament = async function() {
+    const name = document.getElementById('tName').value;
+    const entryFee = document.getElementById('tFee').value;
+    const prize = document.getElementById('tPrize').value;
+
+    if(!name || !entryFee) return alert("❌ Faltan datos del torneo.");
+
+    try {
+        const res = await fetch(`${API_URL}/api/tournaments`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify({ name, entryFee, prize })
+        });
+
+        if(res.ok) {
+            alert("🏆 Torneo forjado con éxito.");
+            document.getElementById('tName').value = "";
+            document.getElementById('tFee').value = "";
+            document.getElementById('tPrize').value = "";
+            loadAdminTournaments();
+        } else {
+            alert("Error al crear torneo.");
+        }
+    } catch(e) { console.error(e); }
+};
+
+async function loadAdminTournaments() {
+    const container = document.getElementById("adminTournaments");
+    if(!container) return;
+
+    container.innerHTML = '<p class="muted-text">Cargando...</p>';
+
+    try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/tournaments`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
         
         if(res.ok) {
             const data = await res.json();
-            const funds = data.funds || { profit:0, dao:0, prizePool:0, microBudget:0 };
-            
-            // Renderizamos en los IDs correspondientes
-            setText('vaultProfit', `$${funds.profit} USD`);
-            setText('vaultDao', `$${funds.dao} USD`);
-            setText('vaultPrize', `$${funds.prizePool} USD`);
-            setText('vaultMicro', `$${funds.microBudget} USD`);
-            setText('daoTotalDisplay', `$${funds.dao} USD`);
+            if(data.length === 0) {
+                container.innerHTML = '<p class="muted-text">No hay torneos activos.</p>';
+                return;
+            }
+            container.innerHTML = data.map(t => `
+                <div class="list-item">
+                    <span>🏆 ${t.name}</span>
+                    <span style="color:var(--gold);">Pozo: $${t.prizePool || 0}</span>
+                </div>
+            `).join('');
         }
-    } catch (e) { console.error("Error cargando finanzas:", e); }
-}
-
-// ==========================================
-// 🕹️ JUEGOS (INTERNOS Y EXTERNOS)
-// ==========================================
-
-// Función para Juego Interno
-window.createInternalGame = async function() {
-    const title = getVal('giTitle');
-    const thumbnail = getVal('giImg');
-    const url = getVal('giUrl');
-    
-    // Capturamos los modos (checkboxes)
-    const modes = [];
-    if(document.getElementById('modePractice')?.checked) modes.push('practice');
-    if(document.getElementById('modeTournament')?.checked) modes.push('tournament');
-    if(document.getElementById('modeDuel')?.checked) modes.push('duel');
-
-    if(modes.length === 0) return alert("⚠️ Selecciona al menos un modo de juego.");
-
-    await postGame({ title, thumbnail, embedUrl: url, type: 'internal', modes });
-};
-
-// Función para Juego Externo
-window.createExternalGame = async function() {
-    const title = getVal('geTitle');
-    const thumbnail = getVal('geImg');
-    const url = getVal('geUrl');
-    await postGame({ title, thumbnail, embedUrl: url, type: 'external', modes: ['practice'] });
-};
-
-// Lógica central de subida
-async function postGame(gameData) {
-    if(!gameData.title || !gameData.embedUrl) return alert("❌ Faltan datos obligatorios del juego.");
-
-    try {
-        const res = await fetch(`${API_URL}/api/games`, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-            body: JSON.stringify(gameData)
-        });
-
-        if(res.ok) {
-            alert("✅ Juego instalado en el inventario.");
-            loadGamesList();
-            loadGameSelector();
-            // Limpiar inputs
-            document.querySelectorAll('.admin-form input').forEach(i => i.value = '');
-        } else {
-            const err = await res.json();
-            alert(`Error: ${err.message || 'No se pudo guardar'}`);
-        }
-    } catch (err) { alert("Error de red al guardar juego."); }
-}
-
-// Cargar lista visual
-async function loadGamesList() {
-    const container = document.getElementById('gamesList');
-    if(!container) return;
-
-    try {
-        const res = await fetch(`${API_URL}/api/games`);
-        const games = await res.json();
-        window.allGames = games; // Guardamos para el filtro
-        renderGames(games);
-    } catch(e) { console.error(e); }
-}
-
-// Renderizador
-function renderGames(games) {
-    const container = document.getElementById('gamesList');
-    if(!container) return;
-    
-    if (games.length === 0) {
-        container.innerHTML = '<p class="muted-text">El inventario está vacío.</p>';
-        return;
+    } catch(e) {
+        container.innerHTML = '<p style="color:red">Error cargando torneos.</p>';
     }
-
-    container.innerHTML = games.map(g => `
-        <div class="metric-card" style="padding:10px; position:relative; background: #1a1a1a; border: 1px solid #333;">
-            <div style="position:absolute; top:5px; right:5px; cursor:pointer; color:#d90429;" onclick="deleteGame('${g._id}')">🗑️</div>
-            <img src="${g.thumbnail}" style="width:100%; height:80px; object-fit:cover; border-radius:4px; margin-bottom:5px;">
-            <div style="font-weight:bold; font-size:0.9rem; color:white;">${g.title}</div>
-            <div class="muted-text" style="font-size:0.7rem;">${g.type.toUpperCase()}</div>
-        </div>
-    `).join('');
 }
 
-window.filterGamesByType = function(type) {
-    if(!window.allGames) return;
-    const filtered = window.allGames.filter(g => g.type === type);
-    renderGames(filtered);
-};
-
-window.deleteGame = async function(id) {
-    if(!confirm("⚠️ ¿Desinstalar este juego permanentemente?")) return;
-    await fetch(`${API_URL}/api/games/${id}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-    });
-    loadGamesList();
-};
-
 // ==========================================
-// 🏆 GESTIÓN DE TORNEOS
+// 6. USUARIOS Y ESTADÍSTICAS
 // ==========================================
+async function loadStats() {
+    // Aquí puedes conectar a un endpoint real de stats si lo tienes
+    // Por ahora simulamos la carga para que se vea activo
+    const elUsers = document.getElementById("statUsers");
+    const elVol = document.getElementById("statVol");
+    const elProfit = document.getElementById("statProfit");
 
-async function loadGameSelector() {
-    const selector = document.getElementById('tGameSelect');
-    if(!selector) return;
-    try {
-        const res = await fetch(`${API_URL}/api/games`);
-        const games = await res.json();
-        selector.innerHTML = `<option value="">Selecciona juego...</option>` + 
-                             games.map(g => `<option value="${g._id}">${g.title}</option>`).join('');
-    } catch (e) { console.error("Error cargando selector de juegos"); }
-}
-
-window.createTournament = async function() {
-    const payload = {
-        name: getVal('tName'),
-        gameId: getVal('tGameSelect'),
-        entryFee: getVal('tFee'),
-        prize: getVal('tPrize'),
-        startDate: getVal('tStart'), 
-        endDate: getVal('tEnd')      
-    };
-
-    if(!payload.name || !payload.gameId || !payload.startDate) return alert("❌ Faltan datos clave del torneo.");
-
-    try {
-        const res = await fetch(`${API_URL}/api/tournaments`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-            body: JSON.stringify(payload)
-        });
-        if(res.ok) {
-            alert("🏆 Torneo Publicado exitosamente");
-            loadTournamentsList();
-            document.getElementById('tName').value = ''; 
-        } else {
-            alert("Error creando torneo. Revisa los datos.");
-        }
-    } catch(e) { alert("Error de red al crear torneo."); }
-};
-
-async function loadTournamentsList() {
-    const container = document.getElementById('tournamentsList');
-    if(!container) return;
+    if(elUsers) elUsers.innerText = "Activo";
     
-    try {
-        const res = await fetch(`${API_URL}/api/tournaments`, {
-             headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-        const data = await res.json();
-
-        container.innerHTML = data.map(t => `
-            <div class="menu-item" style="cursor:default; justify-content: space-between; border-left: 2px solid var(--shogun-gold); background:#111; margin-bottom:5px; padding: 10px;">
-                <div>
-                    <span class="gold-text" style="font-weight:bold;">${t.name}</span>
-                    <br><small class="muted-text">Estado: ${t.status || 'Activo'}</small>
-                </div>
-                <div style="text-align:right;">
-                    <small style="display:block; color:white;">Bolsa: ${t.prize} NC</small>
-                    <small class="muted-text">Entrada: ${t.entryFee} NC</small>
-                </div>
-            </div>
-        `).join('');
-        
-        setText('statActiveTournaments', data.length);
-    } catch (e) { console.log("Error loading tournaments list"); }
+    // Ejemplo de cómo podrías obtener el volumen real si creas el endpoint
+    // const res = await fetch(`${API_URL}/api/stats/global`);
+    // ...
 }
-
-// ==========================================
-// 👥 GESTIÓN DE USUARIOS
-// ==========================================
 
 async function loadUsersList() {
-    const tbody = document.getElementById('usersTableBody');
-    if(!tbody) return;
-
-    try {
-        const res = await fetch(`${API_URL}/api/users`, { 
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-        if(!res.ok) return;
-        const users = await res.json();
-
-        tbody.innerHTML = users.map(u => `
-            <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #333;">
-                    <div style="font-weight:bold; color:white;">${u.ninjaName}</div>
-                    <div style="font-size:0.75rem; color:#666;">${u.email}</div>
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #333;">
-                    <span style="background:${u.role==='shogun'?'#d90429':'#222'}; color: white; padding:2px 8px; border-radius:4px; font-size:0.8rem;">
-                        ${u.role === 'shogun' ? 'SHOGUN' : 'Nivel ' + (u.level || 0)}
-                    </span>
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #333; text-align: center;">
-                    ${u.referralStats ? u.referralStats.count : 0}
-                </td>
-            </tr>
-        `).join('');
-
-        setText('statUsers', users.length);
-    } catch (e) { console.error("Error cargando usuarios"); }
-}
-
-// ==========================================
-// 🛠️ UTILIDADES
-// ==========================================
-function getVal(id) { const el = document.getElementById(id); return el ? el.value : ''; }
-function setText(id, txt) { const el = document.getElementById(id); if(el) el.innerText = txt; }
-
-// ==========================================
-// 💰 GESTIÓN DE TESORERÍA (DEPÓSITOS)
-// ==========================================
-
-window.loadPendingDeposits = async function() {
-    const container = document.getElementById('pendingDepositsList');
+    const container = document.getElementById("usersListContainer");
     if(!container) return;
-
-    try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/payments/pending`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if(!res.ok) throw new Error("Error al cargar finanzas");
-        
-        const transactions = await res.json();
-
-        if (transactions.length === 0) {
-            container.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:#666;">📭 No hay tributos pendientes.</td></tr>`;
-            return;
-        }
-
-        container.innerHTML = transactions.map(tx => `
-            <tr style="border-bottom: 1px solid #222;">
-                <td style="padding:15px; color:#888; font-size:0.9rem;">
-                    ${new Date(tx.createdAt).toLocaleDateString()} ${new Date(tx.createdAt).toLocaleTimeString()}
-                </td>
-                <td style="padding:15px;">
-                    <strong style="color:white;">${tx.user?.ninjaName || 'Desconocido'}</strong><br>
-                    <small style="color:#666;">${tx.user?.email || ''}</small>
-                </td>
-                <td style="padding:15px; color:#00d4ff; font-family:'Orbitron';">
-                    ${tx.referenceId}
-                </td>
-                <td style="padding:15px; font-size:1.2rem; color:#10b981;">
-                    $${tx.amount}
-                </td>
-                <td style="padding:15px; text-align:right;">
-                    <button onclick="processDeposit('${tx._id}', 'approve')" 
-                        style="background:#10b981; border:none; color:black; padding:5px 10px; cursor:pointer; font-weight:bold; margin-right:5px; border-radius:4px;">
-                        ✓ APROBAR
-                    </button>
-                    <button onclick="processDeposit('${tx._id}', 'reject')" 
-                        style="background:#d90429; border:none; color:white; padding:5px 10px; cursor:pointer; border-radius:4px;">
-                        ✕
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-    } catch (error) {
-        console.error(error);
-        container.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error de conexión con la bóveda.</td></tr>`;
-    }
-};
-
-window.processDeposit = async function(id, action) {
-    if(!confirm(action === 'approve' ? "¿Confirmas que recibiste el dinero real?" : "¿Rechazar solicitud?")) return;
-
-    const btn = event.target; 
-    const originalText = btn.innerText;
-    btn.disabled = true;
-    btn.innerText = "...";
-
-    try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/payments/manage`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ 
-                transactionId: id, 
-                action: action, 
-                comment: action === 'approve' ? "Aprobado por Shogun" : "Comprobante inválido"
-            })
-        });
-
-        const data = await res.json();
-        
-        if(res.ok) {
-            alert(`✅ Operación ${action.toUpperCase()} exitosa.`);
-            loadPendingDeposits(); 
-            loadUsersList(); 
-            loadFinanceStats(); 
-        } else {
-            alert("⚠️ " + data.message);
-            btn.disabled = false;
-            btn.innerText = originalText;
-        }
-
-    } catch (e) {
-        alert("Error de red");
-        btn.disabled = false;
-        btn.innerText = originalText;
-    }
-};
+    
+    // Aquí implementarías la llamada a /api/users si decides crear ese endpoint
+    container.innerHTML = '<p class="muted-text">Función de censo en desarrollo...</p>';
+}
