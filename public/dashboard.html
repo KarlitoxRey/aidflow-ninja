@@ -10,11 +10,42 @@
     <link rel="stylesheet" href="css/dashboard.css">
     
     <style>
+        /* === CORRECCIÓN CRÍTICA DE SCROLL Y LAYOUT === */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow-y: auto !important; /* FORZAR SCROLL */
+            background-color: #000;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr; /* Sidebar fija, contenido flexible */
+            gap: 20px;
+            max-width: 1400px;
+            margin: 80px auto 20px auto;
+            padding: 0 20px;
+            align-items: start; /* Evita que se estire */
+        }
+
+        /* En móviles, poner una columna */
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Estilos de la Barra de Progreso ($12.50) */
+        .cycle-progress-container {
+            background: #111; border: 1px solid #333; padding: 20px; 
+            border-radius: 8px; margin-bottom: 20px; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.5); border-left: 4px solid var(--gold);
+        }
+        .progress-track { width: 100%; height: 25px; background: #222; border-radius: 12px; overflow: hidden; margin: 15px 0; border: 1px solid #444; position: relative; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #d90429, #ffb400); width: 0%; transition: width 0.5s ease; }
+        
+        /* Chat Flotante */
         .chat-btn-floating { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; border: 2px solid #fff; color: #000; font-size: 1.5rem; }
         .chat-window { position: fixed; bottom: 100px; right: 30px; width: 320px; height: 400px; background: rgba(10, 10, 10, 0.95); border: 1px solid var(--gold); border-radius: 10px; display: none; flex-direction: column; z-index: 1000; overflow: hidden; }
-        .cycle-progress-container { background: #111; border: 1px solid #333; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.5); border-left: 4px solid var(--gold); }
-        .progress-track { width: 100%; height: 20px; background: #222; border-radius: 10px; overflow: hidden; margin: 15px 0; border: 1px solid #444; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #d90429, #ffb400); width: 0%; transition: width 0.5s ease; box-shadow: 0 0 10px var(--gold); }
+        .chat-body { flex: 1; padding: 10px; overflow-y: auto; color: #ddd; font-size: 0.9rem; }
     </style>
 </head>
 <body class="bg-ninja">
@@ -31,25 +62,29 @@
         </div>
     </header>
 
-    <div class="container dashboard-grid" style="margin-top: 80px;">
+    <div class="dashboard-grid">
+        
         <aside class="sidebar-profile">
             <div class="profile-card card-dark">
                 <div class="avatar-circle"><i class="fas fa-user-ninja"></i></div>
                 <h2 id="userName">Guerrero</h2>
                 <p id="userRank" style="color:var(--gold); font-size:0.9rem;">Ronin</p>
+                
                 <div style="margin-top:20px; border-top:1px solid #333; padding-top:15px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                         <span>Fichas Torneo:</span> <strong id="userTokens" style="color:var(--red)">0</strong>
                     </div>
                 </div>
+
                 <div class="action-buttons" style="margin-top:20px;">
-                    <button onclick="openModal('depositModal')" class="btn-ninja-primary full-width mb-1">RECARGAR / ACTIVAR PASE</button>
+                    <button onclick="openDepositModal()" class="btn-ninja-primary full-width mb-1">RECARGAR / ACTIVAR PASE</button>
                     <button id="menuProfile" class="btn-ninja-outline full-width">PERFIL</button>
                 </div>
             </div>
         </aside>
 
         <main class="main-content">
+            
             <div id="cycleContainer" class="cycle-progress-container" style="display:none;">
                 <h3 class="gold-text"><i class="fas fa-chart-line"></i> PROGRESO DE RETIRO</h3>
                 <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#ccc;">
@@ -62,25 +97,28 @@
                 <button id="harvestBtn" class="btn-ninja-primary full-width" style="margin-top:15px; display:none;">RETIRAR FONDOS</button>
             </div>
 
-            <div id="buyAlert" class="card-dark" style="border:1px solid #333; display:none; text-align:center; margin-bottom:20px;">
+            <div id="buyAlert" class="card-dark" style="border:1px solid #333; display:none; text-align:center; margin-bottom:20px; padding:20px;">
                 <h3 style="color:var(--gold);">⚠️ PASE INACTIVO</h3>
                 <p style="color:#aaa;">Recarga saldo para recibir 100 Fichas y habilitar retiros.</p>
-                <button onclick="openModal('depositModal')" class="btn-ninja-outline">ACTIVAR</button>
+                <button onclick="openDepositModal()" class="btn-ninja-outline">ACTIVAR</button>
             </div>
 
-            <section>
-                <h3 class="section-title">ARENA DE DUELOS</h3>
+            <section style="margin-bottom: 30px;">
+                <h3 class="section-title gold-text">ARENA DE DUELOS</h3>
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <input type="number" id="betAmount" placeholder="Apuesta (NC)" style="padding:5px;">
+                    <input type="number" id="betAmount" placeholder="Apuesta (NC)" class="input-ninja" style="flex:1;">
                     <button onclick="crearReto()" class="btn-ninja-primary">CREAR RETO</button>
                 </div>
                 <div id="duelsList"></div>
             </section>
 
             <section>
-                <h3 class="section-title">JUEGOS</h3>
-                <div id="embedGamesGrid" class="games-grid"><p style="color:#666;">Cargando juegos...</p></div>
+                <h3 class="section-title gold-text">JUEGOS</h3>
+                <div id="embedGamesGrid" class="games-grid">
+                    <p style="color:#666;">Cargando juegos...</p>
+                </div>
             </section>
+
         </main>
     </div>
 
