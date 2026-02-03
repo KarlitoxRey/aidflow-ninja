@@ -1,24 +1,43 @@
 import { Router } from "express";
+import { verifyToken, isShogun } from "../middlewares/auth.middleware.js";
 import { 
     getWalletDetails, 
-    buyPass,         // <--- Asegurate que coincida con el controller
     requestDeposit, 
-    manageDeposit, 
-    withdrawCycle,   // <--- Agregué esta que faltaba en tu router anterior
-    getPendingTransactions 
+    requestPayout, 
+    buyLevel,        // <--- AQUI ESTABA EL ERROR (Antes decía buyPass)
+    harvestEarnings, 
+    getPendingTransactions, 
+    manageDeposit 
 } from "../controllers/payments.controller.js";
-import { verifyToken } from "../middlewares/auth.middleware.js"; 
 
 const router = Router();
 
-// --- RUTAS DE USUARIO ---
-router.get("/wallet", verifyToken, getWalletDetails);
-router.post("/buy-pass", verifyToken, buyPass);
-router.post("/withdraw", verifyToken, withdrawCycle);
-router.post("/deposit", verifyToken, requestDeposit);
+// ==========================================
+// 👤 RUTAS DE USUARIO
+// ==========================================
 
-// --- RUTAS DE SHOGUN (ADMIN) ---
-router.post("/manage", verifyToken, manageDeposit);
-router.get("/pending", verifyToken, getPendingTransactions);
+// Billetera
+router.get("/wallet", verifyToken, getWalletDetails);
+
+// Depósitos y Retiros
+router.post("/deposit", verifyToken, requestDeposit);
+router.post("/payout", verifyToken, requestPayout);
+
+// JUEGO: Comprar Nivel (Antes buy-pass, ahora buy-level)
+router.post("/buy-level", verifyToken, buyLevel);
+
+// JUEGO: Cosechar
+router.post("/harvest", verifyToken, harvestEarnings);
+router.post("/withdraw", verifyToken, harvestEarnings); // Alias por compatibilidad
+
+// ==========================================
+// 🛡️ RUTAS DE ADMIN (TESORERÍA)
+// ==========================================
+
+// Ver pendientes
+router.get("/pending", verifyToken, isShogun, getPendingTransactions);
+
+// Gestionar (Aprobar/Rechazar)
+router.post("/manage", verifyToken, isShogun, manageDeposit);
 
 export default router;
