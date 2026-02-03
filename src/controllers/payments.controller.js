@@ -1,13 +1,14 @@
 import User from "../models/User.js";
 import Transaction from "../models/Transaction.js";
-import Cycle from "../models/Cycle.js"; // Necesario para la lógica de juego
-import { LEVEL_PRICES, SPEED_MULTIPLIERS, LEVEL_TOKENS, calculateCommissions } from "../utils/economyRules.js";
+import Cycle from "../models/Cycle.js"; 
+// Importamos reglas, pero si fallan, usaremos valores por defecto en el código
+import { LEVEL_PRICES, LEVEL_TOKENS } from "../utils/economyRules.js";
 
 // ==========================================
 // 1. GESTIÓN DE BILLETERA (USUARIO)
 // ==========================================
 
-// Obtener detalles completos
+// Obtener detalles completos (Wallet + Ciclo Activo + Historial)
 export const getWalletDetails = async (req, res) => {
     try {
         const user = await User.findById(req.user.userId).populate('activeCycle');
@@ -27,7 +28,7 @@ export const getWalletDetails = async (req, res) => {
     }
 };
 
-// Solicitar Depósito
+// Solicitar Depósito (Usuario sube comprobante)
 export const requestDeposit = async (req, res) => {
     try {
         const { amount, referenceId } = req.body;
@@ -68,7 +69,7 @@ export const requestPayout = async (req, res) => {
         const user = await User.findById(userId);
         if (user.balance < amount) return res.status(400).json({ message: "Saldo insuficiente en tu Bolsa." });
 
-        // Descontamos del saldo inmediatamente (Reserva)
+        // Descontamos del saldo inmediatamente (Reserva de fondos)
         user.balance -= amount;
         await user.save();
 
@@ -92,21 +93,25 @@ export const requestPayout = async (req, res) => {
 // ==========================================
 // 2. LÓGICA DEL JUEGO (NIVELES Y CICLOS)
 // ==========================================
-// Estas son las funciones que probablemente te faltaban y bajaban las líneas
 
 export const buyLevel = async (req, res) => {
     try {
         const { level } = req.body; // Nivel 1, 2, 3...
         const userId = req.user.userId;
 
-        const price = LEVEL_PRICES[level];
+        // PRECIOS: Usamos importación o valores por defecto para seguridad
+        const prices = LEVEL_PRICES || { 1: 10, 2: 20, 3: 50 };
+        const price = prices[level];
+
         if (!price) return res.status(400).json({ error: "Nivel no existente." });
 
         const user = await User.findById(userId).populate('activeCycle');
         
         // Validaciones
         if (user.balance < price) return res.status(400).json({ error: "Oro insuficiente." });
-        if (user.level >= level && (!user.activeCycle || user.activeCycle.progress < 100)) {
+        
+        // Regla: No puedes comprar si tienes un ciclo activo incompleto
+        if (user.activeCycle && user.activeCycle.progress < 100) {
             return res.status(400).json({ error: "Debes completar tu ciclo actual antes de recomprar." });
         }
 
@@ -115,7 +120,8 @@ export const buyLevel = async (req, res) => {
         user.level = level;
         
         // 2. Dar Fichas de Torneo (Bonus)
-        const tokens = LEVEL_TOKENS ? LEVEL_TOKENS[level] : 0;
+        const tokensMap = LEVEL_TOKENS || { 1: 5, 2: 10, 3: 25 };
+        const tokens = tokensMap[level] || 0;
         user.tournamentTokens = (user.tournamentTokens || 0) + tokens;
 
         // 3. Crear Ciclo
@@ -132,7 +138,7 @@ export const buyLevel = async (req, res) => {
         
         user.activeCycle = newCycle._id;
 
-        // 4. Pagar Referidos (Comisiones)
+        // 4. Pagar Referidos (Comisiones Multinivel)
         if (user.referredBy) {
             await distributeCommissions(user.referredBy, price, 1);
         }
@@ -163,19 +169,16 @@ export const harvestEarnings = async (req, res) => {
 
         const cycle = await Cycle.findById(user.activeCycle._id);
         
-        // Lógica simple: Si está al 100% o tiene ganancias pendientes
-        // Aquí asumo que hay un worker o lógica que actualiza 'earnings'
-        // Si es manual, aquí calculamos basado en el tiempo.
-        
+        // Validación de ganancias
         if (cycle.earnings <= 0) return res.status(400).json({ error: "Nada para cosechar aún." });
 
         const amount = cycle.earnings;
         
         // Mover al saldo principal
         user.balance += amount;
-        cycle.earnings = 0; // Reset o marcar como reclamado
+        cycle.earnings = 0; // Reset a 0 tras cosechar
         
-        // Si el ciclo terminó
+        // Si el ciclo terminó (100%), lo marcamos completed
         if (cycle.progress >= 100) {
             cycle.status = 'completed';
         }
@@ -198,21 +201,24 @@ export const harvestEarnings = async (req, res) => {
     }
 };
 
-// Función auxiliar para referidos
+// Función auxiliar recursiva para referidos (3 Niveles)
 async function distributeCommissions(sponsorId, amount, depth) {
-    if (depth > 3 || !sponsorId) return; // Máximo 3 niveles
+    if (depth > 3 || !sponsorId) return; 
 
     try {
         const sponsor = await User.findById(sponsorId);
         if (!sponsor) return;
 
-        // Porcentajes hardcodeados o desde economyRules
-        const rates = [0.10, 0.05, 0.02]; // 10%, 5%, 2%
+        // Niveles: 10%, 5%, 2%
+        const rates = [0.10, 0.05, 0.02]; 
         const commission = amount * rates[depth - 1];
 
         if (commission > 0) {
             sponsor.balance += commission;
+            // Aseguramos que exista el objeto stats
+            if (!sponsor.referralStats) sponsor.referralStats = { count: 0, totalEarned: 0 };
             sponsor.referralStats.totalEarned += commission;
+            
             await sponsor.save();
 
             await Transaction.create({
@@ -224,7 +230,7 @@ async function distributeCommissions(sponsorId, amount, depth) {
             });
         }
 
-        // Recursividad hacia arriba
+        // Subir al siguiente nivel
         if (sponsor.referredBy) {
             await distributeCommissions(sponsor.referredBy, amount, depth + 1);
         }
@@ -234,10 +240,10 @@ async function distributeCommissions(sponsorId, amount, depth) {
 }
 
 // ==========================================
-// 3. GESTIÓN DE TESORERÍA (ADMIN - LA PARTE NUEVA)
+// 3. GESTIÓN DE TESORERÍA (ADMIN)
 // ==========================================
 
-// Obtener Pendientes
+// Obtener Pendientes (Para la tabla del Admin)
 export const getPendingTransactions = async (req, res) => {
     try {
         const pending = await Transaction.find({ status: "pending" })
@@ -251,35 +257,36 @@ export const getPendingTransactions = async (req, res) => {
     }
 };
 
-// Aprobar/Rechazar
+// Aprobar/Rechazar Transacción
 export const manageDeposit = async (req, res) => {
     try {
         const { transactionId, action, comment } = req.body; 
         
         const tx = await Transaction.findById(transactionId).populate("user");
         if (!tx) return res.status(404).json({ error: "Transacción no encontrada." });
-        if (tx.status !== "pending") return res.status(400).json({ error: "Ya fue procesada." });
+        if (tx.status !== "pending") return res.status(400).json({ error: "Esta transacción ya fue procesada." });
 
         if (action === "approve") {
             tx.status = "completed";
             tx.description += " (Aprobado)";
             
-            // Si es depósito, sumamos saldo
+            // Si es depósito, AUMENTAMOS saldo
             if (tx.type === 'deposit') {
                 const user = await User.findById(tx.user._id);
                 user.balance += tx.amount;
                 await user.save();
             }
-            // Si es retiro, ya se descontó al pedirlo.
+            // Si es retiro, el saldo YA se descontó al solicitar, no hacemos nada más.
 
             await tx.save();
             res.json({ message: "✅ Operación aprobada." });
 
         } else {
+            // RECHAZO
             tx.status = "rejected";
             tx.description += ` (Rechazado: ${comment || 'Sin motivo'})`;
             
-            // Si era retiro y se rechaza, DEVOLVER el dinero a la bolsa
+            // Si era retiro y se rechaza, DEVOLVEMOS el dinero a la bolsa del usuario
             if (tx.type === 'withdrawal_external') {
                  const user = await User.findById(tx.user._id);
                  user.balance += tx.amount; 
@@ -295,5 +302,3 @@ export const manageDeposit = async (req, res) => {
         res.status(500).json({ error: "Error interno gestionando fondos." });
     }
 };
-
-
