@@ -1,9 +1,9 @@
 import User from "../models/User.js";
+import Cycle from "../models/Cycle.js"; // <--- ESTA ES LA LLAVE MAESTRA QUE FALTABA
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const generateReferralCode = (name) => {
-    // Genera código tipo: HANZO-492
     const cleanName = name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().substring(0, 4);
     const randomNum = Math.floor(100 + Math.random() * 900);
     return `${cleanName}-${randomNum}`;
@@ -96,6 +96,7 @@ export const login = async (req, res) => {
 // 3. OBTENER PERFIL (ME)
 export const getMe = async (req, res) => {
     try {
+        // AHORA SÍ FUNCIONARÁ EL POPULATE PORQUE IMPORTAMOS CYCLE ARRIBA
         const user = await User.findById(req.user.userId)
             .select("-password")
             .populate("activeCycle"); 
