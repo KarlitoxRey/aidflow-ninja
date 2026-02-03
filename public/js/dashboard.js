@@ -108,7 +108,7 @@ function setupEventListeners() {
 }
 
 // ==========================================
-// ⚔️ 3. LÓGICA DE DUELOS 1vs1 (NUEVO)
+// ⚔️ 3. LÓGICA DE DUELOS 1vs1
 // ==========================================
 
 function initDuelArena() {
@@ -449,7 +449,7 @@ function applyAccessLogic() {
         const btnAdmin = document.createElement("button");
         btnAdmin.id = "btnAdminFloating";
         btnAdmin.innerText = "⚙️ COMANDO SHOGUN";
-        btnAdmin.className = "btn-ninja-primary"; // Clase existente
+        btnAdmin.className = "btn-ninja-primary"; 
         
         // Estilos forzados para garantizar visibilidad
         Object.assign(btnAdmin.style, {
@@ -541,8 +541,8 @@ window.selectLevel = async (lvl) => {
         const res = await fetch(`${API_URL}/api/cycles/start`, { 
             method: "POST",
             headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                "Content-Type": "application/json", 
+                "Authorization": `Bearer ${localStorage.getItem("token")}` 
             },
             body: JSON.stringify({ level: lvl })
         });
