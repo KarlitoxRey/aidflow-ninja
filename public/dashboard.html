@@ -3,222 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comando Central | AidFlow Ninja</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+    <title>Dojo del Guerrero | AidFlow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    
+    <style>
+        /* ESTILOS DEL CHAT FLOTANTE */
+        .chat-btn-floating {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: var(--gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 180, 0, 0.4);
+            z-index: 1000;
+            transition: transform 0.2s;
+            border: 2px solid #fff;
+            color: #000;
+            font-size: 1.5rem;
+        }
+        .chat-btn-floating:hover { transform: scale(1.1); }
+
+        .chat-window {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 350px;
+            height: 450px;
+            background: rgba(10, 10, 10, 0.95);
+            border: 1px solid var(--gold);
+            border-radius: 10px;
+            display: none; /* Oculto por defecto */
+            flex-direction: column;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+        
+        .chat-header { background: #1a1a1a; padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; color: #ddd; font-size: 0.9rem; }
+        .chat-input { padding: 10px; background: #000; border-top: 1px solid #333; display: flex; }
+        .chat-input input { flex: 1; background: #222; border: none; color: white; padding: 10px; border-radius: 4px; margin-right: 5px; }
+
+        /* BARRA DE PROGRESO (Estilo corregido) */
+        .cycle-progress-container {
+            background: #111; border: 1px solid #333; padding: 20px; border-radius: 8px; margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        .progress-track { width: 100%; height: 20px; background: #222; border-radius: 10px; overflow: hidden; margin: 15px 0; border: 1px solid #444; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #d90429, #ffb400); width: 0%; transition: width 0.5s ease; box-shadow: 0 0 10px var(--gold); }
+    </style>
 </head>
-<body>
+<body class="bg-ninja">
 
-    <aside class="sidebar">
-        <div class="profile-summary">
-            <div class="avatar-circle">
-                <i class="fas fa-user-ninja"></i>
+    <header class="dashboard-header">
+        <div class="container flex-between">
+            <h1 class="shogun-title-mini">AIDFLOW <span class="red-text">NINJA</span></h1>
+            <div class="user-menu">
+                <span class="gold-text" style="margin-right:15px; font-weight:bold;">
+                    <i class="fas fa-coins"></i> <span id="headerBalance">0.00</span>
+                </span>
+                <button onclick="logout()" class="btn-icon"><i class="fas fa-sign-out-alt"></i></button>
             </div>
-            <h3 id="sideName" style="margin:0; font-family:'Orbitron'; color:white;">GUERRERO</h3>
-            <span id="sideLevelBadge" style="font-size:0.8rem; color:#ffb703; border:1px solid #ffb703; padding:2px 8px; border-radius:4px; display:inline-block; margin-top:5px;">RONIN</span>
         </div>
+    </header>
 
-        <nav class="nav-menu">
-            <ul>
-                <li class="active"><i class="fas fa-home"></i> <span>BASE</span></li>
-                <li onclick="window.openProfileModal()"><i class="fas fa-id-card"></i> <span>PERFIL</span></li>
-                <li onclick="window.openWithdrawModal()"><i class="fas fa-coins"></i> <span>RETIROS</span></li>
-                <li onclick="window.openLevelModal()"><i class="fas fa-layer-group"></i> <span>NIVELES</span></li>
-                <li id="logoutBtn" style="margin-top:auto; color:#d90429;"><i class="fas fa-sign-out-alt"></i> <span>ABANDONAR</span></li>
-            </ul>
-        </nav>
-    </aside>
-
-    <main class="main-content">
+    <div class="container dashboard-grid" style="margin-top: 80px;">
         
-        <div class="stats-header">
-            <div class="stat-box">
-                <span class="label">MI BOLSA (SALDO)</span>
-                <span class="value gold-text">$<span id="headerBalance">0.00</span></span>
-            </div>
-            
-            <div class="stat-box" style="border-color: #00d4ff;">
-                <span class="label" style="color:#00d4ff;">FICHAS COMBATE</span>
-                <span class="value" id="tokenBalance" style="color: #fff; text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);">0</span>
-            </div>
-
-            <div class="stat-box">
-                <span class="label">FONDO CLAN (DAO)</span>
-                <span class="value" id="daoFund">$0.00</span>
-            </div>
-            
-            <div class="stat-box">
-                <span class="label">POZO GUERRA</span>
-                <span class="value" id="prizePool">$0.00</span>
-            </div>
-        </div>
-
-        <div class="action-bar">
-            <button onclick="window.openDepositModal()" class="btn-action btn-deposit">
-                <i class="fas fa-plus-circle"></i> RECARGAR SALDO
-            </button>
-            <button onclick="window.openWithdrawModal()" class="btn-action btn-withdraw">
-                <i class="fas fa-hand-holding-usd"></i> RETIRAR GANANCIAS
-            </button>
-        </div>
-
-         <section class="card-dark" style="margin-top: 20px; border: 1px solid var(--shogun-gold);">
-    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-        <img src="images/icon-duel.png" width="40" alt="Duelo">
-        <h2 class="gold-text" style="font-family: 'Orbitron'; margin: 0;">ARENA DE DUELOS</h2>
-    </div>
-
-    <div class="bet-panel" style="background: #0a0a0a; padding: 20px; border-radius: 8px; border: 1px solid #222;">
-        <p class="muted-text" style="font-size: 0.9rem; margin-bottom: 10px;">PREPARA TU APUESTA (NC)</p>
-        <div style="display: flex; gap: 10px;">
-            <input type="number" id="betAmount" value="10" min="5" step="5" 
-                   style="background: #000; border: 1px solid var(--blood); color: white; padding: 10px; flex: 1; font-family: 'Orbitron';">
-            <button onclick="crearReto()" class="btn-ninja-primary" style="padding: 10px 20px;">PUBLICAR RETO</button>
-        </div>
-        <p style="font-size: 0.75rem; color: #666; margin-top: 8px;">* El Clan cobra un 10% de comisión sobre el pozo total.</p>
-    </div>
-
-    <div id="duelsList" style="margin-top: 20px; display: grid; gap: 10px;">
-        <p class="muted-text text-center">Buscando oponentes en las sombras...</p>
-    </div>
-</section>
-        <h2 class="section-title">⚔️ OPERACIONES TÁCTICAS</h2>
-        
-        <div class="mission-card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h3 style="margin:0; font-family:'Orbitron'; color:white;">DIFUSIÓN DE INTEL</h3>
-                    <p style="color:#888; margin:5px 0 0 0; font-size:0.9rem;">Comparte nuestro protocolo en redes.</p>
+        <aside class="sidebar-profile">
+            <div class="profile-card card-dark">
+                <div class="avatar-circle"><i class="fas fa-user-ninja"></i></div>
+                <h2 id="userName">Guerrero</h2>
+                <p id="userRank" style="color:var(--gold); font-size:0.9rem;">Ronin</p>
+                
+                <div style="margin-top:20px; border-top:1px solid #333; padding-top:15px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span>Fichas Torneo:</span>
+                        <strong id="userTokens" style="color:var(--red)">0</strong>
+                    </div>
                 </div>
-                <i class="fab fa-twitter" style="font-size:2rem; color:#1da1f2;"></i>
-            </div>
-            
-            <div class="step-box">
-                <button id="btnShare" class="step-btn active">1. COMPARTIR</button>
-                <button id="btnVerify" class="step-btn" disabled>2. VERIFICAR</button>
-                <button id="btnClaimSocial" class="step-btn" disabled>3. RECLAMAR $0.10</button>
-            </div>
-            <div id="socialStatus" style="margin-top:10px; font-size:0.8rem; color:#555; text-align:center;">Esperando acción del agente...</div>
-        </div>
 
-        <div class="mission-card" style="border-left-color: #10b981;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h3 style="margin:0; font-family:'Orbitron'; color:white;">REPORTE DIARIO</h3>
-                    <p style="color:#888; margin:5px 0 0 0; font-size:0.9rem;">Confirma tu estado activo al cuartel.</p>
+                <div class="action-buttons" style="margin-top:20px;">
+                    <button onclick="openModal('depositModal')" class="btn-ninja-primary full-width mb-1">RECARGAR SALDO</button>
+                    <button onclick="openModal('levelModal')" class="btn-ninja-outline full-width">COMPRAR NIVEL</button>
                 </div>
-                <i class="fas fa-satellite-dish" style="font-size:2rem; color:#10b981;"></i>
             </div>
-            <button id="missionBtn" style="width:100%; margin-top:15px; background:transparent; border:1px solid #10b981; color:#10b981; padding:10px; font-family:'Orbitron'; cursor:pointer; transition:0.3s;">
-                CARGANDO ESTADO...
-            </button>
-        </div>
+        </aside>
 
-        <h2 class="section-title">🎮 SIMULACIONES DE COMBATE</h2>
-        <div id="embedGamesGrid" class="games-grid">
-            <p style="color:#666;">Cargando simulaciones...</p>
-        </div>
+        <main class="main-content">
+            
+            <div id="cycleContainer" class="cycle-progress-container" style="display:none;">
+                <h3 class="gold-text"><i class="fas fa-sync-alt fa-spin"></i> CICLO ACTIVO: NIVEL <span id="cycleLevel">1</span></h3>
+                <div class="progress-track">
+                    <div id="cycleBar" class="progress-fill"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#aaa;">
+                    <span>Progreso: <strong id="cyclePercent" style="color:white;">0%</strong></span>
+                    <span>Ganancia: <strong id="cycleEarnings" style="color:var(--gold);">$0.00</strong></span>
+                </div>
+                <button onclick="harvest()" id="harvestBtn" class="btn-ninja-primary full-width" style="margin-top:15px; display:none;">COSECHAR GANANCIAS</button>
+            </div>
 
-    </main>
+            <div id="buyAlert" class="card-dark" style="border:1px solid var(--gold); display:none; text-align:center; margin-bottom:20px;">
+                <h3 style="color:var(--gold);">⚠️ TIENES SALDO DISPONIBLE</h3>
+                <p>Tu depósito fue aprobado. Ahora debes activar tu ciclo.</p>
+                <button onclick="openModal('levelModal')" class="btn-ninja-primary">ACTIVAR NIVEL AHORA</button>
+            </div>
 
-    <div id="toggleChatBtn" class="chat-floating-btn">
-        <i class="fas fa-comments"></i>
+            <section>
+                <h3 class="section-title">TORNEOS DISPONIBLES</h3>
+                <div id="gamesGrid" class="games-grid">
+                    <p style="color:#666;">Buscando oponentes...</p>
+                </div>
+            </section>
+        </main>
     </div>
+
+    <div onclick="toggleChat()" class="chat-btn-floating">
+        <i class="fas fa-comment-dots"></i>
+    </div>
+
     <div id="chatWindow" class="chat-window">
         <div class="chat-header">
-            <span>COMUNICACIONES</span>
-            <i class="fas fa-times" id="closeChatBtn" style="cursor:pointer;"></i>
+            <span class="gold-text">CANAL GLOBAL</span>
+            <button onclick="toggleChat()" style="background:none; border:none; color:white; cursor:pointer;">✖</button>
         </div>
-        <div id="chatMessages" class="chat-body"></div>
-        <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Mensaje...">
-            <button id="sendChatBtn"><i class="fas fa-paper-plane"></i></button>
+        <div id="chatMessages" class="chat-body custom-scroll">
+            <div style="text-align:center; padding:20px; color:#555;">Conectando al servidor secreto...</div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="chatMsg" placeholder="Escribe aquí...">
+            <button onclick="sendChat()" class="btn-ninja-primary" style="padding:0 15px;">➤</button>
         </div>
     </div>
 
-    <div id="depositModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; align-items:center; justify-content:center;">
-        <div class="modal-content" style="background:#111; padding:30px; border:2px solid var(--gold); width:90%; max-width:400px; text-align:center; border-radius:8px;">
-            <h2 style="color:var(--gold); font-family:'Orbitron'; margin-top:0;">RECARGA TÁCTICA</h2>
-            <p style="color:#ccc; font-size:0.9rem;">Envía tu tributo por Mercado Pago y reporta aquí la operación.</p>
-            <div style="background:#222; padding:10px; margin:15px 0; border-radius:4px;">
-                <p style="color:#fff; margin:0;">ALIAS: <strong style="color:var(--blood);">TU.ALIAS.MP</strong></p>
-                <p style="color:#fff; margin:5px 0 0 0;">CVU: <strong style="color:var(--blood);">0000003123123</strong></p>
+    <div id="depositModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <h3 class="gold-text">RECARGAR BILLETERA</h3>
+            <input type="number" id="depAmount" placeholder="Monto ($)" class="input-ninja full-width mb-1">
+            <input type="text" id="depRef" placeholder="ID Transacción / Hash" class="input-ninja full-width mb-1">
+            <div style="display:flex; gap:10px;">
+                <button onclick="submitDeposit()" class="btn-ninja-primary full-width">ENVIAR AVISO</button>
+                <button onclick="closeModal('depositModal')" class="btn-ninja-outline full-width">CANCELAR</button>
             </div>
-            <input type="number" id="depAmount" placeholder="Monto ($)" style="width:100%; padding:10px; margin-bottom:10px; background:#000; border:1px solid #444; color:white;">
-            <input type="text" id="depRef" placeholder="ID de Operación MP" style="width:100%; padding:10px; margin-bottom:20px; background:#000; border:1px solid #444; color:white;">
-            <button onclick="window.submitDeposit()" class="btn-ninja-primary" style="width:100%; padding:12px;">INFORMAR PAGO</button>
-            <button onclick="window.closeDepositModal()" style="margin-top:15px; background:none; border:none; color:#666; cursor:pointer;">Cancelar</button>
         </div>
     </div>
 
-    <div id="profileModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2000; align-items:center; justify-content:center;">
-        <div class="modal-content" style="background:#111; padding:30px; border:2px solid var(--blood); width:90%; max-width:450px; border-radius:8px; position:relative;">
-            <span onclick="window.closeProfileModal()" style="position:absolute; top:10px; right:15px; color:#666; cursor:pointer; font-size:1.5rem;">&times;</span>
-            <h2 style="color:var(--blood); font-family:'Orbitron'; text-align:center; margin-top:0;">EXPEDIENTE NINJA</h2>
-            <div style="text-align:center; margin-bottom:20px;">
-                <div style="width:80px; height:80px; background:#000; border:2px solid var(--gold); border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:30px; color:var(--gold);">
-                    <i class="fas fa-user-secret"></i>
+    <div id="levelModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <h3 class="gold-text">SELECCIONA TU CAMINO</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:15px;">
+                <div class="level-card" onclick="buyLevel(1)">
+                    <h4>NIVEL 1</h4><p>$10</p><small>+5 Fichas</small>
                 </div>
-                <h3 id="profName" style="color:white; margin:0;">...</h3>
-                <p id="profEmail" style="color:#666; font-size:0.9rem; margin:5px 0;">...</p>
-            </div>
-            <div style="background:#1a1a1a; padding:15px; border-radius:6px; border:1px solid #333; margin-bottom:15px;">
-                <label style="color:var(--gold); font-size:0.7rem; font-family:'Orbitron';">TU ENLACE DE RECLUTAMIENTO</label>
-                <div style="display:flex; gap:10px; margin-top:5px;">
-                    <input type="text" id="referralLink" readonly style="flex:1; background:#000; border:1px solid #444; color:#fff; padding:8px; font-size:0.8rem;">
-                    <button onclick="window.copyReferral()" style="background:var(--blood); border:none; color:white; padding:0 15px; cursor:pointer; font-weight:bold;">COPIAR</button>
+                <div class="level-card" onclick="buyLevel(2)">
+                    <h4>NIVEL 2</h4><p>$20</p><small>+10 Fichas</small>
+                </div>
+                <div class="level-card" onclick="buyLevel(3)">
+                    <h4>NIVEL 3</h4><p>$50</p><small>+25 Fichas</small>
                 </div>
             </div>
-            <div style="display:flex; justify-content:space-between; text-align:center;">
-                <div><span style="display:block; color:#666; font-size:0.7rem;">RANGO</span><strong id="profLevel" style="color:white;">...</strong></div>
-                <div><span style="display:block; color:#666; font-size:0.7rem;">REFERIDOS</span><strong id="profRefCount" style="color:white;">0</strong></div>
-                <div><span style="display:block; color:#666; font-size:0.7rem;">GANANCIAS</span><strong id="profRefEarn" style="color:#10b981;">$0.00</strong></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="withdrawModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2000; align-items:center; justify-content:center;">
-        <div class="modal-content" style="background:#111; padding:30px; border:2px solid #10b981; width:90%; max-width:450px; border-radius:8px; position:relative;">
-            <span onclick="window.closeWithdrawModal()" style="position:absolute; top:10px; right:15px; color:#666; cursor:pointer; font-size:1.5rem;">&times;</span>
-            <h2 style="color:#10b981; font-family:'Orbitron'; text-align:center; margin-top:0;">BÓVEDA DE RETIRO</h2>
-            <div style="display:flex; border-bottom:1px solid #333; margin-bottom:20px;">
-                <button onclick="window.showTab('harvest')" id="tabHarvest" style="flex:1; background:none; border:none; color:white; padding:10px; border-bottom:2px solid #10b981; cursor:pointer;">COSECHAR CICLO</button>
-                <button onclick="window.showTab('bank')" id="tabBank" style="flex:1; background:none; border:none; color:#666; padding:10px; cursor:pointer;">RETIRAR A BANCO</button>
-            </div>
-            <div id="viewHarvest">
-                <p style="color:#ccc; text-align:center;">Mueve tus ganancias del ciclo activo a tu saldo principal.</p>
-                <div style="text-align:center; margin:20px 0;">
-                    <span style="color:#666; font-size:0.8rem;">DISPONIBLE</span>
-                    <div id="harvestAmount" style="font-size:2rem; color:#10b981; font-family:'Orbitron';">$0.00</div>
-                </div>
-                <button onclick="window.doHarvest()" class="btn-ninja-primary" style="width:100%; background:#10b981; color:black;">RECOLECTAR GANANCIAS</button>
-            </div>
-            <div id="viewBank" style="display:none;">
-                <p style="color:#ccc; text-align:center; font-size:0.9rem;">Solicita el envío de tu Saldo Principal a tu cuenta externa.</p>
-                <input type="number" id="outAmount" placeholder="Monto a retirar ($)" style="width:100%; padding:10px; margin-bottom:10px; background:#000; border:1px solid #444; color:white;">
-                <input type="text" id="outAlias" placeholder="Tu CBU / ALIAS / MP" style="width:100%; padding:10px; margin-bottom:20px; background:#000; border:1px solid #444; color:white;">
-                <button onclick="window.doPayout()" class="btn-ninja-primary" style="width:100%;">SOLICITAR PAGO</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="game-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; flex-direction:column; align-items:center; justify-content:center;">
-        <button onclick="window.closeGame()" style="align-self:flex-end; margin-right:5%; margin-bottom:10px; background:var(--blood); border:none; color:white; padding:10px 20px; font-family:'Orbitron'; cursor:pointer;">CERRAR SIMULACIÓN X</button>
-        <iframe id="game-frame" src="" style="width:90%; height:80%; border:2px solid var(--gold); background:black;"></iframe>
-    </div>
-
-    <div id="levelModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; align-items:center; justify-content:center;">
-        <div style="background:#111; padding:30px; border:2px solid var(--gold); max-width:500px; width:90%; text-align:center;">
-            <h2 style="color:var(--gold); font-family:'Orbitron';">FORJAR DESTINO</h2>
-            <div id="levelButtonsContainer" style="margin-top:20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;"></div>
-            <button onclick="window.closeLevelModal()" style="margin-top:20px; background:transparent; border:1px solid #444; color:#888; padding:5px 15px; cursor:pointer;">Cancelar</button>
+            <button onclick="closeModal('levelModal')" class="btn-ninja-outline full-width">CANCELAR</button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="js/app.js"></script>
     <script type="module" src="js/dashboard.js"></script>
 </body>
 </html>
