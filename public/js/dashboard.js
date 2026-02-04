@@ -39,7 +39,10 @@ async function validateSession() {
 
 function renderUserInterface() {
     safeText("userName", currentUser.ninjaName);
-    safeText("headerBalance", formatMoney(currentUser.balance)); // Se mostrará $0.00 tras aprobación
+    // NOTA: El balance ya no está en el header, pero si existe en el DOM lo llenamos
+    const headerBal = document.getElementById("headerBalance");
+    if(headerBal) headerBal.innerText = formatMoney(currentUser.balance);
+
     safeText("userTokens", currentUser.tournamentTokens || 0);
     safeText("userRefCode", currentUser.referralCode || "---");
     
@@ -51,7 +54,7 @@ function renderUserInterface() {
     updateCycleProgress();
 }
 
-// === LÓGICA PASE $50 ===
+// === LÓGICA DE BARRA Y RETIRO ===
 function updateCycleProgress() {
     const container = document.getElementById("cycleContainer");
     if(!container) return;
@@ -62,7 +65,7 @@ function updateCycleProgress() {
 
         const currentBalance = currentUser.balance || 0;
         const totalTarget = 50.00;
-        const stepTarget = 12.50; 
+        const stepTarget = 12.50;
         
         let percent = (currentBalance / totalTarget) * 100;
         if(percent > 100) percent = 100;
@@ -73,7 +76,6 @@ function updateCycleProgress() {
 
         const harvestBtn = document.getElementById("harvestBtn");
         
-        // Bloqueo y habilitación por tramos
         if (currentUser.hasPendingWithdrawal) {
             harvestBtn.style.display = "block";
             harvestBtn.innerText = "⏳ RETIRO EN PROCESO";
@@ -93,14 +95,24 @@ function updateCycleProgress() {
     }
 }
 
-// === CHAT CORREGIDO ===
+// === CHAT (DEPURADO) ===
 function initChat() {
-    if(typeof io === 'undefined') return;
+    if(typeof io === 'undefined') {
+        console.error("Socket.io no cargado");
+        return;
+    }
+    
+    console.log("Conectando Chat a:", API_URL);
     socket = io(API_URL);
-    const input = document.getElementById("chatMsg");
+    
     const box = document.getElementById("chatMessages");
 
+    socket.on("connect", () => {
+        console.log("Chat Conectado. ID:", socket.id);
+    });
+
     socket.on("chat message", (msg) => {
+        console.log("Mensaje recibido:", msg);
         if(box) {
             const p = document.createElement("div");
             p.style.borderBottom = "1px solid #222"; p.style.padding="5px 0";
@@ -110,16 +122,22 @@ function initChat() {
     });
 
     window.sendChat = () => {
+        const input = document.getElementById("chatMsg");
         const txt = input.value.trim();
-        if(txt) { socket.emit("chat message", { user: currentUser.ninjaName, text: txt }); input.value = ""; }
+        if(txt) { 
+            console.log("Enviando:", txt);
+            socket.emit("chat message", { user: currentUser.ninjaName, text: txt }); 
+            input.value = ""; 
+        }
     };
 }
 
-// === PAGOS ===
+// === PAGOS (Nuevo flujo desde Modal Niveles) ===
 window.submitDeposit = async () => {
     const amount = document.getElementById("depAmount").value;
     const ref = document.getElementById("depRef").value;
-    if(!amount || !ref) return alert("Faltan datos");
+    
+    if(!amount || !ref) return alert("Ingresa el ID de transacción");
 
     try {
         const res = await fetch(`${API_URL}/api/payments/deposit`, {
@@ -128,9 +146,13 @@ window.submitDeposit = async () => {
             body: JSON.stringify({ amount, referenceId: ref })
         });
         const data = await res.json();
-        if(res.ok) { alert("✅ Enviado."); window.closeModal('depositModal'); }
+        if(res.ok) { 
+            alert("✅ Comprobante enviado. Espera la activación."); 
+            // Cerrar el modal de niveles
+            document.getElementById('levelsModal').style.display = 'none';
+        }
         else { alert("⚠️ " + data.message); }
-    } catch (e) { alert("Error"); }
+    } catch (e) { alert("Error de conexión"); }
 };
 
 window.doPayout = async (amountFixed) => {
@@ -148,7 +170,7 @@ window.doPayout = async (amountFixed) => {
     } catch(e) { alert("Error"); }
 };
 
-// === FUNCIONES PRESERVADAS ===
+// === FUNCIONES EXTRAS ===
 function initSocialMissionLogic() {
     const btnShare = document.getElementById("btnShare");
     if(!btnShare) return;
@@ -157,13 +179,12 @@ function initSocialMissionLogic() {
         btnShare.disabled = true;
         setTimeout(() => document.getElementById("btnVerify").disabled = false, 3000);
     });
-    // ... resto de lógica de misiones ...
+    // ... resto
 }
 
 function initDailyMissionBtn() {
     const btn = document.getElementById("missionBtn");
     if(!btn) return;
-    // Lógica básica de UI, la validación real está en backend
     btn.onclick = async () => {
         const res = await fetch(`${API_URL}/api/missions/daily`, { method: "POST", headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } });
         if(res.ok) window.location.reload();
@@ -186,12 +207,21 @@ async function loadUserGames() {
 }
 
 function initDuelArena() {
-    if(socket) socket.on("newDuelAvailable", (d) => { /* render */ });
+    if(socket) socket.on("newDuelAvailable", (d) => { /* render logic */ });
 }
-window.crearReto = () => alert("Crear Reto (Requiere Backend)");
+window.crearReto = () => alert("Publicando reto...");
 window.playGame = (url) => window.open(url, '_blank');
-window.toggleChat = () => { const w = document.getElementById("chatWindow"); if(w) w.style.display = w.style.display==="flex"?"none":"flex"; };
 window.logout = () => { localStorage.clear(); window.location.replace("login.html"); };
+window.toggleChat = () => { const w = document.getElementById("chatWindow"); if(w) w.style.display = w.style.display==="flex"?"none":"flex"; };
 function formatMoney(amount) { return Number(amount || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }); }
 function safeText(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; }
-function applyAccessLogic() { if (currentUser && currentUser.role === 'shogun') { /* admin btn */ } }
+function applyAccessLogic() {
+    if (currentUser && currentUser.role === 'shogun') {
+        const btn = document.createElement("button");
+        btn.innerText = "ADMIN"; btn.className = "btn-blade";
+        btn.style = "position:fixed; bottom:20px; left:20px; width:auto; z-index:9999;";
+        btn.onclick = () => window.location.href = "admin.html";
+        document.body.appendChild(btn);
+    }
+}
+function setupEventListeners() { document.getElementById("menuProfile")?.addEventListener("click", ()=>alert("Perfil")); }
