@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema({
+    // ===========================
+    // 🥷 IDENTIDAD (INTACTO)
+    // ===========================
     ninjaName: { 
         type: String, 
         required: true, 
@@ -25,8 +28,20 @@ const userSchema = new mongoose.Schema({
         enum: ['ninja', 'shogun'] 
     },
     
-    // --- ECONOMÍA ---
+    // ===========================
+    // 💰 ECONOMÍA (ACTUALIZADO)
+    // ===========================
     balance: { 
+        type: Number, 
+        default: 0 
+    },
+    // NUEVO: Para saber cuánto ha ganado en total (histórico)
+    totalEarnings: { 
+        type: Number, 
+        default: 0 
+    },
+    // NUEVO: Progreso del ciclo actual (ej: lleva $15 de $30)
+    currentCycleAcc: { 
         type: Number, 
         default: 0 
     },
@@ -35,17 +50,50 @@ const userSchema = new mongoose.Schema({
         default: 0 
     },
     
-    // --- JUEGO ---
+    // ===========================
+    // ⚔️ ESTADO DEL GUERRERO (NUEVO)
+    // ===========================
+    // NUEVO: Nivel actual (1=Bronce, 2=Plata, 3=Oro)
+    level: { 
+        type: Number, 
+        default: 0 
+    },
+    // NUEVO: Velocidad para el sorteo de micropagos (x1, x1.5, x2)
+    micropaymentSpeed: { 
+        type: Number, 
+        default: 1 
+    },
+    // NUEVO: ¿Está habilitado para recibir lluvia de dinero?
+    isActive: { 
+        type: Boolean, 
+        default: false 
+    },
+    // NUEVO: Bandera para obligar a recomprar
+    cycleCompleted: { 
+        type: Boolean, 
+        default: false 
+    },
+    // NUEVO: Para identificar a los primeros 100 fundadores
+    userIndex: { 
+        type: Number 
+    },
+
+    // ===========================
+    // 🎲 JUEGO (LEGACY/COMPATIBLE)
+    // ===========================
     activeCycle: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: "Cycle", 
         default: null 
     },
     
-    // --- REFERIDOS ---
+    // ===========================
+    // 🤝 REFERIDOS (INTACTO)
+    // ===========================
     referralCode: { 
         type: String, 
-        unique: true 
+        unique: true,
+        sparse: true // Permite nulls si no tienen código al inicio
     },
     referredBy: { 
         type: mongoose.Schema.Types.ObjectId, 
@@ -61,7 +109,9 @@ const userSchema = new mongoose.Schema({
         totalEarned: { type: Number, default: 0 }
     },
 
-    // --- SEGURIDAD ---
+    // ===========================
+    // 🛡️ SEGURIDAD (INTACTO)
+    // ===========================
     isVerified: { 
         type: Boolean, 
         default: false 
@@ -73,17 +123,13 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // ==========================================
-// 🛡️ EL ARREGLO ESTÁ AQUÍ
+// 🔒 MIDDLEWARES Y MÉTODOS
 // ==========================================
-// Antes usabas 'next' con async, lo cual causa el error.
-// Al quitar 'next' y dejar solo async, Mongoose entiende que es una Promesa.
 
+// 1. Hook para Encriptar Password (TU CÓDIGO ORIGINAL CORREGIDO)
 userSchema.pre("save", async function () {
-    // Si la contraseña NO se modificó, continuamos sin hacer nada
     if (!this.isModified("password")) return;
-
     try {
-        // Encriptar contraseña
         const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
     } catch (error) {
@@ -91,7 +137,24 @@ userSchema.pre("save", async function () {
     }
 });
 
-// Método para verificar contraseña en el Login
+// 2. NUEVO HOOK: Generar User Index (Para Fundadores)
+userSchema.pre("save", async function (next) {
+    if (this.isNew && !this.userIndex) {
+        try {
+            const count = await mongoose.model("User").countDocuments();
+            this.userIndex = count + 1;
+        } catch (error) {
+            console.error("Error generando index:", error);
+        }
+    }
+    // Si no tiene código de referido propio, generamos uno simple
+    if (this.isNew && !this.referralCode) {
+        this.referralCode = this.ninjaName + Math.floor(Math.random() * 1000);
+    }
+    next(); // Aquí sí usamos next porque no es una promesa que bloquee auth
+});
+
+// Método para verificar contraseña
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
