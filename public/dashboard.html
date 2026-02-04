@@ -4,362 +4,178 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dojo Central | AidFlow</title>
-    <!-- Fuentes de Combate -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Estilos Nucleares -->
     <style>
-        :root {
-            --bg-dark: #020202;
-            --panel: #0a0a0a;
-            --blood: #ff003c; /* Rojo Sangre Neón */
-            --blood-dim: #590015;
-            --gold: #fca311;
-            --text-main: #e5e5e5;
-            --border: #222;
-        }
-
-        /* RESET & BASE */
-        html, body {
-            height: 100%; margin: 0; padding: 0;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: 'Rajdhani', sans-serif;
-            overflow-y: auto !important;
-            background-image: 
-                linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.9)),
-                url('https://www.transparenttextures.com/patterns/dark-matter.png');
-        }
-
-        /* --- HEADER AGRESIVO --- */
-        .ninja-header {
-            height: 80px;
-            background: rgba(10, 10, 10, 0.95);
-            border-bottom: 2px solid var(--blood);
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 40px;
-            box-shadow: 0 5px 20px rgba(255, 0, 60, 0.1);
-            position: sticky; top: 0; z-index: 100;
-            backdrop-filter: blur(5px);
-        }
-
-        .brand-logo h1 {
-            font-family: 'Orbitron'; font-size: 1.8rem; margin: 0;
-            text-transform: uppercase; letter-spacing: 2px;
-            text-shadow: 0 0 10px var(--blood);
-        }
-        .brand-logo span { color: var(--blood); }
-
-        .balance-box {
-            display: flex; align-items: center; gap: 15px;
-            background: #000; padding: 8px 20px;
-            border: 1px solid var(--blood);
-            clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%);
-        }
-        .balance-value { font-family: 'Orbitron'; font-size: 1.4rem; color: var(--gold); font-weight: bold; }
-        .balance-label { font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
-
-        /* --- GRID LAYOUT --- */
-        .dojo-grid {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 30px;
-            max-width: 1600px;
-            margin: 40px auto;
-            padding: 0 20px;
-            padding-bottom: 100px;
-        }
+        :root { --bg: #020202; --panel: #0a0a0a; --blood: #ff003c; --gold: #fca311; --text: #e5e5e5; }
+        html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: 'Rajdhani'; overflow-y: auto !important; }
+        
+        /* HEADER */
+        .ninja-header { height: 80px; background: rgba(10,10,10,0.95); border-bottom: 2px solid var(--blood); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(5px); }
+        .logo { font-family: 'Orbitron'; font-size: 1.5rem; letter-spacing: 2px; }
+        .logo span { color: var(--blood); }
+        
+        /* LAYOUT */
+        .dojo-grid { display: grid; grid-template-columns: 320px 1fr; gap: 30px; max-width: 1400px; margin: 40px auto; padding: 0 20px 100px 20px; }
         @media (max-width: 900px) { .dojo-grid { grid-template-columns: 1fr; } }
 
-        /* --- TARJETAS ESTILO "BLADE" --- */
-        .blade-card {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            padding: 25px;
-            position: relative;
-            overflow: hidden;
-            /* Esquina cortada */
-            clip-path: polygon(
-                0 0, 
-                100% 0, 
-                100% calc(100% - 20px), 
-                calc(100% - 20px) 100%, 
-                0 100%
-            );
-            margin-bottom: 25px;
-        }
-        .blade-card::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
-            background: var(--blood);
-            box-shadow: 0 0 15px var(--blood);
-        }
+        /* TARJETAS CORTADAS (CLIP-PATH) */
+        .blade-card { background: var(--panel); border: 1px solid #222; padding: 25px; margin-bottom: 25px; position: relative; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%); }
+        .blade-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--blood); box-shadow: 0 0 10px var(--blood); }
         
-        .card-title {
-            font-family: 'Orbitron'; color: #fff; margin: 0 0 20px 0;
-            display: flex; align-items: center; gap: 10px;
-            border-bottom: 1px solid #222; padding-bottom: 10px;
-        }
-        .card-title i { color: var(--blood); }
+        /* BOTONES */
+        .btn-blade { background: var(--blood); color: #fff; border: none; padding: 12px; width: 100%; font-family: 'Orbitron'; cursor: pointer; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); transition: 0.3s; margin-bottom: 10px; }
+        .btn-blade:hover { transform: translateX(5px); background: #ff1a53; box-shadow: -5px 0 15px rgba(255,0,60,0.3); }
+        .btn-blade:disabled { background: #333; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-outline { background: transparent; border: 1px solid var(--blood); color: var(--blood); }
+        .btn-outline:hover { background: rgba(255,0,60,0.1); color: #fff; }
 
-        /* --- SIDEBAR PROFILE --- */
-        .ninja-avatar {
-            width: 100px; height: 100px; margin: 0 auto 15px;
-            background: #000; border: 2px solid var(--blood);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 3rem; color: var(--blood);
-            box-shadow: 0 0 20px rgba(255, 0, 60, 0.2);
-            clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
-        }
-        .ninja-name { text-align: center; font-family: 'Orbitron'; font-size: 1.5rem; color: white; margin: 0; }
-        .ninja-rank { text-align: center; color: var(--gold); font-size: 0.9rem; letter-spacing: 2px; margin-bottom: 20px; }
+        /* INPUTS */
+        .input-cyber { background: #000; border: 1px solid #333; color: #fff; padding: 12px; width: 100%; margin-bottom: 10px; font-family: 'Rajdhani'; box-sizing: border-box; }
+        .input-cyber:focus { border-color: var(--blood); outline: none; }
 
-        .stat-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #222; font-size: 0.9rem; }
-        .stat-val { color: #fff; font-weight: bold; font-family: 'Orbitron'; }
+        /* BARRA DE PROGRESO */
+        .blood-bar-container { background: #000; height: 30px; border: 1px solid #333; position: relative; margin: 15px 0; clip-path: polygon(0 0, 100% 0, 98% 100%, 2% 100%); }
+        .blood-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #590015, #ff003c); transition: width 1s ease; position: relative; }
+        
+        /* CHAT */
+        .chat-orb { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: #000; border: 2px solid var(--blood); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--blood); cursor: pointer; z-index: 1000; box-shadow: 0 0 15px var(--blood); }
+        .chat-panel { position: fixed; bottom: 100px; right: 30px; width: 320px; height: 450px; background: #0a0a0a; border: 1px solid var(--blood); display: none; flex-direction: column; z-index: 1000; }
 
-        /* --- BOTONES DE COMBATE --- */
-        .btn-blade {
-            background: var(--blood); color: #fff; border: none;
-            padding: 12px; width: 100%; font-family: 'Orbitron';
-            font-weight: bold; cursor: pointer; text-transform: uppercase;
-            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-            transition: 0.3s; margin-bottom: 10px;
-            position: relative; overflow: hidden;
-        }
-        .btn-blade:hover { background: #ff1a53; transform: translateX(5px); box-shadow: -5px 0 15px rgba(255,0,60,0.4); }
-        .btn-blade-outline {
-            background: transparent; border: 1px solid var(--blood); color: var(--blood);
-        }
-        .btn-blade-outline:hover { background: rgba(255,0,60,0.1); color: #fff; }
-
-        /* --- BARRA DE PROGRESO ($12.50) --- */
-        .blood-bar-container {
-            background: #000; height: 30px; width: 100%;
-            border: 1px solid #333; position: relative;
-            margin: 20px 0;
-            clip-path: polygon(0 0, 100% 0, 98% 100%, 2% 100%);
-        }
-        .blood-bar-fill {
-            height: 100%; width: 0%;
-            background: linear-gradient(90deg, #590015, #ff003c);
-            box-shadow: 0 0 20px var(--blood);
-            transition: width 1s ease-out;
-            position: relative;
-        }
-        /* Efecto de pulso en la barra */
-        .blood-bar-fill::after {
-            content: ''; position: absolute; top:0; right:0; bottom:0; width: 2px; background: #fff;
-            box-shadow: 0 0 10px #fff;
-        }
-
-        /* --- ALERTAS --- */
-        .alert-box {
-            background: rgba(255, 0, 60, 0.05); border: 1px solid var(--blood);
-            padding: 20px; text-align: center; margin-bottom: 20px;
-        }
-
-        /* --- MODALES OSCUROS --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); backdrop-filter: blur(8px);
-            z-index: 2000; display: none; align-items: center; justify-content: center;
-        }
-        .modal-blade {
-            background: #080808; border: 2px solid var(--blood);
-            width: 90%; max-width: 450px; padding: 30px;
-            box-shadow: 0 0 50px rgba(255, 0, 60, 0.2);
-            position: relative;
-        }
-        .modal-blade::before { content: "SYSTEM ACCESS"; position: absolute; top:-10px; left:20px; background:var(--blood); color:black; font-size:0.7rem; padding:2px 8px; font-weight:bold; }
-
-        /* --- INPUTS --- */
-        .input-cyber {
-            background: #000; border: 1px solid #333; color: #fff;
-            padding: 12px; width: 100%; margin-bottom: 10px;
-            font-family: 'Rajdhani'; font-size: 1.1rem;
-            box-sizing: border-box;
-        }
-        .input-cyber:focus { border-color: var(--blood); outline: none; box-shadow: 0 0 10px rgba(255,0,60,0.2); }
-
-        /* --- CHAT FLOTANTE --- */
-        .chat-orb {
-            position: fixed; bottom: 30px; right: 30px;
-            width: 60px; height: 60px;
-            background: #000; border: 2px solid var(--blood);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; color: var(--blood);
-            cursor: pointer; z-index: 1000;
-            box-shadow: 0 0 20px var(--blood);
-            transition: transform 0.3s;
-        }
-        .chat-orb:hover { transform: scale(1.1) rotate(15deg); color: #fff; background: var(--blood); }
-
-        .chat-panel {
-            position: fixed; bottom: 100px; right: 30px;
-            width: 320px; height: 450px;
-            background: #0a0a0a; border: 1px solid var(--blood);
-            display: none; flex-direction: column; z-index: 1000;
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
-        }
+        /* MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .modal-content { background: #080808; border: 2px solid var(--blood); width: 90%; max-width: 450px; padding: 30px; }
     </style>
 </head>
 <body class="bg-ninja">
 
-    <!-- HEADER -->
     <header class="ninja-header">
-        <div class="brand-logo">
-            <h1>AIDFLOW <span>NINJA</span></h1>
-        </div>
-        <div style="display:flex; gap:20px; align-items:center;">
-            <div class="balance-box">
-                <div>
-                    <div class="balance-label">Saldo Disponible</div>
-                    <div class="balance-value">$<span id="headerBalance">0.00</span></div>
-                </div>
+        <div class="logo">AIDFLOW <span>NINJA</span></div>
+        <div style="display:flex; gap:15px; align-items:center;">
+            <div style="text-align:right;">
+                <div style="font-size:0.7rem; color:#666;">SALDO</div>
+                <div style="font-family:'Orbitron'; font-size:1.2rem; color:var(--gold);">$<span id="headerBalance">0.00</span></div>
             </div>
-            <button onclick="logout()" class="btn-blade btn-blade-outline" style="width:auto; padding:8px 15px;">
-                <i class="fas fa-power-off"></i>
-            </button>
+            <button onclick="logout()" class="btn-blade btn-outline" style="width:auto; padding:5px 15px;"><i class="fas fa-sign-out-alt"></i></button>
         </div>
     </header>
 
-    <!-- GRID PRINCIPAL -->
     <div class="dojo-grid">
-        
-        <!-- SIDEBAR IZQUIERDA -->
         <aside>
             <div class="blade-card">
-                <div class="ninja-avatar"><i class="fas fa-user-secret"></i></div>
-                <h2 id="userName" class="ninja-name">Guerrero</h2>
-                <p id="userRank" class="ninja-rank">INICIADO</p>
-                
-                <div style="margin-top:30px;">
-                    <div class="stat-row">
-                        <span style="color:#888">Fichas de Combate</span>
-                        <span id="userTokens" class="stat-val" style="color:var(--blood)">0</span>
+                <div style="text-align:center; margin-bottom:20px;">
+                    <i class="fas fa-user-ninja" style="font-size:3rem; color:var(--blood);"></i>
+                    <h2 id="userName" style="margin:10px 0; font-family:'Orbitron'">Guerrero</h2>
+                    <span id="userRank" style="color:var(--gold); letter-spacing:2px;">RONIN</span>
+                </div>
+                <div style="border-top:1px solid #222; padding-top:15px; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <span style="color:#888;">Fichas:</span> <strong id="userTokens" style="color:var(--text)">0</strong>
                     </div>
-                    <div class="stat-row">
-                        <span style="color:#888">Código Clan</span>
-                        <span id="userRefCode" class="stat-val">---</span>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#888;">Código:</span> <strong id="userRefCode" style="color:var(--text)">---</strong>
                     </div>
                 </div>
-
-                <div style="margin-top:30px;">
-                    <button onclick="openModal('depositModal')" class="btn-blade">
-                        <i class="fas fa-bolt"></i> RECARGAR / ACTIVAR
-                    </button>
-                    <button id="menuProfile" class="btn-blade btn-blade-outline">
-                        <i class="fas fa-id-card"></i> PERFIL
-                    </button>
-                </div>
+                <button onclick="openModal('depositModal')" class="btn-blade">RECARGAR / ACTIVAR</button>
+                <button id="menuProfile" class="btn-blade btn-outline">PERFIL CLAN</button>
             </div>
         </aside>
 
-        <!-- CONTENIDO CENTRAL -->
         <main>
-            
-            <!-- 1. BARRA DE PROGRESO DE SANGRE ($12.50) -->
             <div id="cycleContainer" class="blade-card" style="display:none; border-color:var(--gold);">
                 <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <h3 class="card-title" style="border:none; margin:0; color:var(--gold);">
-                        <i class="fas fa-dragon"></i> PASE ACTIVO
-                    </h3>
-                    <span style="font-family:'Orbitron'; color:var(--gold);">META: $12.50</span>
+                    <h3 style="margin:0; color:var(--gold); font-family:'Orbitron';">PASE ACTIVO</h3>
+                    <span style="color:#888;">META FINAL: $50.00</span>
                 </div>
-
                 <div class="blood-bar-container">
                     <div id="cycleBar" class="blood-bar-fill"></div>
                 </div>
-                
-                <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#aaa; font-family:'Orbitron';">
+                <div style="display:flex; justify-content:space-between; color:#aaa; font-size:0.9rem;">
                     <span>ACUMULADO: <strong id="cycleEarnings" style="color:#fff;">$0.00</strong></span>
                     <span id="cyclePercent">0%</span>
                 </div>
-
-                <!-- Botón de retiro (Aparece al 100%) -->
-                <button id="harvestBtn" class="btn-blade" style="margin-top:20px; background:var(--gold); color:black; display:none; animation: pulse 1.5s infinite;">
-                    <i class="fas fa-hand-holding-usd"></i> RECLAMAR BOTÍN ($12.50)
+                <button id="harvestBtn" class="btn-blade" style="margin-top:15px; background:var(--gold); color:black; display:none;">
+                    RETIRAR FONDOS
                 </button>
             </div>
 
-            <!-- 2. ALERTA DE COMPRA -->
-            <div id="buyAlert" class="alert-box" style="display:none;">
-                <i class="fas fa-lock" style="font-size:3rem; color:var(--blood); margin-bottom:15px;"></i>
-                <h2 style="font-family:'Orbitron'; margin:0; color:white;">ACCESO RESTRINGIDO</h2>
-                <p style="color:#aaa;">Tu Pase de Batalla está inactivo. Recarga para desbloquear 100 Fichas y habilitar retiros.</p>
-                <button onclick="openModal('depositModal')" class="btn-blade" style="width:200px; margin:20px auto 0;">ACTIVAR AHORA</button>
+            <div id="buyAlert" class="blade-card" style="text-align:center; padding:40px; display:none;">
+                <i class="fas fa-lock" style="font-size:2rem; color:var(--blood); margin-bottom:15px;"></i>
+                <h3 style="margin:0 0 10px; color:var(--blood);">PASE INACTIVO</h3>
+                <p style="color:#888;">Recarga para obtener 100 Fichas y habilitar retiros.</p>
+                <button onclick="openModal('depositModal')" class="btn-blade" style="width:200px; margin-top:10px;">ACTIVAR</button>
             </div>
 
-            <!-- 3. ARENA DE DUELOS -->
-            <section class="blade-card">
-                <h3 class="card-title"><i class="fas fa-khanda"></i> ARENA PVP</h3>
-                <div style="display:flex; gap:15px; margin-bottom:20px;">
-                    <input type="number" id="betAmount" placeholder="Apuesta (NC)" class="input-cyber" style="margin:0;">
-                    <button onclick="crearReto()" class="btn-blade" style="width:auto; margin:0;">DESAFIAR</button>
+            <div class="blade-card">
+                <h3 style="margin-top:0; border-bottom:1px solid #222; padding-bottom:10px; color:var(--text); font-family:'Orbitron';">
+                    <i class="fas fa-scroll"></i> MISIONES DEL CLAN
+                </h3>
+                
+                <div style="margin-bottom:20px;">
+                    <p style="font-size:0.9rem; color:#ccc;">1. Difunde la palabra del clan:</p>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                        <button id="btnShare" class="btn-blade btn-outline" style="font-size:0.8rem;">COMPARTIR</button>
+                        <button id="btnVerify" class="btn-blade btn-outline" style="font-size:0.8rem;" disabled>VERIFICAR</button>
+                        <button id="btnClaimSocial" class="btn-blade" style="font-size:0.8rem;" disabled>RECLAMAR</button>
+                    </div>
+                    <small id="socialStatus" style="color:#666;">Esperando acción...</small>
                 </div>
-                <div id="duelsList">
-                    <p style="color:#666; text-align:center; font-style:italic;">Escaneando retadores en la sombra...</p>
-                </div>
-            </section>
 
-            <!-- 4. JUEGOS -->
-            <section class="blade-card">
-                <h3 class="card-title"><i class="fas fa-gamepad"></i> SIMULACIONES</h3>
-                <div id="embedGamesGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
-                    <p style="color:#666;">Cargando software...</p>
+                <div>
+                    <p style="font-size:0.9rem; color:#ccc;">2. Suministros diarios:</p>
+                    <button id="missionBtn" class="btn-blade">RECLAMAR SUMINISTROS</button>
                 </div>
-            </section>
+            </div>
+
+            <div class="blade-card">
+                <h3 style="margin-top:0; border-bottom:1px solid #222; padding-bottom:10px; color:var(--text); font-family:'Orbitron';">
+                    <i class="fas fa-khanda"></i> ARENA PVP
+                </h3>
+                <div style="display:flex; gap:10px; margin:15px 0;">
+                    <input type="number" id="betAmount" placeholder="Apuesta (NC)" class="input-cyber" style="margin:0;">
+                    <button onclick="crearReto()" class="btn-blade" style="width:auto;">CREAR</button>
+                </div>
+                <div id="duelsList"></div>
+            </div>
+
+            <h3 style="color:var(--gold); font-family:'Orbitron'; margin-bottom:15px;">SIMULACIONES</h3>
+            <div id="embedGamesGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:20px;">
+                <p style="color:#666;">Cargando...</p>
+            </div>
 
         </main>
     </div>
 
-    <!-- ==========================
-         ELEMENTOS FLOTANTES
-    =========================== -->
-
-    <!-- CHAT ORB -->
-    <div onclick="toggleChat()" class="chat-orb">
-        <i class="fas fa-comment-alt"></i>
-    </div>
-
+    <div onclick="toggleChat()" class="chat-orb"><i class="fas fa-comment"></i></div>
     <div id="chatWindow" class="chat-panel">
-        <div style="padding:15px; background:var(--blood); color:black; font-weight:bold; display:flex; justify-content:space-between;">
-            <span>CANAL ENCRIPTADO</span>
-            <span onclick="toggleChat()" style="cursor:pointer;">✕</span>
+        <div style="padding:10px; background:var(--blood); display:flex; justify-content:space-between; color:black; font-weight:bold;">
+            <span>CANAL GLOBAL</span> <span onclick="toggleChat()" style="cursor:pointer;">X</span>
         </div>
-        <div id="chatMessages" style="flex:1; padding:15px; overflow-y:auto; color:#ccc; font-size:0.9rem;"></div>
+        <div id="chatMessages" style="flex:1; padding:10px; overflow-y:auto; color:#ccc; font-size:0.9rem;"></div>
         <div style="padding:10px; border-top:1px solid #333; display:flex;">
-            <input type="text" id="chatMsg" placeholder="Transmisión..." class="input-cyber" style="margin:0; font-size:0.9rem;">
-            <button onclick="sendChat()" style="background:var(--blood); border:none; color:white; width:50px;">➤</button>
+            <input type="text" id="chatMsg" class="input-cyber" style="margin:0;" placeholder="...">
+            <button onclick="sendChat()" class="btn-blade" style="width:50px; margin-left:5px;">></button>
         </div>
     </div>
 
-    <!-- MODAL DEPOSITO -->
     <div id="depositModal" class="modal-overlay">
-        <div class="modal-blade">
-            <h2 style="font-family:'Orbitron'; color:var(--blood); text-align:center; margin-top:0;">RECARGA TÁCTICA</h2>
-            <p style="color:#ccc; text-align:center; font-size:0.9rem; margin-bottom:20px;">
-                Transfiere fondos a la cuenta del clan para activar tu pase y recibir fichas.
-            </p>
-            
-            <label style="color:#666; font-size:0.8rem;">MONTO ($)</label>
-            <input type="number" id="depAmount" class="input-cyber">
-            
-            <label style="color:#666; font-size:0.8rem;">ID TRANSACCIÓN</label>
-            <input type="text" id="depRef" class="input-cyber">
-            
-            <div style="display:flex; gap:15px; margin-top:20px;">
-                <button onclick="submitDeposit()" class="btn-blade">CONFIRMAR</button>
-                <button onclick="closeModal('depositModal')" class="btn-blade btn-blade-outline">ABORTAR</button>
+        <div class="modal-content">
+            <h3 style="color:var(--blood); text-align:center; margin-top:0; font-family:'Orbitron'">RECARGA TÁCTICA</h3>
+            <input type="number" id="depAmount" placeholder="Monto ($)" class="input-cyber">
+            <input type="text" id="depRef" placeholder="ID Transacción" class="input-cyber">
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button onclick="submitDeposit()" class="btn-blade">ENVIAR</button>
+                <button onclick="closeModal('depositModal')" class="btn-blade btn-outline">CANCELAR</button>
             </div>
         </div>
     </div>
 
-    <style>
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); box-shadow: 0 0 20px var(--gold); } 100% { transform: scale(1); } }
-    </style>
-
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="js/dashboard.js"></script>
+    <script>
+        window.openModal = (id) => document.getElementById(id).style.display = "flex";
+        window.closeModal = (id) => document.getElementById(id).style.display = "none";
+    </script>
 </body>
 </html>
