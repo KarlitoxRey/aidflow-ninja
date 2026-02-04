@@ -8,48 +8,70 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --bg: #020202; --panel: #0a0a0a; --blood: #ff003c; --gold: #fca311; }
-        html, body { height: 100%; margin: 0; background: var(--bg); color: #e5e5e5; font-family: 'Rajdhani'; overflow-y: auto !important; }
+        :root { --bg: #020202; --panel: #0a0a0a; --blood: #ff003c; --gold: #fca311; --text: #e5e5e5; }
+        html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: 'Rajdhani'; overflow-y: auto !important; }
         
-        /* HEADER */
-        .ninja-header { height: 80px; background: rgba(10,10,10,0.95); border-bottom: 2px solid var(--blood); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; position: sticky; top: 0; z-index: 100; }
-        .logo { font-family: 'Orbitron'; font-size: 1.5rem; letter-spacing: 2px; } .logo span { color: var(--blood); }
+        /* HEADER (LIMPIO SIN SALDO) */
+        .ninja-header { height: 80px; background: rgba(10,10,10,0.95); border-bottom: 2px solid var(--blood); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(5px); }
+        .logo { font-family: 'Orbitron'; font-size: 1.5rem; letter-spacing: 2px; }
+        .logo span { color: var(--blood); }
         
-        /* GRID */
-        .dojo-grid { display: grid; grid-template-columns: 320px 1fr; gap: 30px; max-width: 1400px; margin: 40px auto; padding: 0 20px 100px; }
+        /* LAYOUT */
+        .dojo-grid { display: grid; grid-template-columns: 320px 1fr; gap: 30px; max-width: 1400px; margin: 40px auto; padding: 0 20px 100px 20px; }
         @media (max-width: 900px) { .dojo-grid { grid-template-columns: 1fr; } }
 
-        /* CARDS & UI */
-        .blade-card { background: var(--panel); border: 1px solid #222; padding: 25px; margin-bottom: 25px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%); position: relative; }
-        .blade-card::before { content:''; position: absolute; top:0; left:0; width:4px; height:100%; background:var(--blood); }
+        /* TARJETAS CORTADAS */
+        .blade-card { background: var(--panel); border: 1px solid #222; padding: 25px; margin-bottom: 25px; position: relative; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%); }
+        .blade-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--blood); box-shadow: 0 0 10px var(--blood); }
         
-        .btn-blade { background: var(--blood); color: #fff; border: none; padding: 12px; width: 100%; font-family: 'Orbitron'; cursor: pointer; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); transition: 0.2s; }
-        .btn-blade:hover { transform: translateX(3px); background: #ff1a53; }
-        .btn-blade:disabled { background: #333; cursor: not-allowed; }
+        /* BOTONES */
+        .btn-blade { background: var(--blood); color: #fff; border: none; padding: 12px; width: 100%; font-family: 'Orbitron'; cursor: pointer; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); transition: 0.3s; margin-bottom: 10px; text-transform: uppercase; font-weight: bold; }
+        .btn-blade:hover { transform: translateX(5px); background: #ff1a53; box-shadow: -5px 0 15px rgba(255,0,60,0.3); }
+        .btn-blade:disabled { background: #333; color:#666; cursor: not-allowed; transform: none; box-shadow: none; }
         .btn-outline { background: transparent; border: 1px solid var(--blood); color: var(--blood); }
+        .btn-outline:hover { background: rgba(255,0,60,0.1); color: #fff; }
 
-        .blood-bar-container { background: #000; height: 30px; border: 1px solid #333; position: relative; margin: 15px 0; }
-        .blood-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #590015, #ff003c); transition: width 1s ease; }
+        /* INPUTS */
+        .input-cyber { background: #000; border: 1px solid #333; color: #fff; padding: 12px; width: 100%; margin-bottom: 10px; font-family: 'Rajdhani'; box-sizing: border-box; }
+        .input-cyber:focus { border-color: var(--blood); outline: none; }
+
+        /* BARRA DE PROGRESO */
+        .blood-bar-container { background: #000; height: 30px; border: 1px solid #333; position: relative; margin: 15px 0; clip-path: polygon(0 0, 100% 0, 98% 100%, 2% 100%); }
+        .blood-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #590015, #ff003c); transition: width 1s ease; position: relative; }
         
-        .input-cyber { background: #000; border: 1px solid #333; color: #fff; padding: 10px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
-        
-        /* CHAT CORREGIDO */
-        .chat-orb { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: #000; border: 2px solid var(--blood); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--blood); cursor: pointer; z-index: 1000; }
+        /* CHAT */
+        .chat-orb { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: #000; border: 2px solid var(--blood); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--blood); cursor: pointer; z-index: 1000; box-shadow: 0 0 15px var(--blood); }
         .chat-panel { position: fixed; bottom: 100px; right: 30px; width: 320px; height: 450px; background: #0a0a0a; border: 1px solid var(--blood); display: none; flex-direction: column; z-index: 1000; }
+
+        /* MODAL DE NIVELES */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-content-levels { background: #080808; border: 1px solid #333; width: 95%; max-width: 900px; padding: 30px; display: grid; gap: 20px; position: relative; }
         
-        /* MODAL */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; }
-        .modal-content { background: #080808; border: 2px solid var(--blood); width: 90%; max-width: 450px; padding: 30px; }
+        .levels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        @media (max-width: 768px) { .levels-grid { grid-template-columns: 1fr; } }
+
+        .level-card { background: #111; border: 1px solid #333; padding: 20px; text-align: center; transition: 0.3s; position: relative; }
+        .level-card:hover { border-color: var(--gold); transform: translateY(-5px); }
+        .level-card.locked { opacity: 0.5; border-color: #333; pointer-events: none; }
+        .level-card.locked::after { content: '\f023'; font-family: "Font Awesome 6 Free"; font-weight: 900; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 3rem; color: #555; }
+        
+        .level-price { font-size: 2rem; color: var(--gold); font-family: 'Orbitron'; margin: 10px 0; }
+        .level-features { list-style: none; padding: 0; margin: 20px 0; color: #aaa; font-size: 0.9rem; text-align: left; }
+        .level-features li { margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        .level-features li i { color: var(--blood); margin-right: 5px; }
+
+        /* FORMULARIO PAGO (Oculto inicialmente) */
+        #paymentForm { display: none; margin-top: 20px; border-top: 2px solid var(--blood); padding-top: 20px; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-ninja">
 
     <header class="ninja-header">
         <div class="logo">AIDFLOW <span>NINJA</span></div>
-        <div style="text-align:right;">
-            <div style="font-size:0.7rem; color:#666;">GANANCIA ACUMULADA</div>
-            <div style="font-family:'Orbitron'; font-size:1.2rem; color:var(--gold);">$<span id="headerBalance">0.00</span></div>
-        </div>
+        <button onclick="logout()" class="btn-blade btn-outline" style="width:auto; padding:5px 15px;">
+            <i class="fas fa-sign-out-alt"></i> SALIR
+        </button>
     </header>
 
     <div class="dojo-grid">
@@ -58,15 +80,20 @@
                 <div style="text-align:center; margin-bottom:20px;">
                     <i class="fas fa-user-ninja" style="font-size:3rem; color:var(--blood);"></i>
                     <h2 id="userName" style="margin:10px 0; font-family:'Orbitron'">Guerrero</h2>
-                    <span id="userRank" style="color:var(--gold);">RONIN</span>
+                    <span id="userRank" style="color:var(--gold); letter-spacing:2px;">RONIN</span>
                 </div>
                 <div style="border-top:1px solid #222; padding-top:15px; margin-bottom:20px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                         <span style="color:#888;">Fichas:</span> <strong id="userTokens" style="color:var(--text)">0</strong>
                     </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:#888;">Código:</span> <strong id="userRefCode" style="color:var(--text)">---</strong>
+                    </div>
                 </div>
-                <button onclick="openModal('depositModal')" class="btn-blade">RECARGAR / ACTIVAR</button>
-                <button onclick="logout()" class="btn-blade btn-outline" style="margin-top:10px;">SALIR</button>
+                <button onclick="openLevelsModal()" class="btn-blade">
+                    <i class="fas fa-shopping-cart"></i> COMPRAR PASE
+                </button>
+                <button id="menuProfile" class="btn-blade btn-outline">PERFIL CLAN</button>
             </div>
         </aside>
 
@@ -74,7 +101,7 @@
             <div id="cycleContainer" class="blade-card" style="display:none; border-color:var(--gold);">
                 <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                     <h3 style="margin:0; color:var(--gold); font-family:'Orbitron';">PASE ACTIVO</h3>
-                    <span style="color:#888;">META FINAL: $50.00</span>
+                    <span style="color:#888;">META: $50.00</span>
                 </div>
                 <div class="blood-bar-container">
                     <div id="cycleBar" class="blood-bar-fill"></div>
@@ -89,27 +116,25 @@
             </div>
 
             <div id="buyAlert" class="blade-card" style="text-align:center; padding:40px; display:none;">
+                <i class="fas fa-lock" style="font-size:2rem; color:var(--blood); margin-bottom:15px;"></i>
                 <h3 style="margin:0 0 10px; color:var(--blood);">PASE INACTIVO</h3>
-                <p style="color:#888;">Recarga para obtener 100 Fichas y habilitar retiros.</p>
-                <button onclick="openModal('depositModal')" class="btn-blade" style="width:200px; margin-top:10px;">ACTIVAR</button>
+                <p style="color:#888;">Compra tu Pase de Nivel 1 para combatir y ganar.</p>
+                <button onclick="openLevelsModal()" class="btn-blade" style="width:200px; margin-top:10px;">VER PASES</button>
             </div>
 
             <div class="blade-card">
-                <h3 style="margin-top:0; color:var(--text); font-family:'Orbitron'; border-bottom:1px solid #222; padding-bottom:10px;">MISIONES</h3>
+                <h3 style="margin-top:0; border-bottom:1px solid #222; padding-bottom:10px; color:var(--text); font-family:'Orbitron';">MISIONES</h3>
                 <div style="margin-bottom:15px;">
-                    <p style="font-size:0.9rem; color:#ccc;">Difunde el clan:</p>
                     <button id="btnShare" class="btn-blade btn-outline" style="font-size:0.8rem; width:auto;">COMPARTIR</button>
                     <button id="btnVerify" class="btn-blade btn-outline" style="font-size:0.8rem; width:auto;" disabled>VERIFICAR</button>
                     <button id="btnClaimSocial" class="btn-blade" style="font-size:0.8rem; width:auto;" disabled>RECLAMAR</button>
                 </div>
-                <div>
-                    <button id="missionBtn" class="btn-blade">RECLAMAR SUMINISTROS DIARIOS</button>
-                </div>
+                <button id="missionBtn" class="btn-blade">RECLAMAR SUMINISTROS</button>
             </div>
 
             <h3 style="color:var(--gold); font-family:'Orbitron';">TORNEOS Y JUEGOS</h3>
             <div id="embedGamesGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:20px; margin-bottom:30px;">
-                <p style="color:#666;">Cargando...</p>
+                <p style="color:#666;">Cargando software...</p>
             </div>
 
             <div class="blade-card">
@@ -131,18 +156,57 @@
         <div id="chatMessages" style="flex:1; padding:10px; overflow-y:auto; color:#ccc; font-size:0.9rem;"></div>
         <div style="padding:10px; border-top:1px solid #333; display:flex;">
             <input type="text" id="chatMsg" class="input-cyber" style="margin:0;" placeholder="...">
-            <button id="sendChatBtn" onclick="sendChat()" class="btn-blade" style="width:50px; margin-left:5px;">></button>
+            <button onclick="sendChat()" class="btn-blade" style="width:50px; margin-left:5px;">></button>
         </div>
     </div>
 
-    <div id="depositModal" class="modal-overlay">
-        <div class="modal-content">
-            <h3 style="color:var(--blood); text-align:center; margin-top:0;">RECARGA TÁCTICA</h3>
-            <input type="number" id="depAmount" placeholder="Monto ($)" class="input-cyber">
-            <input type="text" id="depRef" placeholder="ID Transacción" class="input-cyber">
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button onclick="submitDeposit()" class="btn-blade">ENVIAR</button>
-                <button onclick="closeModal('depositModal')" class="btn-blade btn-outline">CANCELAR</button>
+    <div id="levelsModal" class="modal-overlay">
+        <div class="modal-content-levels">
+            <button onclick="closeModal('levelsModal')" style="position:absolute; top:10px; right:10px; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+            
+            <h2 style="font-family:'Orbitron'; color:var(--gold); text-align:center; margin:0;">ARSENAL DE PASES</h2>
+            
+            <div class="levels-grid">
+                <div class="level-card" style="border-color:var(--blood);">
+                    <h3 style="margin:0; font-family:'Orbitron'; color:white;">PASE INICIADO</h3>
+                    <div class="level-price">$10.00</div>
+                    <ul class="level-features">
+                        <li><i class="fas fa-check"></i> 100 Fichas de Torneo</li>
+                        <li><i class="fas fa-check"></i> Acceso a Retiros ($12.50)</li>
+                        <li><i class="fas fa-check"></i> Arena PVP Básica</li>
+                        <li><i class="fas fa-check"></i> Ganancia Max: $50.00</li>
+                    </ul>
+                    <button onclick="showPaymentForm(10)" class="btn-blade">ADQUIRIR</button>
+                </div>
+
+                <div class="level-card locked">
+                    <h3 style="margin:0; font-family:'Orbitron'; color:#666;">PASE ELITE</h3>
+                    <div class="level-price" style="color:#444;">$20.00</div>
+                    <ul class="level-features" style="color:#444;">
+                        <li><i class="fas fa-lock"></i> 250 Fichas</li>
+                        <li><i class="fas fa-lock"></i> Retiros Rápidos</li>
+                        <li><i class="fas fa-lock"></i> Ganancia Max: $100</li>
+                    </ul>
+                    <button class="btn-blade" disabled>BLOQUEADO</button>
+                </div>
+
+                <div class="level-card locked">
+                    <h3 style="margin:0; font-family:'Orbitron'; color:#666;">PASE SHOGUN</h3>
+                    <div class="level-price" style="color:#444;">$50.00</div>
+                    <ul class="level-features" style="color:#444;">
+                        <li><i class="fas fa-lock"></i> 600 Fichas</li>
+                        <li><i class="fas fa-lock"></i> Sin Comisiones</li>
+                        <li><i class="fas fa-lock"></i> Ganancia Max: $300</li>
+                    </ul>
+                    <button class="btn-blade" disabled>BLOQUEADO</button>
+                </div>
+            </div>
+
+            <div id="paymentForm">
+                <h4 style="color:var(--blood); margin-bottom:10px;">CONFIRMAR PAGO - NIVEL 1</h4>
+                <p style="font-size:0.9rem; color:#888;">Envía <strong>$10.00</strong> a la Wallet del Clan y reporta la transacción.</p>
+                <input type="hidden" id="depAmount" value="10"> <input type="text" id="depRef" placeholder="Pegar ID / Hash de Transacción" class="input-cyber">
+                <button onclick="submitDeposit()" class="btn-blade">ENVIAR COMPROBANTE</button>
             </div>
         </div>
     </div>
@@ -150,9 +214,17 @@
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="js/dashboard.js"></script>
     <script>
-        // Helpers globales
-        window.openModal = (id) => document.getElementById(id).style.display = "flex";
-        window.closeModal = (id) => document.getElementById(id).style.display = "none";
+        // Funciones auxiliares para el HTML
+        window.openLevelsModal = () => {
+            document.getElementById('levelsModal').style.display = 'flex';
+            document.getElementById('paymentForm').style.display = 'none'; // Resetear form
+        };
+        window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+        
+        window.showPaymentForm = (amount) => {
+            document.getElementById('depAmount').value = amount;
+            document.getElementById('paymentForm').style.display = 'block';
+        };
     </script>
 </body>
 </html>
