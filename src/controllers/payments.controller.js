@@ -1,14 +1,14 @@
 import User from "../models/User.js";
 import Transaction from "../models/Transaction.js";
 
-// 1. VER BILLETERA
+// 1. OBTENER DATOS DE BILLETERA
 export const getWalletDetails = async (req, res) => {
     try {
         const user = await User.findById(req.user.userId);
         if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
 
         const pendingWithdrawal = await Transaction.findOne({ 
-            userId: req.user.userId, // Ojo: verifica si usas 'user' o 'userId' en tu modelo Transaction
+            userId: req.user.userId, 
             type: 'withdrawal_external', 
             status: 'pending' 
         });
@@ -20,6 +20,7 @@ export const getWalletDetails = async (req, res) => {
             isActive: user.isActive || false,
             currentCycleAcc: user.currentCycleAcc || 0,
             hasPendingWithdrawal: !!pendingWithdrawal,
+            // Últimos 10 movimientos
             history: await Transaction.find({ userId: req.user.userId }).sort({ createdAt: -1 }).limit(10)
         });
     } catch (error) {
@@ -35,10 +36,10 @@ export const requestDeposit = async (req, res) => {
         const userId = req.user.userId;
 
         if (!amount || amount <= 0) return res.status(400).json({ message: "Monto inválido." });
-        if (!referenceId) return res.status(400).json({ message: "Falta ID." });
+        if (!referenceId) return res.status(400).json({ message: "Falta ID de transacción." });
 
         const exists = await Transaction.findOne({ referenceId });
-        if (exists) return res.status(400).json({ message: "ID duplicado." });
+        if (exists) return res.status(400).json({ message: "Este ID ya fue utilizado." });
 
         await Transaction.create({
             userId: userId,
@@ -46,10 +47,10 @@ export const requestDeposit = async (req, res) => {
             amount: Number(amount),
             status: 'pending',
             referenceId: referenceId,
-            description: 'Carga de Saldo'
+            description: 'Solicitud de Carga de Saldo'
         });
 
-        res.json({ message: "Solicitud recibida." });
+        res.json({ message: "Solicitud recibida. Esperando al Shogun." });
 
     } catch (error) {
         res.status(500).json({ message: "Error procesando solicitud." });
@@ -82,37 +83,59 @@ export const requestPayout = async (req, res) => {
     }
 };
 
-// 4. APROBAR DEPÓSITO (ADMIN)
-export const approveDeposit = async (req, res) => {
+// ==========================================
+// 🛡️ FUNCIONES DE ADMIN
+// ==========================================
+
+// 4. VER PENDIENTES
+export const getPendingTransactions = async (req, res) => {
     try {
-        const { transactionId } = req.body;
-        const tx = await Transaction.findById(transactionId);
-        if (!tx || tx.status !== 'pending') return res.status(400).json({ error: "TX inválida" });
-
-        const user = await User.findById(tx.userId);
-        user.balance += tx.amount;
-        await user.save();
-
-        tx.status = 'approved';
-        await tx.save();
-
-        res.json({ success: true, message: "Saldo cargado." });
+        // Traemos transacciones pendientes y populamos datos del usuario (nombre, email)
+        const pending = await Transaction.find({ status: "pending" })
+            .populate("userId", "ninjaName email") // Asegúrate que en Transaction el campo ref es 'userId'
+            .sort({ createdAt: 1 });
+        
+        res.json(pending);
     } catch (error) {
-        res.status(500).json({ error: "Error interno" });
+        console.error("Error obteniendo pendientes:", error);
+        res.status(500).json([]);
     }
 };
 
-// 5. RECHAZAR DEPÓSITO (ADMIN)
-export const rejectDeposit = async (req, res) => {
+// 5. GESTIONAR (APROBAR / RECHAZAR)
+export const manageDeposit = async (req, res) => {
     try {
-        const { transactionId } = req.body;
+        const { transactionId, action } = req.body; // action: 'approve' o 'reject'
+        
         const tx = await Transaction.findById(transactionId);
-        if (!tx) return res.status(404).json({ error: "TX no encontrada" });
+        if (!tx) return res.status(404).json({ error: "Transacción no encontrada" });
+        if (tx.status !== 'pending') return res.status(400).json({ error: "Ya procesada" });
 
-        tx.status = 'rejected';
-        await tx.save();
-        res.json({ success: true, message: "Rechazado." });
+        if (action === 'reject') {
+            tx.status = 'rejected';
+            await tx.save();
+            return res.json({ success: true, message: "Depósito rechazado." });
+        }
+
+        if (action === 'approve') {
+            const user = await User.findById(tx.userId);
+            if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+            // === LÓGICA DE SALDO ===
+            // Solo sumamos al balance. El usuario activará su nivel manualmente después.
+            user.balance += tx.amount;
+            await user.save();
+
+            tx.status = 'approved';
+            await tx.save();
+
+            return res.json({ success: true, message: `Aprobado. $${tx.amount} cargados a ${user.ninjaName}.` });
+        }
+
+        res.status(400).json({ error: "Acción inválida" });
+
     } catch (error) {
+        console.error("Manage Error:", error);
         res.status(500).json({ error: "Error interno" });
     }
 };
