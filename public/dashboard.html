@@ -4,187 +4,191 @@
     <meta charset="UTF-8">
     <title>Dojo Central | AidFlow Ninja</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
+    
     <style>
-        /* Bloqueo Visual */
-        .locked-feature { 
-            filter: grayscale(100%); 
-            opacity: 0.5; 
-            pointer-events: none; 
-            position: relative; 
-        }
-        .locked-feature::after { 
-            content: "🔒 BLOQUEADO"; 
-            position: absolute; 
-            top: 50%; left: 50%; 
-            transform: translate(-50%, -50%); 
-            background: black; 
-            color: var(--shogun-gold); 
-            padding: 5px 10px; 
-            font-weight: bold; 
-            border: 1px solid var(--shogun-gold); 
-            z-index: 10;
+        /* ESTILOS ESPECÍFICOS DASHBOARD */
+        :root { --bg: #020202; --panel: #0a0a0a; --blood: #ff003c; --gold: #fca311; --text: #e5e5e5; }
+        
+        /* HEADER MEJORADO */
+        .dashboard-header {
+            background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.8) 100%);
+            border-bottom: 2px solid var(--blood);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
         }
 
-        /* Modal Sigilo */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; display: none; align-items: center; justify-content: center; }
-        .modal-box { background: #0a0a0a; border: 2px solid var(--ninja-red); padding: 30px; width: 90%; max-width: 500px; color: white; position: relative; }
-        
-        /* Alerta de Compra */
-        .buy-alert-box {
-            background: rgba(252, 163, 17, 0.1); 
-            border: 1px solid var(--shogun-gold); 
-            padding: 20px; 
-            margin-top: 20px; 
-            text-align: center;
-            animation: pulse 2s infinite;
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 1px solid #333;
         }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(252, 163, 17, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(252, 163, 17, 0); } 100% { box-shadow: 0 0 0 0 rgba(252, 163, 17, 0); } }
+
+        /* CHAT FLOTANTE */
+        .chat-fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: var(--blood);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 0, 60, 0.4);
+            z-index: 1000;
+            transition: transform 0.2s;
+        }
+        .chat-fab:hover { transform: scale(1.1); }
+        
+        .chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 300px;
+            height: 400px;
+            background: #000;
+            border: 2px solid var(--gold);
+            display: none; /* Oculto por defecto */
+            flex-direction: column;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        /* Bloqueos */
+        .locked-feature { filter: grayscale(100%); opacity: 0.5; pointer-events: none; }
+        
+        /* Modal Sigilo */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-box { background: #0a0a0a; border: 1px solid var(--blood); padding: 30px; width: 90%; max-width: 450px; text-align: center; position: relative; }
     </style>
 </head>
 
-<body class="dashboard-body bg-ninja">
+<body class="bg-ninja">
     <canvas id="particles-canvas" style="position: fixed; top: 0; left: 0; z-index: -1; pointer-events: none;"></canvas>
 
     <header class="dashboard-header">
-        <div class="header-overlay flex-between container">
-            <div class="logo-area">
-                <h1 class="shogun-title-mini">AIDFLOW <span class="red-text">NINJA</span></h1>
+        <div class="logo-area">
+            <h2 class="shogun-title-mini" style="margin:0; font-size: 1.5rem;">AIDFLOW <span class="red-text">NINJA</span></h2>
+        </div>
+        
+        <div class="user-badge">
+            <div style="text-align: right; line-height: 1.2;">
+                <div id="userName" class="gold-text" style="font-weight: bold;">Cargando...</div>
+                <div id="userRank" style="font-size: 0.75rem; color: #888;">---</div>
             </div>
-            <div class="header-right" style="display: flex; align-items: center; gap: 15px;">
-                <div class="balance-container" style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.6); padding: 5px 15px; border: 1px solid var(--shogun-gold);">
-                    <img src="images/icon-coin.png" width="20" alt="Coin">
-                    <span id="headerBalance" class="gold-text font-orbitron">$0.00</span>
-                </div>
-                <div class="user-profile flex-center" id="menuProfile" style="cursor: pointer;">
-                    <img src="images/ninja-avatar.png" class="avatar-small" alt="Ninja">
-                    <span id="userName">Cargando...</span>
-                    <span id="userRank" style="font-size: 0.8em; color: #888; margin-left: 5px;"></span>
-                </div>
-                <button onclick="logout()" class="btn-ninja-outline" style="padding: 5px 10px; font-size: 0.8rem;">SALIR</button>
-            </div>
+            <img src="images/ninja-avatar.png" width="40" style="border-radius: 50%; border: 2px solid #333;">
+            <button onclick="logout()" class="btn-ninja-outline" style="padding: 5px 10px; font-size: 0.7rem;">SALIR</button>
         </div>
     </header>
 
-    <main class="container dashboard-grid">
+    <main class="container dashboard-grid" style="margin-top: 30px;">
         
-        <section class="stats-panel card-dark full-width">
+        <section class="card-dark full-width">
             <div class="flex-between align-center">
                 <div>
-                    <h2 class="section-title">ESTADO DEL CICLO</h2>
-                    <p class="muted-text">Tu progreso en la senda de las sombras</p>
+                    <span class="muted-text">SALDO DISPONIBLE</span>
+                    <h1 id="headerBalance" class="gold-text" style="font-family: 'Orbitron'; font-size: 2.5rem; margin: 5px 0;">$0.00</h1>
                 </div>
-                <button onclick="openLevelsModal()" class="btn-ninja-primary">🛒 COMPRAR PASE</button>
+                <button onclick="openLevelsModal()" class="btn-ninja-primary">🛒 CARGAR SALDO</button>
             </div>
 
-            <div id="buyAlert" style="display:none;" class="buy-alert-box">
-                </div>
+            <div id="buyAlert" style="display:none; margin-top: 20px;"></div>
 
-            <div id="cycleContainer" style="display:none; margin-top: 20px;">
-                <div class="progress-bar-container">
-                    <div class="progress-info flex-between">
-                        <span class="gold-text">Progreso Actual</span>
-                        <span id="cycleEarnings" class="white-text">$0.00 / $0.00</span>
-                    </div>
-                    <div class="bar-bg">
-                        <div id="cycleBar" class="bar-fill" style="width: 0%;"></div>
-                    </div>
-                    <div style="text-align: right; margin-top: 5px;">
-                        <span id="cyclePercent" style="color: #666;">0%</span>
-                    </div>
+            <div id="cycleContainer" style="display:none; margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
+                <div class="flex-between">
+                    <span class="gold-text">Progreso del Ciclo</span>
+                    <span id="cycleEarnings" class="white-text">$0.00 / $0.00</span>
                 </div>
-                <button id="harvestBtn" class="btn-ninja-primary" style="width:100%; margin-top:15px; display:none;">💸 RETIRAR GANANCIAS</button>
+                <div style="background: #222; height: 8px; margin: 10px 0; border-radius: 4px; overflow: hidden;">
+                    <div id="cycleBar" style="background: var(--blood); height: 100%; width: 0%; transition: width 0.5s;"></div>
+                </div>
+                <button id="harvestBtn" class="btn-ninja-outline" style="width:100%; margin-top:10px; display:none;">💸 RETIRAR GANANCIAS</button>
             </div>
         </section>
 
-        <section class="main-actions grid-3">
-            <div id="btn-tournament" class="action-card card-dark hover-effect" onclick="alert('Sistema de Torneos en Mantenimiento')">
-                <img src="images/icon-duel.png" width="50" style="margin-bottom: 15px;">
+        <section class="grid-3" style="margin-top: 30px;">
+            <div id="btn-tournament" class="action-card card-dark hover-effect">
+                <i class="fas fa-trophy fa-3x gold-text" style="margin-bottom: 15px;"></i>
                 <h3>TORNEOS</h3>
-                <p>Compite por la gloria del Clan</p>
             </div>
 
             <div id="btn-duels" class="action-card card-dark hover-effect" onclick="crearReto()">
                 <i class="fas fa-khanda fa-3x red-text" style="margin-bottom: 15px;"></i>
-                <h3>DUELOS 1v1</h3>
-                <p>Desafía a otro ninja por oro</p>
+                <h3>DUELOS</h3>
             </div>
 
             <div id="btn-missions" class="action-card card-dark hover-effect">
-                <i class="fas fa-scroll fa-3x gold-text" style="margin-bottom: 15px;"></i>
+                <i class="fas fa-scroll fa-3x" style="color: #888; margin-bottom: 15px;"></i>
                 <h3>MISIONES</h3>
-                <p>Recompensas diarias</p>
-                <button id="missionBtn" class="btn-ninja-outline" style="margin-top:10px; width:100%">RECLAMAR DIARIO</button>
+                <button id="missionBtn" class="btn-ninja-outline" style="margin-top:10px; width:100%; font-size:0.8rem;">DIARIO</button>
             </div>
         </section>
 
-        <section class="games-section full-width">
+        <section style="margin-top: 30px;">
             <h3 class="section-title">DOJO DE JUEGOS</h3>
-            <div id="embedGamesGrid" class="grid-ninja" style="margin-top: 20px;">
-                </div>
-        </section>
-
-        <section class="chat-section card-dark full-width">
-            <div class="chat-header flex-between" onclick="toggleChat()" style="cursor: pointer;">
-                <h3>💬 CHAT DEL CLAN</h3>
-                <span id="chatToggleIcon">▼</span>
-            </div>
-            <div id="chatWindow" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
-                <div id="chatMessages" class="chat-box" style="height: 200px; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #333;"></div>
-                <div class="chat-input flex-between">
-                    <input type="text" id="chatMsg" class="input-dark" placeholder="Escribe tu mensaje..." style="width: 80%;">
-                    <button onclick="sendChat()" class="btn-ninja-outline">ENVIAR</button>
-                </div>
-            </div>
+            <div id="embedGamesGrid" class="grid-ninja" style="margin-top: 15px;"></div>
         </section>
 
     </main>
 
-    <footer class="footer-ninja">
-        <div class="container">
-            <a href="javascript:void(0)" onclick="mostrarTerminos()" class="legal-link">Código de Honor (Términos)</a>
-            <p class="copy">© 2026 AidFlow Ninja - El camino no tiene fin.</p>
-        </div>
-    </footer>
+    <div class="chat-fab" onclick="toggleChat()">
+        <i class="fas fa-comments fa-lg white-text"></i>
+    </div>
 
-    <div id="game-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column;">
-        <div style="width: 90%; max-width: 900px; text-align: right; margin-bottom: 10px;">
-            <button onclick="closeGame()" class="btn-ninja-outline">CERRAR X</button>
+    <div id="chatWindow" class="chat-window">
+        <div style="background: #111; padding: 10px; border-bottom: 1px solid #333; display: flex; justify-content: space-between;">
+            <span class="gold-text">CHAT DEL CLAN</span>
+            <span onclick="toggleChat()" style="cursor:pointer;">✖</span>
         </div>
-        <iframe id="game-frame" src="" style="width: 95%; height: 85%; border: 2px solid var(--shogun-gold); background: black;"></iframe>
+        <div id="chatMessages" style="flex: 1; padding: 10px; overflow-y: auto; font-size: 0.9rem;"></div>
+        <div style="padding: 10px; background: #111;">
+            <input type="text" id="chatMsg" placeholder="Escribe..." style="width: 100%; background: #000; border: 1px solid #333; color: white; padding: 5px;">
+        </div>
     </div>
 
     <div id="levelsModal" class="modal-overlay">
         <div class="modal-box">
             <h2 class="shogun-title-mini red-text">PROTOCOLOS DE PAGO</h2>
             
-            <div style="background: #3a0000; border: 1px solid red; padding: 10px; margin-bottom: 20px; text-align: left; font-size: 0.9rem;">
-                <strong style="color: #ff5555;">⚠️ ADVERTENCIA DE SIGILO</strong>
-                <p style="margin: 5px 0; color: #ffcccc;">Para evitar bloqueos de MercadoPago:</p>
-                <ul style="margin-left: 20px; color: white;">
-                    <li>❌ NUNCA pongas: "Inversión", "Ganancia", "Nivel".</li>
-                    <li>✅ SOLO pon: <strong>"Varios"</strong>, <strong>"Diseño"</strong> o vacío.</li>
+            <div style="background: #2a0000; border: 1px solid #ff0000; padding: 10px; margin-bottom: 20px; font-size: 0.85rem; text-align: left;">
+                <strong style="color: #ff5555;">⚠️ IMPORTANTE (MERCADOPAGO)</strong>
+                <ul style="margin: 5px 0 0 20px; color: #ffcccc;">
+                    <li>❌ NO pongas: "Inversión", "Ganancia", "Nivel".</li>
+                    <li>✅ SOLO pon: <strong>"Varios"</strong> o déjalo vacío.</li>
                 </ul>
             </div>
 
-            <p style="color:#aaa; font-size:0.9rem;">Envía el monto exacto al Alias/CVU:</p>
-            <div style="background:#000; padding:10px; border:1px solid #444; margin-bottom: 20px; display:flex; justify-content:space-between; cursor:pointer;" onclick="navigator.clipboard.writeText(this.innerText); alert('Alias copiado')">
+            <p style="color:#aaa; font-size:0.9rem; margin-bottom: 5px;">Copiar Alias del Shogun:</p>
+            <div style="background:#000; padding:10px; border:1px solid #444; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="navigator.clipboard.writeText(this.innerText); alert('Alias copiado')">
                 <span id="adminAlias" class="gold-text font-orbitron">ALIAS.DEL.SHOGUN</span>
                 <i class="fas fa-copy" style="color:#666"></i>
             </div>
 
             <div style="text-align: left;">
-                <label>1. Elige tu Rango:</label>
-                <select id="levelSelect" class="input-dark" style="width: 100%; margin-bottom: 15px;">
+                <label style="font-size:0.8rem; color:#888;">1. Selecciona el Nivel:</label>
+                <select id="levelSelect" class="input-dark" style="width: 100%; padding: 10px; margin-bottom: 15px; background: #111; color: white; border: 1px solid #333;">
                     <option value="1">Nivel 1 - Bronce ($10)</option>
-                    <option value="2">Nivel 2 - Plata ($25)</option>
-                    <option value="3">Nivel 3 - Oro ($50)</option>
+                    <option value="2" disabled>🔒 Nivel 2 - Plata ($25) (Bloqueado)</option>
+                    <option value="3" disabled>🔒 Nivel 3 - Oro ($50) (Bloqueado)</option>
                 </select>
 
-                <label>2. ID de Transacción:</label>
-                <input type="text" id="depRef" class="input-dark" placeholder="Ej: 1234567890" style="width: 100%;">
+                <label style="font-size:0.8rem; color:#888;">2. ID de Transacción (Comprobante):</label>
+                <input type="text" id="depRef" class="input-dark" placeholder="Ej: 1234567890" style="width: 100%; padding: 10px; background: #111; border: 1px solid #333; color: white;">
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 25px;">
@@ -193,31 +197,36 @@
             </div>
         </div>
     </div>
+    
+    <div id="game-modal" class="modal-overlay">
+        <div style="width:90%; height:80%; max-width:1000px; position:relative;">
+            <button onclick="document.getElementById('game-modal').style.display='none'; document.getElementById('game-frame').src='';" style="position:absolute; top:-40px; right:0;" class="btn-ninja-outline">CERRAR</button>
+            <iframe id="game-frame" style="width:100%; height:100%; border:none; background:black;"></iframe>
+        </div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="js/dashboard.js"></script>
     <script>
-        function closeGame(){ document.getElementById('game-modal').style.display = 'none'; document.getElementById('game-frame').src = ''; }
-        function initParticles(){
+        document.addEventListener("DOMContentLoaded", () => {
             const canvas = document.getElementById('particles-canvas');
             if(!canvas) return;
             const ctx = canvas.getContext('2d');
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            const particles = Array.from({length:30}).map(()=>({
+            const pArray = Array.from({length:40}).map(()=>({
                 x:Math.random()*canvas.width, y:Math.random()*canvas.height,
-                r:Math.random()*2, c: Math.random()>.5?'#8e0000':'#ffb400', s:Math.random()*.5
+                s:Math.random()*1.5, c: Math.random()>.5?'#330000':'#332200'
             }));
             function animate(){
                 ctx.clearRect(0,0,canvas.width,canvas.height);
-                particles.forEach(p=>{
-                    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=p.c; ctx.fill();
-                    p.y-=p.s; if(p.y<0) p.y=canvas.height;
+                pArray.forEach(p=>{
+                    ctx.beginPath(); ctx.arc(p.x,p.y,p.s,0,Math.PI*2); ctx.fillStyle=p.c; ctx.fill();
+                    p.y-=0.5; if(p.y<0) p.y=canvas.height;
                 });
                 requestAnimationFrame(animate);
             }
             animate();
-        }
-        document.addEventListener("DOMContentLoaded", initParticles);
+        });
     </script>
 </body>
 </html>
