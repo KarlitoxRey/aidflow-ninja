@@ -4,8 +4,6 @@ import {
     getWalletDetails, 
     requestDeposit, 
     requestPayout, 
-    buyLevel,        // <--- AQUI ESTABA EL ERROR (Antes decía buyPass)
-    harvestEarnings, 
     getPendingTransactions, 
     manageDeposit 
 } from "../controllers/payments.controller.js";
@@ -16,28 +14,26 @@ const router = Router();
 // 👤 RUTAS DE USUARIO
 // ==========================================
 
-// Billetera
+// Ver Billetera y Movimientos
 router.get("/wallet", verifyToken, getWalletDetails);
 
-// Depósitos y Retiros
+// Solicitar Depósito (Subir comprobante)
 router.post("/deposit", verifyToken, requestDeposit);
+
+// Solicitar Retiro
 router.post("/payout", verifyToken, requestPayout);
 
-// JUEGO: Comprar Nivel (Antes buy-pass, ahora buy-level)
-router.post("/buy-level", verifyToken, buyLevel);
-
-// JUEGO: Cosechar
-router.post("/harvest", verifyToken, harvestEarnings);
-router.post("/withdraw", verifyToken, harvestEarnings); // Alias por compatibilidad
+// NOTA: 'buyLevel' se eliminó de aquí porque ahora se maneja en 'economy.routes.js'
+// NOTA: 'harvestEarnings' se eliminó porque el retiro es 'payout'
 
 // ==========================================
 // 🛡️ RUTAS DE ADMIN (TESORERÍA)
 // ==========================================
 
-// Ver pendientes
+// Ver transacciones pendientes
 router.get("/pending", verifyToken, isShogun, getPendingTransactions);
 
-// Gestionar (Aprobar/Rechazar)
+// Gestionar Depósitos (Aprobar/Rechazar)
 router.post("/manage", verifyToken, isShogun, manageDeposit);
 
 export default router;
