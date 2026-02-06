@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema({
     // ===========================
-    // 🥷 IDENTIDAD (INTACTO)
+    // 🥷 IDENTIDAD
     // ===========================
     ninjaName: { 
         type: String, 
@@ -29,18 +29,16 @@ const userSchema = new mongoose.Schema({
     },
     
     // ===========================
-    // 💰 ECONOMÍA (ACTUALIZADO)
+    // 💰 ECONOMÍA
     // ===========================
     balance: { 
         type: Number, 
         default: 0 
     },
-    // NUEVO: Para saber cuánto ha ganado en total (histórico)
     totalEarnings: { 
         type: Number, 
         default: 0 
     },
-    // NUEVO: Progreso del ciclo actual (ej: lleva $15 de $30)
     currentCycleAcc: { 
         type: Number, 
         default: 0 
@@ -51,35 +49,30 @@ const userSchema = new mongoose.Schema({
     },
     
     // ===========================
-    // ⚔️ ESTADO DEL GUERRERO (NUEVO)
+    // ⚔️ ESTADO DEL GUERRERO
     // ===========================
-    // NUEVO: Nivel actual (1=Bronce, 2=Plata, 3=Oro)
     level: { 
         type: Number, 
         default: 0 
     },
-    // NUEVO: Velocidad para el sorteo de micropagos (x1, x1.5, x2)
     micropaymentSpeed: { 
         type: Number, 
         default: 1 
     },
-    // NUEVO: ¿Está habilitado para recibir lluvia de dinero?
     isActive: { 
         type: Boolean, 
         default: false 
     },
-    // NUEVO: Bandera para obligar a recomprar
     cycleCompleted: { 
         type: Boolean, 
         default: false 
     },
-    // NUEVO: Para identificar a los primeros 100 fundadores
     userIndex: { 
         type: Number 
     },
 
     // ===========================
-    // 🎲 JUEGO (LEGACY/COMPATIBLE)
+    // 🎲 JUEGO (COMPATIBILIDAD)
     // ===========================
     activeCycle: { 
         type: mongoose.Schema.Types.ObjectId, 
@@ -88,12 +81,12 @@ const userSchema = new mongoose.Schema({
     },
     
     // ===========================
-    // 🤝 REFERIDOS (INTACTO)
+    // 🤝 REFERIDOS
     // ===========================
     referralCode: { 
         type: String, 
         unique: true,
-        sparse: true // Permite nulls si no tienen código al inicio
+        sparse: true
     },
     referredBy: { 
         type: mongoose.Schema.Types.ObjectId, 
@@ -110,7 +103,7 @@ const userSchema = new mongoose.Schema({
     },
 
     // ===========================
-    // 🛡️ SEGURIDAD (INTACTO)
+    // 🛡️ SEGURIDAD
     // ===========================
     isVerified: { 
         type: Boolean, 
@@ -123,10 +116,10 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // ==========================================
-// 🔒 MIDDLEWARES Y MÉTODOS
+// 🔒 MIDDLEWARES (CORREGIDOS: SIN 'next')
 // ==========================================
 
-// 1. Hook para Encriptar Password (TU CÓDIGO ORIGINAL CORREGIDO)
+// 1. Hook para Encriptar Password
 userSchema.pre("save", async function () {
     if (!this.isModified("password")) return;
     try {
@@ -137,8 +130,10 @@ userSchema.pre("save", async function () {
     }
 });
 
-// 2. NUEVO HOOK: Generar User Index (Para Fundadores)
-userSchema.pre("save", async function (next) {
+// 2. Hook: User Index y Referral Code
+// ⚠️ NOTA: Aquí quitamos el 'next' de los argumentos y del final
+userSchema.pre("save", async function () {
+    // Generar índice numérico secuencial
     if (this.isNew && !this.userIndex) {
         try {
             const count = await mongoose.model("User").countDocuments();
@@ -147,11 +142,13 @@ userSchema.pre("save", async function (next) {
             console.error("Error generando index:", error);
         }
     }
-    // Si no tiene código de referido propio, generamos uno simple
+    
+    // Generar código de referido si no existe
     if (this.isNew && !this.referralCode) {
-        this.referralCode = this.ninjaName + Math.floor(Math.random() * 1000);
+        // Limpieza básica para evitar espacios en el código
+        const cleanName = this.ninjaName ? this.ninjaName.replace(/\s+/g, '') : 'NINJA';
+        this.referralCode = `${cleanName}-${Math.floor(Math.random() * 10000)}`;
     }
-    next(); // Aquí sí usamos next porque no es una promesa que bloquee auth
 });
 
 // Método para verificar contraseña
