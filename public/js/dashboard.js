@@ -3,7 +3,6 @@ import { API_URL } from "./api.js";
 let currentUser = null;
 let socket = null;
 
-// Configuración de la Nueva Economía
 const ECONOMY_CONFIG = {
     LEVELS: {
         1: { name: "🥷 BRONCE", goal: 30, entry: 10 },
@@ -15,10 +14,8 @@ const ECONOMY_CONFIG = {
 document.addEventListener("DOMContentLoaded", async () => {
     await validateSession();
     if (currentUser) {
-        setupEventListeners();
-        initSocialMissionLogic();
-        initChat(); // Iniciamos el chat si existe
-        initDuelArena(); // Iniciamos escucha de duelos
+        initChat(); 
+        initUI();
     }
 });
 
@@ -32,14 +29,11 @@ async function validateSession() {
         
         currentUser = await res.json();
         
-        // 1. Renderizar Interfaz Base
+        // Renderizar datos básicos
         renderUserInterface();
         
-        // 2. Aplicar Restricciones (Si no está activo)
-        applyRestrictions();
-        
-        // 3. Botón Shogun (si aplica)
-        applyAccessLogic();
+        // Cargar juegos (con restricción si aplica)
+        loadUserGames(!currentUser.isActive);
 
     } catch (error) {
         console.error("Error sesión:", error);
@@ -48,62 +42,36 @@ async function validateSession() {
     }
 }
 
-// === 🔒 SISTEMA DE RESTRICCIONES (NUEVO) ===
-function applyRestrictions() {
-    const isInactive = !currentUser.isActive;
-    
-    // Lista de botones a bloquear si está inactivo
-    const restrictedBtns = ['btn-tournament', 'btn-duels', 'btn-missions'];
-    
-    restrictedBtns.forEach(btnId => {
-        const el = document.getElementById(btnId);
-        if(el) {
-            if(isInactive) {
-                el.classList.add('locked-feature'); // CSS class en HTML
-                el.onclick = (e) => { 
-                    e.preventDefault(); 
-                    e.stopPropagation(); 
-                    alert("🔒 Debes activar tu nivel para acceder a esta sección."); 
-                };
-            } else {
-                el.classList.remove('locked-feature');
-                // Restaurar eventos originales si fuera necesario (aquí asumimos onclick en HTML)
-            }
-        }
-    });
-
-    // Cargar Juegos (Si es inactivo -> Modo Práctica)
-    loadUserGames(isInactive);
-}
-
 function renderUserInterface() {
     safeText("userName", currentUser.ninjaName);
     safeText("headerBalance", formatMoney(currentUser.balance));
-    
+
     // Rango
     const levelInfo = ECONOMY_CONFIG.LEVELS[currentUser.level];
     safeText("userRank", levelInfo ? levelInfo.name : "👺 RONIN (Sin Clan)");
 
-    // === LÓGICA DE BARRA Y ALERTAS ===
+    // === LÓGICA DE ACTIVACIÓN ===
     const container = document.getElementById("cycleContainer");
     const buyAlert = document.getElementById("buyAlert");
 
-    // CASO A: Tiene saldo pero NO está activo -> Mostrar Alerta de Activación
+    // 1. USUARIO CON SALDO PERO INACTIVO (Debe activar manualmente)
     if (!currentUser.isActive && currentUser.balance >= 10) {
         if(container) container.style.display = "none";
         if(buyAlert) {
             buyAlert.style.display = "block";
             buyAlert.innerHTML = `
-                <h3 class="gold-text" style="margin-top:0;">⚠️ SALDO DETECTADO: ${formatMoney(currentUser.balance)}</h3>
-                <p style="color:#ccc;">Tienes fondos suficientes.</p>
-                <p class="white-text">Debes <strong>ACTIVAR EL NIVEL</strong> para desbloquear micropagos, torneos y duelos.</p>
-                <button onclick="window.activateLevelWithBalance()" class="btn-ninja-primary" style="width:100%; font-size:1.1rem;">
-                    🚀 ACTIVAR NIVEL 1 AHORA
-                </button>
+                <div style="background: rgba(252, 163, 17, 0.1); border: 1px solid var(--gold); padding: 15px; text-align: center;">
+                    <h3 style="color:var(--gold); margin:0;">⚠️ SALDO DETECTADO</h3>
+                    <p style="color:#ccc; font-size:0.9rem;">Tienes <strong>${formatMoney(currentUser.balance)}</strong> listos.</p>
+                    <p style="font-size:0.9rem;">Activa tu rango para desbloquear Torneos y Ganancias.</p>
+                    <button onclick="window.activateLevelWithBalance()" class="btn-ninja-primary" style="width:100%; margin-top:10px;">
+                        🚀 ACTIVAR NIVEL 1
+                    </button>
+                </div>
             `;
         }
     }
-    // CASO B: Activo -> Mostrar Barra de Progreso
+    // 2. USUARIO ACTIVO (Jugando)
     else if (currentUser.isActive) {
         if(buyAlert) buyAlert.style.display = "none";
         if(container) {
@@ -111,42 +79,40 @@ function renderUserInterface() {
             updateCycleProgress();
         }
     }
-    // CASO C: Inactivo sin saldo -> Ocultar todo (Se usa el botón Comprar Pase del header)
+    // 3. NUEVO SIN SALDO
     else {
         if(container) container.style.display = "none";
         if(buyAlert) buyAlert.style.display = "none";
+        // Bloquear menú principal visualmente
+        ['btn-tournament', 'btn-duels', 'btn-missions'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.classList.add('locked-feature');
+                el.onclick = () => alert("🔒 Función Bloqueada: Debes adquirir el Pase Nivel 1.");
+            }
+        });
     }
-
-    initDailyMissionBtn();
 }
 
-// === 📊 BARRA DE PROGRESO ===
 function updateCycleProgress() {
     const levelData = ECONOMY_CONFIG.LEVELS[currentUser.level];
     if(!levelData) return;
 
     const goal = levelData.goal;
     const currentAcc = currentUser.currentCycleAcc || 0;
-    
-    let percent = (currentAcc / goal) * 100;
-    if(percent > 100) percent = 100;
+    const percent = Math.min((currentAcc / goal) * 100, 100);
 
     document.getElementById("cycleBar").style.width = `${percent}%`;
-    safeText("cyclePercent", `${percent.toFixed(1)}%`);
     safeText("cycleEarnings", `${formatMoney(currentAcc)} / ${formatMoney(goal)}`);
 
-    // Botón de Retiro
     const harvestBtn = document.getElementById("harvestBtn");
-    if(currentUser.balance >= 10) { // Mínimo retiro
+    if(currentUser.balance >= 10) {
         harvestBtn.style.display = "block";
         harvestBtn.onclick = () => window.doPayout(currentUser.balance);
-    } else {
-        harvestBtn.style.display = "none";
     }
 }
 
-// === 🎮 CARGAR JUEGOS (MODO PRÁCTICA) ===
-async function loadUserGames(isPracticeMode) {
+async function loadUserGames(isPractice) {
     const container = document.getElementById('embedGamesGrid');
     if(!container) return;
     
@@ -155,57 +121,101 @@ async function loadUserGames(isPracticeMode) {
         const games = await res.json();
         
         if(games.length === 0) { 
-            container.innerHTML = "<p style='color:#666'>El Dojo está vacío por ahora.</p>"; return; 
+            container.innerHTML = "<p style='color:#666'>Dojo vacío.</p>"; return; 
         }
 
         container.innerHTML = games.map(g => `
-            <div class="action-card card-dark" style="cursor:pointer; position:relative;" onclick="window.playGame('${g.embedUrl}', ${isPracticeMode})">
-                ${isPracticeMode ? '<div style="position:absolute; top:5px; right:5px; background:#555; color:white; font-size:10px; padding:2px 5px; border-radius:3px;">PRÁCTICA</div>' : ''}
-                <div style="height:80px; display:flex; align-items:center; justify-content:center; background:#111; margin-bottom:10px;">
+            <div style="background:#111; border:1px solid #333; position:relative; cursor:pointer;" 
+                 onclick="window.playGame('${g.embedUrl}', ${isPractice})">
+                ${isPractice ? '<div style="position:absolute; top:5px; right:5px; background:#444; color:#fff; font-size:10px; padding:2px 5px;">PRÁCTICA</div>' : ''}
+                <div style="height:120px; display:flex; align-items:center; justify-content:center; background:#000;">
                    <i class="fas fa-gamepad fa-3x gold-text"></i>
                 </div>
-                <h4 style="color:white; margin:0;">${g.title}</h4>
+                <h4 style="color:white; padding:10px; margin:0; font-size:0.9rem;">${g.title}</h4>
             </div>
         `).join('');
-    } catch (e) { console.log("Error cargando juegos"); }
+    } catch (e) {}
 }
 
-// === 🚀 ACCIONES DEL USUARIO ===
+// === ACCIONES PRINCIPALES ===
 
-// 1. Abrir Modal de Pago
+// 1. Abrir Modal de Carga de Saldo (Lógica de bloqueo de niveles)
 window.openLevelsModal = () => {
-    document.getElementById('levelsModal').style.display = 'flex';
+    const modal = document.getElementById('levelsModal');
+    const select = document.getElementById('levelSelect');
+    
+    if(!modal || !select) return;
+
+    // LÓGICA DE PROGRESIÓN ESTRICTA
+    // Limpiamos opciones
+    select.innerHTML = '';
+
+    // Opción Nivel 1 (Siempre visible, pero seleccionable solo si es el siguiente paso)
+    const opt1 = new Option("Nivel 1 - Bronce ($10)", "1");
+    select.add(opt1);
+
+    // Opción Nivel 2 (Bloqueado si no completó Nivel 1)
+    const opt2 = new Option("🔒 Nivel 2 - Plata ($25)", "2");
+    // Lógica futura: if(currentUser.level < 1) opt2.disabled = true;
+    opt2.disabled = true; // Por ahora bloqueado estricto para nuevos
+    select.add(opt2);
+
+    // Opción Nivel 3
+    const opt3 = new Option("🔒 Nivel 3 - Oro ($50)", "3");
+    opt3.disabled = true; 
+    select.add(opt3);
+
+    // Seleccionar por defecto el 1
+    select.value = "1";
+
+    modal.style.display = 'flex';
 };
 
-// 2. Enviar Solicitud de Depósito (SOLO CARGA SALDO)
+// 2. ENVIAR AVISO (Corregido)
 window.submitDeposit = async () => {
+    const refInput = document.getElementById("depRef");
     const levelSelect = document.getElementById("levelSelect");
-    // Asignamos monto según nivel seleccionado para facilitar al usuario
-    const amount = levelSelect.value == 1 ? 10 : (levelSelect.value == 2 ? 25 : 50);
-    const ref = document.getElementById("depRef").value;
     
-    if(!ref) return alert("Falta el ID de transacción");
+    // Obtenemos el valor limpio
+    const ref = refInput.value.trim();
+    if(!ref) return alert("❌ Debes pegar el ID de la transacción.");
+
+    // Definimos monto según el nivel seleccionado
+    let amount = 10;
+    if(levelSelect.value === "2") amount = 25;
+    if(levelSelect.value === "3") amount = 50;
 
     try {
         const res = await fetch(`${API_URL}/api/payments/deposit`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
-            body: JSON.stringify({ amount, referenceId: ref })
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": `Bearer ${localStorage.getItem("token")}` 
+            },
+            body: JSON.stringify({ 
+                amount: amount, 
+                referenceId: ref 
+            })
         });
         
         const data = await res.json();
+
         if(res.ok) { 
-            alert("✅ Aviso enviado. Cuando el Shogun apruebe, verás tu saldo y podrás ACTIVAR."); 
+            alert("✅ Aviso enviado con éxito.\n\nCuando el Shogun lo apruebe, verás tu saldo reflejado y podrás activar el Nivel."); 
             document.getElementById('levelsModal').style.display = 'none';
+            refInput.value = ""; // Limpiar campo
         } else { 
-            alert("⚠️ " + data.message); 
+            alert("⚠️ " + (data.message || data.error)); 
         }
-    } catch (e) { alert("Error de conexión"); }
+    } catch (e) { 
+        console.error(e);
+        alert("❌ Error de conexión con el servidor."); 
+    }
 };
 
-// 3. ACTIVAR NIVEL (Dispara la lógica de economía)
+// 3. ACTIVAR NIVEL (Consumir saldo)
 window.activateLevelWithBalance = async () => {
-    if(!confirm("¿Usar tu saldo para activar el Nivel y entrar al ciclo?")) return;
+    if(!confirm("¿Usar $10 de saldo para iniciar el Ciclo?")) return;
     
     try {
         const res = await fetch(`${API_URL}/api/economy/entry`, {
@@ -214,94 +224,73 @@ window.activateLevelWithBalance = async () => {
                 "Content-Type": "application/json", 
                 "Authorization": `Bearer ${localStorage.getItem("token")}` 
             },
-            body: JSON.stringify({ userId: currentUser._id, level: 1, amount: 10 }) // Default Nivel 1
+            body: JSON.stringify({ userId: currentUser._id, level: 1, amount: 10 })
         });
 
         const data = await res.json();
         if(res.ok) {
-            alert("✅ ¡NIVEL ACTIVADO! Bienvenido a la hermandad.");
+            alert("✅ ¡BIENVENIDO AL CLAN! Tu ciclo ha comenzado.");
             window.location.reload();
         } else {
-            alert("⚠️ " + (data.error || "Error al activar"));
+            alert("⚠️ " + data.error);
         }
     } catch(e) { alert("Error de conexión"); }
 };
 
-// 4. Jugar (Con alerta de Práctica)
-window.playGame = (url, isPractice) => {
-    if(isPractice) {
-        if(!confirm("⚠️ MODO PRÁCTICA: Estás inactivo, por lo que no ganarás recompensas ni puntaje oficial. ¿Jugar igual?")) return;
-    }
-    // Usamos el modal de iframe que existe en el HTML
-    const modal = document.getElementById('game-modal');
-    const iframe = document.getElementById('game-frame');
-    if(modal && iframe) {
-        iframe.src = url;
-        modal.style.display = 'flex';
-    } else {
-        window.open(url, '_blank');
-    }
-};
-
-window.doPayout = async (amount) => {
-    let alias = prompt(`Ingresa tu Alias/CBU para retirar $${amount}:`);
-    if(!alias) return;
-    try {
-        const res = await fetch(`${API_URL}/api/payments/payout`, { 
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
-            body: JSON.stringify({ amount: amount, alias })
-        });
-        const data = await res.json();
-        if(res.ok) { alert("✅ Retiro solicitado."); window.location.reload(); }
-        else { alert("⚠️ " + data.message); }
-    } catch(e) { alert("Error"); }
-};
-
-// === EXTRAS (MISIONES, CHAT, ETC) ===
-function initSocialMissionLogic() {
-    const btnShare = document.getElementById("btnShare"); // Si existe
-    // ... tu lógica existente de share ...
-}
-function initDailyMissionBtn() {
-    const btn = document.getElementById("missionBtn");
-    if(!btn) return;
-    btn.onclick = async () => {
-        const res = await fetch(`${API_URL}/api/missions/daily`, { method: "POST", headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } });
-        if(res.ok) { alert("🎁 Recompensa diaria recibida"); window.location.reload(); }
-        else alert("⏳ Ya reclamaste hoy");
-    };
-}
+// === CHAT FLOTANTE ===
 function initChat() {
     if(typeof io === 'undefined') return;
     socket = io(API_URL);
+    
     const box = document.getElementById("chatMessages");
+    const input = document.getElementById("chatMsg");
+
     socket.on("chat message", (msg) => {
         if(box) {
-            const p = document.createElement("div");
-            p.innerHTML = `<strong style="color:var(--shogun-gold)">${msg.user}:</strong> <span style="color:#ccc">${msg.text}</span>`;
-            box.appendChild(p); box.scrollTop = box.scrollHeight;
+            const div = document.createElement("div");
+            div.style.marginBottom = "5px";
+            div.innerHTML = `<strong style="color:var(--gold)">${msg.user}:</strong> <span style="color:#ccc">${msg.text}</span>`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
         }
     });
-    window.sendChat = () => {
-        const input = document.getElementById("chatMsg");
-        const txt = input.value.trim();
-        if(txt) { socket.emit("chat message", { user: currentUser.ninjaName, text: txt }); input.value = ""; }
-    };
+
+    input?.addEventListener("keypress", (e) => {
+        if(e.key === "Enter") {
+            const txt = input.value.trim();
+            if(txt) {
+                socket.emit("chat message", { user: currentUser.ninjaName, text: txt });
+                input.value = "";
+            }
+        }
+    });
 }
-function initDuelArena() { if(socket) socket.on("newDuelAvailable", (d) => { console.log("Nuevo duelo:", d); }); }
+
+window.toggleChat = () => {
+    const w = document.getElementById("chatWindow");
+    w.style.display = (w.style.display === "none" || w.style.display === "") ? "flex" : "none";
+};
+
+// Helpers
+window.playGame = (url, isPractice) => {
+    const modal = document.getElementById('game-modal');
+    const iframe = document.getElementById('game-frame');
+    if(isPractice) {
+        if(!confirm("⚠️ MODO PRÁCTICA: No sumarás puntos ni dinero real. ¿Continuar?")) return;
+    }
+    iframe.src = url;
+    modal.style.display = 'flex';
+};
+
 window.logout = () => { localStorage.clear(); window.location.replace("login.html"); };
-window.toggleChat = () => { const w = document.getElementById("chatWindow"); if(w) w.style.display = w.style.display==="flex"?"none":"flex"; };
 function formatMoney(amount) { return Number(amount || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }); }
 function safeText(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; }
-function applyAccessLogic() {
-    if (currentUser && currentUser.role === 'shogun') {
-        const btn = document.createElement("button");
-        btn.innerText = "⚙️ SHOGUN"; 
-        btn.className = "btn-ninja-outline";
-        btn.style = "position:fixed; bottom:20px; left:20px; z-index:9999; background:black;";
-        btn.onclick = () => window.location.href = "admin.html";
-        document.body.appendChild(btn);
+function initUI() {
+    const btnMissions = document.getElementById("missionBtn");
+    if(btnMissions) {
+        btnMissions.onclick = (e) => {
+            e.stopPropagation(); // Evitar click en la card
+            alert("⏳ Misiones diarias pronto...");
+        };
     }
 }
-window.crearReto = () => alert("Arena de Duelos: Próximamente");
