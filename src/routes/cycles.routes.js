@@ -1,23 +1,17 @@
 import { Router } from "express";
 import { verifyToken } from "../middlewares/auth.middleware.js";
-// IMPORTAMOS LOS NOMBRES NUEVOS DEL CONTROLADOR
-import { buyLevel, harvestEarnings } from "../controllers/payments.controller.js";
 
 const router = Router();
 
-// ==========================================
-// 🔄 RUTAS DE CICLOS (NIVELES)
-// ==========================================
+// NOTA DEL SHOGUN:
+// Las funciones de "Comprar Nivel" (buyLevel) ahora viven en: economy.routes.js
+// Las funciones de "Cosechar/Retirar" (harvest) ahora viven en: payments.routes.js
 
-// Iniciar un ciclo (Comprar Nivel)
-// Antes: buyPass -> Ahora: buyLevel
-router.post("/start", verifyToken, buyLevel);
+// Dejamos este archivo limpio por ahora para evitar errores de despliegue.
+// Si en el futuro agregas lógica específica de ciclos (ej: ver historial de ciclos), va aquí.
 
-// Retirar ganancias del ciclo
-// Antes: withdrawCycle -> Ahora: harvestEarnings
-router.post("/withdraw", verifyToken, harvestEarnings);
-
-// Estado del ciclo actual (Opcional, si no usas getWalletDetails)
-// router.get("/status", verifyToken, getCycleStatus); 
+router.get("/", verifyToken, (req, res) => {
+    res.json({ message: "Módulo de Ciclos activo. Usa /api/economy para operaciones." });
+});
 
 export default router;
