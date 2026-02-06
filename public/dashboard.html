@@ -9,10 +9,8 @@
     <link rel="stylesheet" href="css/main.css">
     
     <style>
-        /* ESTILOS ESPECÍFICOS DASHBOARD */
         :root { --bg: #020202; --panel: #0a0a0a; --blood: #ff003c; --gold: #fca311; --text: #e5e5e5; }
         
-        /* HEADER MEJORADO */
         .dashboard-header {
             background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.8) 100%);
             border-bottom: 2px solid var(--blood);
@@ -36,45 +34,46 @@
             border: 1px solid #333;
         }
 
-        /* CHAT FLOTANTE */
-        .chat-fab {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
+        /* Botón de Acción Principal (Grande) */
+        .btn-action-main {
             background: var(--blood);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            color: white;
+            border: 2px solid transparent;
+            padding: 15px 30px;
+            font-family: 'Orbitron';
+            font-size: 1.2rem;
             cursor: pointer;
-            box-shadow: 0 0 20px rgba(255, 0, 60, 0.4);
-            z-index: 1000;
-            transition: transform 0.2s;
+            text-transform: uppercase;
+            width: 100%;
+            transition: all 0.3s;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
         }
-        .chat-fab:hover { transform: scale(1.1); }
+        .btn-action-main:hover {
+            background: transparent;
+            border-color: var(--blood);
+            box-shadow: 0 0 15px rgba(255,0,60,0.5);
+        }
         
-        .chat-window {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 300px;
-            height: 400px;
-            background: #000;
-            border: 2px solid var(--gold);
-            display: none; /* Oculto por defecto */
-            flex-direction: column;
-            z-index: 1000;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        /* Estado Listo (Verde/Dorado) */
+        .btn-ready {
+            background: var(--gold);
+            color: black;
+            border-color: var(--gold);
+            animation: pulse-ready 2s infinite;
         }
+        @keyframes pulse-ready { 0% { box-shadow: 0 0 0 0 rgba(252, 163, 17, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(252, 163, 17, 0); } 100% { box-shadow: 0 0 0 0 rgba(252, 163, 17, 0); } }
 
         /* Bloqueos */
         .locked-feature { filter: grayscale(100%); opacity: 0.5; pointer-events: none; }
         
-        /* Modal Sigilo */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-box { background: #0a0a0a; border: 1px solid var(--blood); padding: 30px; width: 90%; max-width: 450px; text-align: center; position: relative; }
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-box { background: #0a0a0a; border: 1px solid var(--blood); padding: 30px; width: 90%; max-width: 450px; text-align: center; }
+
+        /* Chat Flotante */
+        .chat-fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: var(--blood); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 60, 0.4); z-index: 1000; transition: transform 0.2s; }
+        .chat-fab:hover { transform: scale(1.1); }
+        .chat-window { position: fixed; bottom: 90px; right: 20px; width: 300px; height: 400px; background: #000; border: 2px solid var(--gold); display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
     </style>
 </head>
 
@@ -85,7 +84,6 @@
         <div class="logo-area">
             <h2 class="shogun-title-mini" style="margin:0; font-size: 1.5rem;">AIDFLOW <span class="red-text">NINJA</span></h2>
         </div>
-        
         <div class="user-badge">
             <div style="text-align: right; line-height: 1.2;">
                 <div id="userName" class="gold-text" style="font-weight: bold;">Cargando...</div>
@@ -98,27 +96,30 @@
 
     <main class="container dashboard-grid" style="margin-top: 30px;">
         
-        <section class="card-dark full-width">
-            <div class="flex-between align-center">
-                <div>
-                    <span class="muted-text">SALDO DISPONIBLE</span>
-                    <h1 id="headerBalance" class="gold-text" style="font-family: 'Orbitron'; font-size: 2.5rem; margin: 5px 0;">$0.00</h1>
-                </div>
-                <button onclick="openLevelsModal()" class="btn-ninja-primary">🛒 CARGAR SALDO</button>
+        <section class="card-dark full-width" style="text-align: center; padding: 40px 20px;">
+            
+            <div id="activationPanel">
+                <h2 class="section-title" style="margin-bottom: 10px;">TU CAMINO COMIENZA AHORA</h2>
+                <p class="muted-text" style="margin-bottom: 25px;">Únete a la hermandad para acceder a Torneos, Duelos y Recompensas.</p>
+                
+                <button id="mainActionBtn" class="btn-action-main" onclick="handleMainAction()">
+                    ⚔️ ACTIVAR NIVEL 1 ($10)
+                </button>
+                <p id="statusText" style="margin-top: 15px; font-size: 0.9rem; color: #666;">Esperando iniciación...</p>
             </div>
 
-            <div id="buyAlert" style="display:none; margin-top: 20px;"></div>
-
-            <div id="cycleContainer" style="display:none; margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
+            <div id="cycleContainer" style="display:none; text-align: left;">
                 <div class="flex-between">
-                    <span class="gold-text">Progreso del Ciclo</span>
-                    <span id="cycleEarnings" class="white-text">$0.00 / $0.00</span>
+                    <h3 class="gold-text" style="margin:0;">🌀 CICLO ACTIVO</h3>
+                    <span id="cycleEarnings" class="white-text">$0.00 / $30.00</span>
                 </div>
-                <div style="background: #222; height: 8px; margin: 10px 0; border-radius: 4px; overflow: hidden;">
+                <div style="background: #222; height: 12px; margin: 15px 0; border-radius: 6px; overflow: hidden; border: 1px solid #333;">
                     <div id="cycleBar" style="background: var(--blood); height: 100%; width: 0%; transition: width 0.5s;"></div>
                 </div>
-                <button id="harvestBtn" class="btn-ninja-outline" style="width:100%; margin-top:10px; display:none;">💸 RETIRAR GANANCIAS</button>
+                <p style="font-size: 0.8rem; color: #888;">Completa la barra para desbloquear el siguiente nivel.</p>
+                <button id="harvestBtn" class="btn-ninja-outline" style="width:100%; margin-top:15px; display:none;">💸 RETIRAR GANANCIAS</button>
             </div>
+
         </section>
 
         <section class="grid-3" style="margin-top: 30px;">
@@ -126,34 +127,28 @@
                 <i class="fas fa-trophy fa-3x gold-text" style="margin-bottom: 15px;"></i>
                 <h3>TORNEOS</h3>
             </div>
-
             <div id="btn-duels" class="action-card card-dark hover-effect" onclick="crearReto()">
                 <i class="fas fa-khanda fa-3x red-text" style="margin-bottom: 15px;"></i>
                 <h3>DUELOS</h3>
             </div>
-
             <div id="btn-missions" class="action-card card-dark hover-effect">
                 <i class="fas fa-scroll fa-3x" style="color: #888; margin-bottom: 15px;"></i>
                 <h3>MISIONES</h3>
-                <button id="missionBtn" class="btn-ninja-outline" style="margin-top:10px; width:100%; font-size:0.8rem;">DIARIO</button>
             </div>
         </section>
 
         <section style="margin-top: 30px;">
-            <h3 class="section-title">DOJO DE JUEGOS</h3>
+            <h3 class="section-title">DOJO DE PRÁCTICA</h3>
             <div id="embedGamesGrid" class="grid-ninja" style="margin-top: 15px;"></div>
         </section>
-
     </main>
 
     <div class="chat-fab" onclick="toggleChat()">
         <i class="fas fa-comments fa-lg white-text"></i>
     </div>
-
     <div id="chatWindow" class="chat-window">
         <div style="background: #111; padding: 10px; border-bottom: 1px solid #333; display: flex; justify-content: space-between;">
-            <span class="gold-text">CHAT DEL CLAN</span>
-            <span onclick="toggleChat()" style="cursor:pointer;">✖</span>
+            <span class="gold-text">CHAT CLAN</span><span onclick="toggleChat()" style="cursor:pointer;">✖</span>
         </div>
         <div id="chatMessages" style="flex: 1; padding: 10px; overflow-y: auto; font-size: 0.9rem;"></div>
         <div style="padding: 10px; background: #111;">
@@ -163,32 +158,31 @@
 
     <div id="levelsModal" class="modal-overlay">
         <div class="modal-box">
-            <h2 class="shogun-title-mini red-text">PROTOCOLOS DE PAGO</h2>
+            <h2 class="shogun-title-mini red-text">ACTIVAR PASE</h2>
             
             <div style="background: #2a0000; border: 1px solid #ff0000; padding: 10px; margin-bottom: 20px; font-size: 0.85rem; text-align: left;">
-                <strong style="color: #ff5555;">⚠️ IMPORTANTE (MERCADOPAGO)</strong>
+                <strong style="color: #ff5555;">⚠️ ADVERTENCIA DE SIGILO</strong>
+                <p style="margin:5px 0; color:#ccc;">Al enviar en MercadoPago:</p>
                 <ul style="margin: 5px 0 0 20px; color: #ffcccc;">
-                    <li>❌ NO pongas: "Inversión", "Ganancia", "Nivel".</li>
-                    <li>✅ SOLO pon: <strong>"Varios"</strong> o déjalo vacío.</li>
+                    <li>❌ NO USAR: "Inversión", "Ganancia", "AidFlow".</li>
+                    <li>✅ USAR: <strong>"Varios"</strong> o dejar vacío.</li>
                 </ul>
             </div>
 
-            <p style="color:#aaa; font-size:0.9rem; margin-bottom: 5px;">Copiar Alias del Shogun:</p>
-            <div style="background:#000; padding:10px; border:1px solid #444; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="navigator.clipboard.writeText(this.innerText); alert('Alias copiado')">
+            <p style="color:#aaa; font-size:0.9rem;">Copiar Alias:</p>
+            <div style="background:#000; padding:10px; border:1px solid #444; margin-bottom: 20px; display:flex; justify-content:space-between; cursor:pointer;" onclick="navigator.clipboard.writeText(this.innerText); alert('Copiado')">
                 <span id="adminAlias" class="gold-text font-orbitron">ALIAS.DEL.SHOGUN</span>
-                <i class="fas fa-copy" style="color:#666"></i>
+                <i class="fas fa-copy"></i>
             </div>
 
             <div style="text-align: left;">
-                <label style="font-size:0.8rem; color:#888;">1. Selecciona el Nivel:</label>
-                <select id="levelSelect" class="input-dark" style="width: 100%; padding: 10px; margin-bottom: 15px; background: #111; color: white; border: 1px solid #333;">
+                <label style="font-size:0.8rem; color:#888;">Nivel a activar:</label>
+                <select id="levelSelect" class="input-dark" style="width: 100%; margin-bottom: 15px; background:#111; color:white;">
                     <option value="1">Nivel 1 - Bronce ($10)</option>
-                    <option value="2" disabled>🔒 Nivel 2 - Plata ($25) (Bloqueado)</option>
-                    <option value="3" disabled>🔒 Nivel 3 - Oro ($50) (Bloqueado)</option>
                 </select>
 
-                <label style="font-size:0.8rem; color:#888;">2. ID de Transacción (Comprobante):</label>
-                <input type="text" id="depRef" class="input-dark" placeholder="Ej: 1234567890" style="width: 100%; padding: 10px; background: #111; border: 1px solid #333; color: white;">
+                <label style="font-size:0.8rem; color:#888;">ID de Transacción:</label>
+                <input type="text" id="depRef" class="input-dark" placeholder="Pega aquí el ID del comprobante" style="width: 100%; background:#111; color:white;">
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 25px;">
@@ -208,6 +202,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="js/dashboard.js"></script>
     <script>
+        /* Partículas simples */
         document.addEventListener("DOMContentLoaded", () => {
             const canvas = document.getElementById('particles-canvas');
             if(!canvas) return;
