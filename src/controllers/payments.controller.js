@@ -16,9 +16,12 @@ export const getWalletDetails = async (req, res) => {
         res.json({ 
             balance: user.balance || 0, 
             tournamentTokens: user.tournamentTokens || 0,
+            level: user.level || 0,
+            isActive: user.isActive || false,
+            currentCycleAcc: user.currentCycleAcc || 0,
             hasPendingWithdrawal: !!pendingWithdrawal,
             // Historial reciente
-            history: await Transaction.find({ userId: req.user.userId }).sort({ createdAt: -1 }).limit(5)
+            history: await Transaction.find({ userId: req.user.userId }).sort({ createdAt: -1 }).limit(10)
         });
     } catch (error) {
         console.error(error);
@@ -41,12 +44,12 @@ export const requestDeposit = async (req, res) => {
 
         // Crear la transacción pendiente
         await Transaction.create({
-            userId: userId, // Asegúrate que tu modelo use 'userId' o 'user' consistentemente
+            userId: userId, // Usamos userId consistentemente
             type: 'deposit',
             amount: Number(amount),
             status: 'pending',
             referenceId: referenceId,
-            description: 'Solicitud de carga de saldo'
+            description: 'Carga de Saldo - Esperando Aprobación'
         });
 
         res.json({ message: "Solicitud recibida. Esperando aprobación del Shogun." });
@@ -58,29 +61,28 @@ export const requestDeposit = async (req, res) => {
 };
 
 // 3. APROBAR DEPÓSITO (ADMIN) - ¡SOLO CARGA SALDO!
+// NOTA: No activa referidos ni comisiones. Eso pasa en economy.controller.js
 export const approveDeposit = async (req, res) => {
     try {
-        const { transactionId } = req.body; // El Admin envía el ID de la transacción
+        const { transactionId } = req.body; 
         
         const tx = await Transaction.findById(transactionId);
         if (!tx) return res.status(404).json({ error: "Transacción no encontrada" });
-        if (tx.status !== 'pending') return res.status(400).json({ error: "Esta transacción ya fue procesada" });
+        if (tx.status !== 'pending') return res.status(400).json({ error: "Ya procesada" });
 
         const user = await User.findById(tx.userId);
         if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
-        // === LÓGICA CORE: SOLO CARGAR SALDO ===
+        // === LÓGICA: SOLO CARGAR SALDO ===
         user.balance += tx.amount;
-        // NOTA IMPORTANTE: No activamos isActive aquí. 
-        // El usuario debe usar su saldo para comprar el nivel manualmente.
         
         await user.save();
 
         // Marcar transacción como completada
-        tx.status = 'approved'; // o 'completed' según tu enum
+        tx.status = 'approved'; 
         await tx.save();
 
-        res.json({ success: true, message: `Saldo cargado ($${tx.amount}) al usuario ${user.ninjaName}` });
+        res.json({ success: true, message: `Saldo de $${tx.amount} cargado a ${user.ninjaName}.` });
 
     } catch (error) {
         console.error("Error aprobando depósito:", error);
@@ -114,6 +116,16 @@ export const requestPayout = async (req, res) => {
         res.status(500).json({ message: "Error procesando retiro" });
     }
 };
-}
-export const buyLevel = async (req, res) => res.status(400).json({error: "Deprecated"});
-export const harvestEarnings = async (req, res) => res.status(400).json({error: "Deprecated"});
+
+// 5. RECHAZAR DEPÓSITO
+export const rejectDeposit = async (req, res) => {
+    try {
+        const { transactionId } = req.body;
+        const tx = await Transaction.findById(transactionId);
+        if(!tx) return res.status(404).json({error: "No encontrada"});
+        
+        tx.status = 'rejected';
+        await tx.save();
+        res.json({ success: true, message: "Transacción rechazada." });
+    } catch (e) { res.status(500).json({error: "Error"}); }
+};
