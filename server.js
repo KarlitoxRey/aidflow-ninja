@@ -31,13 +31,11 @@ app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // 🔥 CONFIGURACIÓN DE SEGURIDAD (CSP) CORREGIDA V6 🔥
-// Se agrega scriptSrcAttr para permitir los botones 'onclick' del Admin
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        // Scripts generales
         scriptSrc: [
             "'self'", 
             "'unsafe-inline'", 
@@ -45,10 +43,7 @@ app.use(
             "https://cdn.socket.io", 
             "https://cdn.jsdelivr.net"
         ],
-        // 👇 ESTA ES LA LÍNEA QUE ARREGLA LOS BOTONES DEL ADMIN
         scriptSrcAttr: ["'unsafe-inline'"], 
-        
-        // Estilos
         styleSrc: [
             "'self'", 
             "'unsafe-inline'", 
@@ -56,7 +51,6 @@ app.use(
             "https://cdnjs.cloudflare.com",
             "https://cdn.jsdelivr.net"
         ],
-        // Fuentes
         fontSrc: [
             "'self'", 
             "data:", 
@@ -129,7 +123,6 @@ app.get(/.*/, (req, res) => {
 });
 
 // SOCKETS
-
 const io = new Server(server, { 
     cors: { origin: allowedOrigins, methods: ["GET", "POST"], credentials: true } 
 });
@@ -139,9 +132,7 @@ io.on("connection", (socket) => {
 
     socket.on("joinUserRoom", (id) => socket.join(id));
 
-    // --- NUEVA LÓGICA DE DUELOS ---
     socket.on("createDuel", (duelData) => {
-        // Notificar a todos que hay un nuevo reto en la Arena
         socket.broadcast.emit("newDuelAvailable", duelData);
     });
 
@@ -151,7 +142,6 @@ io.on("connection", (socket) => {
     });
 
     socket.on("duelAccepted", (data) => {
-        // Notificar al creador (challenger) que ya tiene oponente
         io.to(data.challengerId).emit("startDuelCombat", {
             roomCode: data.roomCode,
             opponentName: data.opponentName
@@ -159,11 +149,17 @@ io.on("connection", (socket) => {
     });
 });
 
-// ARRANQUE
+// ARRANQUE (CORREGIDO PARA RENDER)
 const PORT = process.env.PORT || 5000;
+
+// IMPORTANTE: Asegúrate de que tu IP de MongoDB Atlas permita acceso desde cualquier lugar (0.0.0.0/0)
+// ya que Render cambia de IP constantemente.
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("🔥 MongoDB Conectado");
-    server.listen(PORT, () => console.log(`⚔️ Servidor SHOGUN V6 (Admin Buttons Fix) activo en puerto ${PORT}`));
+    // ✅ CORRECCIÓN: Agregado '0.0.0.0' para que Render detecte el puerto abierto
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log(`⚔️ Servidor SHOGUN V6 activo en puerto ${PORT}`);
+    });
   })
   .catch(err => console.error("🚫 Error DB:", err));
