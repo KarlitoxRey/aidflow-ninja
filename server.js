@@ -26,38 +26,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.set('trust proxy', 1);
+app.set('trust proxy', 1); // Importante para Rate Limit en Render
 
 const server = http.createServer(app);
 
-// 🔥 CONFIGURACIÓN DE SEGURIDAD (CSP) CORREGIDA V6 🔥
+// 🔥 SEGURIDAD (CSP) 🔥
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: [
-            "'self'", 
-            "'unsafe-inline'", 
-            "'unsafe-eval'", 
-            "https://cdn.socket.io", 
-            "https://cdn.jsdelivr.net"
-        ],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io", "https://cdn.jsdelivr.net"],
         scriptSrcAttr: ["'unsafe-inline'"], 
-        styleSrc: [
-            "'self'", 
-            "'unsafe-inline'", 
-            "https://fonts.googleapis.com", 
-            "https://cdnjs.cloudflare.com",
-            "https://cdn.jsdelivr.net"
-        ],
-        fontSrc: [
-            "'self'", 
-            "data:", 
-            "https://fonts.gstatic.com", 
-            "https://cdnjs.cloudflare.com"
-        ],
-        connectSrc: ["'self'", process.env.FRONTEND_URL || "*"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+        connectSrc: ["'self'", process.env.FRONTEND_URL || "*"], // Permite conexiones
         imgSrc: ["'self'", "data:", "https:"],
       },
     },
@@ -79,7 +62,7 @@ app.use(cors({
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            console.log("🚫 Bloqueo CORS (Info):", origin);
+            console.log("⚠️ Bloqueo CORS:", origin);
             callback(null, true);
         }
     },
@@ -88,14 +71,14 @@ app.use(cors({
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
-    max: 100, 
+    max: 200, // Aumentado un poco para evitar bloqueos falsos
     message: { error: "⛔ Demasiados intentos." }
 });
 app.use("/api/", limiter);
 
 app.use(express.json()); 
 
-// SERVIR FRONTEND (Estáticos)
+// FRONTEND ESTÁTICO
 app.use(express.static(path.join(__dirname, "public")));
 
 // RUTAS API
@@ -109,15 +92,12 @@ app.use("/api/users", userRoutes);
 app.use("/api/finance", financeRoutes); 
 app.use("/api/duels", duelRoutes);
 
-// 🛑 ESCUDO 404 API
+// 404 API
 app.use("/api", (req, res) => {
-    res.status(404).json({ 
-        error: "Ruta del Templo no encontrada (404)", 
-        path: req.originalUrl 
-    });
+    res.status(404).json({ error: "Endpoint no encontrado (404)" });
 });
 
-// CATCH-ALL (SPA)
+// SPA FALLBACK
 app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -129,37 +109,29 @@ const io = new Server(server, {
 
 io.on("connection", (socket) => {
     console.log("🥷 Ninja conectado:", socket.id);
-
     socket.on("joinUserRoom", (id) => socket.join(id));
-
-    socket.on("createDuel", (duelData) => {
-        socket.broadcast.emit("newDuelAvailable", duelData);
-    });
-
-    socket.on("joinDuelRoom", (roomCode) => {
-        socket.join(roomCode);
-        console.log(`⚔️ Un ninja entró a la sala de duelo: ${roomCode}`);
-    });
-
-    socket.on("duelAccepted", (data) => {
-        io.to(data.challengerId).emit("startDuelCombat", {
-            roomCode: data.roomCode,
-            opponentName: data.opponentName
-        });
+    socket.on("createDuel", (d) => socket.broadcast.emit("newDuelAvailable", d));
+    socket.on("joinDuelRoom", (code) => socket.join(code));
+    socket.on("duelAccepted", (d) => {
+        io.to(d.challengerId).emit("startDuelCombat", { roomCode: d.roomCode, opponentName: d.opponentName });
     });
 });
 
-// ARRANQUE (CORREGIDO PARA RENDER)
+// ==========================================
+// 🚀 ARRANQUE DE ALTA DISPONIBILIDAD
+// ==========================================
+
+// 1. Iniciamos el servidor INMEDIATAMENTE (para que Render vea el puerto abierto)
 const PORT = process.env.PORT || 5000;
 
-// IMPORTANTE: Asegúrate de que tu IP de MongoDB Atlas permita acceso desde cualquier lugar (0.0.0.0/0)
-// ya que Render cambia de IP constantemente.
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Servidor ONLINE en puerto: ${PORT} (Esperando DB...)`);
+});
+
+// 2. Conectamos la DB en segundo plano
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("🔥 MongoDB Conectado");
-    // ✅ CORRECCIÓN: Agregado '0.0.0.0' para que Render detecte el puerto abierto
-    server.listen(PORT, '0.0.0.0', () => {
-        console.log(`⚔️ Servidor SHOGUN V6 activo en puerto ${PORT}`);
-    });
-  })
-  .catch(err => console.error("🚫 Error DB:", err));
+  .then(() => console.log("🔥 MongoDB Conectado EXITOSAMENTE"))
+  .catch(err => {
+      console.error("❌ Error FATAL en DB:", err);
+      // No hacemos process.exit() para que el servidor siga vivo y Render no se reinicie en bucle
+  });
