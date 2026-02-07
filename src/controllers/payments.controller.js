@@ -8,9 +8,8 @@ const PASS_TARGET = 50.00;
 // 1. OBTENER DATOS (BILLETERA)
 export const getWalletDetails = async (req, res) => {
     try {
-        // Validamos que req.user exista (Middleware auth)
         if (!req.user || !req.user.userId) {
-            return res.status(401).json({ message: "Token inválido o expirado." });
+            return res.status(401).json({ message: "Token inválido." });
         }
 
         const user = await User.findById(req.user.userId).populate('activeCycle');
@@ -26,38 +25,33 @@ export const getWalletDetails = async (req, res) => {
             balance: user.balance || 0, 
             tournamentTokens: user.tournamentTokens || 0,
             cycle: user.activeCycle || null,
+            level: user.level || 0,        // <--- Importante enviar esto
+            isActive: user.isActive || false, // <--- Importante enviar esto
             hasPendingWithdrawal: !!pendingWithdrawal,
-            // Historial reciente
             history: await Transaction.find({ user: req.user.userId }).sort({ createdAt: -1 }).limit(10)
         });
     } catch (error) {
-        console.error("Error GetWallet:", error); // LOG PARA DEBUG
-        res.status(500).json({ message: "Error interno al obtener datos." });
+        console.error("Error GetWallet:", error);
+        res.status(500).json({ message: "Error interno." });
     }
 };
 
-// 2. SOLICITAR PASE (DEPOSITO) - AQUÍ DABA EL ERROR 500
+// 2. SOLICITAR PASE (DEPOSITO)
 export const requestDeposit = async (req, res) => {
     try {
-        console.log("📥 Recibiendo depósito:", req.body); // LOG: Ver qué llega
+        console.log("📥 Recibiendo depósito:", req.body);
 
         const { amount, referenceId } = req.body;
         const userId = req.user.userId;
 
-        // Validaciones
         if (!amount) return res.status(400).json({ message: "Falta el monto." });
         if (!referenceId) return res.status(400).json({ message: "Falta ID comprobante." });
 
-        // Verificar duplicados
         const exists = await Transaction.findOne({ referenceId });
-        if (exists) {
-            console.log("⚠️ Comprobante duplicado:", referenceId);
-            return res.status(400).json({ message: "Este comprobante ya fue enviado." });
-        }
+        if (exists) return res.status(400).json({ message: "Comprobante duplicado." });
 
-        // Crear Transacción
         const newTx = await Transaction.create({
-            user: userId, // Asegúrate que tu modelo Transaction use 'user' (ObjectId)
+            user: userId,
             type: 'deposit',
             amount: Number(amount),
             status: 'pending',
@@ -69,11 +63,8 @@ export const requestDeposit = async (req, res) => {
         res.json({ message: "⏳ Enviado. Esperando al Shogun." });
 
     } catch (error) {
-        console.error("❌ Error RequestDeposit:", error); // ¡ESTO SALDRÁ EN LOGS DE RENDER!
-        res.status(500).json({ 
-            message: "Error al procesar solicitud.",
-            error: error.message // Devolvemos el error técnico para que lo veas en consola del navegador
-        });
+        console.error("❌ Error RequestDeposit:", error);
+        res.status(500).json({ message: "Error al procesar.", error: error.message });
     }
 };
 
@@ -86,17 +77,14 @@ export const requestPayout = async (req, res) => {
         if (!amount || amount <= 0) return res.status(400).json({ message: "Monto inválido." });
         if (!alias) return res.status(400).json({ message: "Falta Alias." });
 
-        // Verificar saldo real
         const user = await User.findById(userId);
         if ((user.balance || 0) < amount) {
             return res.status(400).json({ message: "Saldo insuficiente." });
         }
 
-        // Verificar si ya tiene retiro pendiente
         const pendingTx = await Transaction.findOne({ user: userId, type: 'withdrawal_external', status: 'pending' });
         if (pendingTx) return res.status(400).json({ message: "⛔ Ya tienes un retiro en proceso." });
 
-        // Descontar saldo y crear Tx
         user.balance -= amount;
         await user.save();
 
@@ -106,7 +94,7 @@ export const requestPayout = async (req, res) => {
             amount: Number(amount),
             status: 'pending',
             description: `Retiro a: ${alias}`,
-            referenceId: `OUT-${Date.now()}` // ID único temporal
+            referenceId: `OUT-${Date.now()}`
         });
 
         res.json({ message: "✅ Retiro solicitado.", newBalance: user.balance });
@@ -127,16 +115,18 @@ export const manageDeposit = async (req, res) => {
         if (tx.status !== "pending") return res.status(400).json({ error: "Ya fue procesada." });
 
         if (action === "approve") {
-            // APROBAR
+            // === APROBAR Y ACTIVAR ===
             tx.status = "completed";
             
             if (tx.type === 'deposit') {
                 const user = await User.findById(tx.user._id).populate('activeCycle');
                 
-                // 1. Dar Fichas
+                // 1. ACTIVACIÓN DEL NINJA (¡ESTO FALTABA!)
+                user.isActive = true;  // <--- ¡CLAVE!
+                user.level = 1;        // <--- ¡CLAVE!
                 user.tournamentTokens = (user.tournamentTokens || 0) + PASS_TOKENS;
 
-                // 2. Activar Ciclo (Sin sumar saldo)
+                // 2. Crear Ciclo
                 if (!user.activeCycle || (user.activeCycle.status && user.activeCycle.status === 'completed')) {
                     const newCycle = new Cycle({
                         user: user._id,
@@ -163,12 +153,11 @@ export const manageDeposit = async (req, res) => {
             }
             
             await tx.save();
-            res.json({ message: "✅ Aprobado. Pase activado." });
+            res.json({ message: "✅ Aprobado. Usuario activado correctamente." });
 
         } else {
-            // RECHAZAR
+            // === RECHAZAR ===
             tx.status = "rejected";
-            // Si era retiro y rechazamos, devolvemos el saldo
             if (tx.type === 'withdrawal_external') {
                  const user = await User.findById(tx.user._id);
                  if (user) { 
@@ -203,14 +192,13 @@ async function distributeCommissions(sponsorId, amount, depth) {
         const sponsor = await User.findById(sponsorId);
         if(!sponsor) return;
         
-        // Estructura de referidos
         if(!sponsor.referralStats) sponsor.referralStats = { count:0, totalEarned:0 };
         
-        const rates = [0.10, 0.05, 0.02]; // 10%, 5%, 2%
+        const rates = [0.10, 0.05, 0.02]; 
         const comm = amount * rates[depth-1];
         
         if(comm > 0) {
-            sponsor.balance += comm; // Sumar al saldo
+            sponsor.balance += comm; 
             sponsor.referralStats.totalEarned += comm;
             await sponsor.save();
             
@@ -219,7 +207,7 @@ async function distributeCommissions(sponsorId, amount, depth) {
                 type: 'referral_bonus', 
                 amount: comm, 
                 status: 'completed', 
-                description: `Comisión Referido Nvl ${depth}` 
+                description: `Ref Bonus Nvl ${depth}` 
             });
         }
         
@@ -227,6 +215,6 @@ async function distributeCommissions(sponsorId, amount, depth) {
     } catch(e) { console.error("Error ref recursive:", e); }
 }
 
-// Deprecated (Mantener para evitar error en router import)
+// Compatibilidad (Mantener para no romper rutas antiguas)
 export const buyLevel = async (req, res) => res.status(400).json({error: "Usa endpoint deposit"});
 export const harvestEarnings = async (req, res) => res.status(400).json({error: "Usa endpoint payout"});
