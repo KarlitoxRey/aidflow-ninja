@@ -3,7 +3,8 @@ import { API_URL } from "./api.js";
 let currentUser = null;
 let socket = null;
 
-const ECONOMY_CONFIG = { LEVELS: { 1: { goal: 30 } } };
+// Configuración Nivel 1
+const LEVEL_1_GOAL = 30.00;
 
 document.addEventListener("DOMContentLoaded", async () => {
     await validateSession();
@@ -15,14 +16,11 @@ async function validateSession() {
     if (!token) return window.location.replace("login.html");
 
     try {
-        const res = await fetch(`${API_URL}/api/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } }); // O /api/payments/wallet si usas ese
+        const res = await fetch(`${API_URL}/api/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) throw new Error("Sesión");
-        currentUser = await res.json();
+        currentUser = await res.json(); // Ahora trae 'isActive' y 'hasPendingDeposit'
         
-        // Renderizar según estado
         renderUI();
-        
-        // Juegos (Práctica o Real)
         loadUserGames(!currentUser.isActive);
 
     } catch (error) {
@@ -33,7 +31,7 @@ async function validateSession() {
 
 function renderUI() {
     safeText("userName", currentUser.ninjaName);
-    safeText("userRank", currentUser.isActive ? "🥷 RANGO: BRONCE" : "👺 RONIN (Sin Pase)");
+    safeText("userRank", currentUser.isActive ? "🥷 RANGO: BRONCE (Nivel 1)" : "👺 RONIN (Sin Clan)");
     safeText("userTokens", currentUser.tournamentTokens || 0);
 
     const activationPanel = document.getElementById("activationPanel");
@@ -46,51 +44,49 @@ function renderUI() {
         activationPanel.style.display = "none";
         cycleContainer.style.display = "block";
         
-        // Actualizar barra con GANANCIAS (balance)
-        // Ojo: En este modelo, el balance crece desde 0.
+        // Actualizar barra con GANANCIAS acumuladas
         updateCycleBar();
-        blockMenu(false);
+        blockMenu(false); // Desbloquea torneos
     } 
-    // 2. USUARIO PENDIENTE (YA ENVIÓ PAGO)
+    // 2. USUARIO EN ESPERA (YA ENVIÓ PAGO)
     else if (currentUser.hasPendingDeposit) {
         activationPanel.style.display = "block";
         cycleContainer.style.display = "none";
         
         btn.innerText = "⏳ VERIFICANDO PAGO...";
         btn.className = "btn-action-main btn-pending";
-        btn.onclick = null; // Deshabilitar click
-        statusMsg.innerText = "Tu comprobante está siendo revisado por el Shogun.";
+        btn.onclick = null;
+        statusMsg.innerHTML = "Tu comprobante está en manos del Shogun.<br>La activación será automática al aprobar.";
         
         blockMenu(true);
     }
-    // 3. USUARIO NUEVO (DEBE COMPRAR)
+    // 3. USUARIO NUEVO
     else {
         activationPanel.style.display = "block";
         cycleContainer.style.display = "none";
         
-        btn.innerText = "⚔️ COMPRAR PASE NIVEL 1 ($10)";
+        btn.innerText = "⚔️ OBTENER PASE NIVEL 1";
+        btn.className = "btn-action-main";
         btn.onclick = window.openLevelsModal;
-        statusMsg.innerText = "Adquiere el pase para desbloquear torneos y ganancias.";
+        statusMsg.innerText = "Adquiere el Pase Ninja para desbloquear funciones.";
         
         blockMenu(true);
     }
 }
 
 function updateCycleBar() {
-    const goal = 30; // Meta Nivel 1
-    // Usamos balance como indicador de progreso en el ciclo
-    // OJO: Si implementas retiros parciales, usa 'currentCycleAcc' del backend
+    // Usamos balance (ganancias) como progreso
+    // OJO: Si implementas que el balance baje al retirar, deberías usar 'currentCycleAcc' del backend
     const current = currentUser.currentCycleAcc || 0; 
     
-    let percent = (current / goal) * 100;
+    let percent = (current / LEVEL_1_GOAL) * 100;
     if(percent > 100) percent = 100;
 
     document.getElementById("cycleBar").style.width = `${percent}%`;
-    safeText("cycleEarnings", `$${current.toFixed(2)} / $${goal.toFixed(2)}`);
+    safeText("cycleEarnings", `$${current.toFixed(2)} / $${LEVEL_1_GOAL.toFixed(2)}`);
 
-    // Botón Retiro
+    // Botón Retiro si tiene ganancias > $10
     const harvestBtn = document.getElementById("harvestBtn");
-    // Lógica: Si tiene saldo retirable (balance > 10)
     if(currentUser.balance >= 10) {
         harvestBtn.style.display = "block";
         harvestBtn.onclick = () => window.doPayout(currentUser.balance);
@@ -103,7 +99,7 @@ function blockMenu(shouldBlock) {
         if(el) {
             if(shouldBlock) {
                 el.classList.add('locked-feature');
-                el.onclick = (e) => { e.stopPropagation(); alert("🔒 Bloqueado: Debes tener el Pase Activo."); };
+                el.onclick = (e) => { e.stopPropagation(); alert("🔒 Bloqueado: Requiere Pase Nivel 1."); };
             } else {
                 el.classList.remove('locked-feature');
                 el.onclick = null;
@@ -130,7 +126,7 @@ window.submitDeposit = async () => {
 };
 
 window.doPayout = async (amount) => {
-    let alias = prompt("Alias para recibir dinero:");
+    let alias = prompt("Alias para retirar dinero:");
     if(!alias) return;
     try {
         const res = await fetch(`${API_URL}/api/payments/payout`, {
@@ -141,7 +137,7 @@ window.doPayout = async (amount) => {
     } catch(e) {}
 };
 
-// EXTRAS
+// EXTRAS (Chat, Juegos)
 async function loadUserGames(isPractice) {
     const container = document.getElementById('embedGamesGrid');
     if(!container) return;
@@ -183,4 +179,3 @@ function initChat() {
 window.toggleChat = () => { const w = document.getElementById("chatWindow"); w.style.display = w.style.display==="flex"?"none":"flex"; };
 window.logout = () => { localStorage.clear(); window.location.replace("login.html"); };
 function safeText(id, t) { const e = document.getElementById(id); if(e) e.innerText = t; }
-function formatMoney(n) { return `$${Number(n).toFixed(2)}`; }
