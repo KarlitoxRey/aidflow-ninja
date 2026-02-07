@@ -1,12 +1,31 @@
-// models/SystemWallet.js
 import mongoose from "mongoose";
 
-const SystemWalletSchema = new mongoose.Schema({
-  type: { type: String, default: 'main', unique: true }, 
-  daoBalance: { type: Number, default: 0 },    // Fondo Torneos
-  adminBalance: { type: Number, default: 0 },  // Mantenimiento
-  backupBalance: { type: Number, default: 0 }, // Respaldo
-  lastUpdate: { type: Date, default: Date.now }
-});
+const systemWalletSchema = new mongoose.Schema({
+    type: { 
+        type: String, 
+        default: 'main', 
+        unique: true 
+    },
+    // Pozo del Shogun (Mantenimiento/Admin)
+    adminBalance: { 
+        type: Number, 
+        default: 0 
+    },
+    // Pozo del DAO (Para repartir a la comunidad)
+    daoBalance: { 
+        type: Number, 
+        default: 0 
+    },
+    // Pozo de Respaldo (Fondo de emergencia)
+    backupBalance: { 
+        type: Number, 
+        default: 0 
+    },
+    // Registro histórico de todo lo ingresado
+    totalIncome: {
+        type: Number,
+        default: 0
+    }
+}, { timestamps: true });
 
-export default mongoose.model("SystemWallet", SystemWalletSchema);
+export default mongoose.model("SystemWallet", systemWalletSchema);
