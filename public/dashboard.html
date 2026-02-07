@@ -11,6 +11,7 @@
     <style>
         :root { --bg: #020202; --panel: #0a0a0a; --blood: #ff003c; --gold: #fca311; --text: #e5e5e5; }
         
+        /* HEADER MEJORADO */
         .dashboard-header {
             background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.8) 100%);
             border-bottom: 2px solid var(--blood);
@@ -18,29 +19,39 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            position: sticky; top: 0; z-index: 100;
             backdrop-filter: blur(10px);
         }
 
-        /* Botón Acción */
+        .user-badge {
+            display: flex; align-items: center; gap: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 15px; border-radius: 4px; border: 1px solid #333;
+        }
+
+        /* BOTÓN DE ACCIÓN PRINCIPAL */
         .btn-action-main {
             background: var(--blood); color: white; border: none;
-            padding: 20px 40px; font-family: 'Orbitron'; font-size: 1.2rem;
+            padding: 20px 40px; font-family: 'Orbitron'; font-size: 1.3rem;
             cursor: pointer; text-transform: uppercase; width: 100%; max-width: 500px;
             clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
-            margin-top: 20px; transition: 0.3s;
+            margin-top: 20px; transition: all 0.3s;
         }
-        .btn-action-main:hover { box-shadow: 0 0 20px rgba(255,0,60,0.6); }
-        .btn-pending { background: #333; color: #888; cursor: default; border: 1px solid #555; }
+        .btn-action-main:hover { box-shadow: 0 0 20px rgba(255,0,60,0.6); transform: scale(1.02); }
+        .btn-pending { background: #333; color: #888; cursor: not-allowed; border: 1px solid #555; }
 
-        .locked-feature { filter: grayscale(100%); opacity: 0.3; pointer-events: none; }
+        /* BLOQUEOS */
+        .locked-feature { filter: grayscale(100%); opacity: 0.4; pointer-events: none; position: relative; }
+        .locked-feature::after { content: "🔒"; position: absolute; top: 10px; right: 10px; font-size: 20px; }
+
+        /* CHAT FLOTANTE */
+        .chat-fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: var(--blood); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; box-shadow: 0 0 15px var(--blood); transition: transform 0.2s; }
+        .chat-fab:hover { transform: scale(1.1); }
+        .chat-window { position: fixed; bottom: 90px; right: 20px; width: 300px; height: 400px; background: #000; border: 2px solid var(--gold); display: none; flex-direction: column; z-index: 1000; }
+
+        /* MODALES */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; }
         .modal-box { background: #0a0a0a; border: 1px solid var(--blood); padding: 30px; width: 90%; max-width: 450px; text-align: center; }
-        
-        .chat-fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: var(--blood); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; }
-        .chat-window { position: fixed; bottom: 90px; right: 20px; width: 300px; height: 400px; background: #000; border: 2px solid var(--gold); display: none; flex-direction: column; z-index: 1000; }
     </style>
 </head>
 
@@ -51,29 +62,30 @@
         <div class="logo-area">
             <h2 class="shogun-title-mini" style="margin:0; font-size: 1.5rem;">AIDFLOW <span class="red-text">NINJA</span></h2>
         </div>
-        <div style="display: flex; align-items: center; gap: 15px;">
+        <div class="user-badge">
             <div style="text-align: right; line-height: 1.2;">
                 <div id="userName" class="gold-text" style="font-weight: bold;">Cargando...</div>
                 <div id="userRank" style="font-size: 0.75rem; color: #888;">---</div>
             </div>
-            <button onclick="logout()" class="btn-ninja-outline" style="padding: 5px 10px; font-size: 0.7rem;">SALIR</button>
+            <img src="images/ninja-avatar.png" width="40" style="border-radius: 50%; border: 2px solid #333;">
+            <button onclick="logout()" class="btn-ninja-outline" style="padding: 5px 10px; font-size: 0.7rem; margin-left:10px;">SALIR</button>
         </div>
     </header>
 
     <main class="container dashboard-grid" style="margin-top: 30px;">
         
-        <section class="card-dark full-width" style="text-align: center; padding: 40px 20px;">
+        <section class="card-dark full-width" style="text-align: center; padding: 40px 20px; min-height: 200px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
             
             <div id="activationPanel">
-                <h1 class="section-title" style="margin-bottom: 10px;">ESTADO DEL PASE</h1>
-                <p id="statusMsg" class="muted-text">Debes adquirir el Pase Ninja para desbloquear funciones.</p>
+                <h1 class="section-title" style="margin-bottom: 10px;">ESTADO DEL GUERRERO</h1>
+                <p id="statusMsg" class="muted-text">Adquiere el Pase Ninja para iniciar tu camino.</p>
                 
                 <button id="mainActionBtn" class="btn-action-main" onclick="openLevelsModal()">
-                    ⚔️ COMPRAR PASE NIVEL 1
+                    ⚔️ OBTENER PASE NIVEL 1
                 </button>
             </div>
 
-            <div id="cycleContainer" style="display:none; text-align: left;">
+            <div id="cycleContainer" style="display:none; text-align: left; width: 100%;">
                 <div class="flex-between">
                     <h3 class="gold-text" style="margin:0;">🌀 PROGRESO NIVEL 1</h3>
                     <span id="cycleEarnings" class="white-text">$0.00 / $30.00</span>
@@ -82,10 +94,10 @@
                     <div id="cycleBar" style="background: var(--blood); height: 100%; width: 0%; transition: width 0.5s;"></div>
                 </div>
                 
-                <div class="flex-between" style="margin-top: 20px;">
-                    <div style="text-align: center;">
-                        <span class="muted-text" style="font-size:0.8rem;">FICHAS DISPONIBLES</span><br>
-                        <strong id="userTokens" class="white-text" style="font-size:1.2rem;">0</strong>
+                <div class="flex-between" style="margin-top: 20px; align-items: center;">
+                    <div>
+                        <span class="muted-text" style="font-size:0.8rem;">FICHAS TORNEO</span><br>
+                        <strong id="userTokens" class="gold-text" style="font-size:1.4rem;">0</strong>
                     </div>
                     <button id="harvestBtn" class="btn-ninja-outline" style="display:none;">💸 RETIRAR GANANCIAS</button>
                 </div>
@@ -96,35 +108,41 @@
             <div id="btn-tournament" class="action-card card-dark hover-effect">
                 <i class="fas fa-trophy fa-3x gold-text" style="margin-bottom: 15px;"></i>
                 <h3>TORNEOS</h3>
+                <p class="muted-text">Compite por Honor</p>
             </div>
-            <div id="btn-duels" class="action-card card-dark hover-effect">
+
+            <div id="btn-duels" class="action-card card-dark hover-effect" onclick="alert('Duelos: Próximamente')">
                 <i class="fas fa-khanda fa-3x red-text" style="margin-bottom: 15px;"></i>
                 <h3>DUELOS</h3>
+                <p class="muted-text">1v1 Apostando Oro</p>
             </div>
+
             <div id="btn-missions" class="action-card card-dark hover-effect">
                 <i class="fas fa-scroll fa-3x" style="color: #888; margin-bottom: 15px;"></i>
                 <h3>MISIONES</h3>
+                <p class="muted-text">Recompensas Diarias</p>
             </div>
         </section>
 
         <section style="margin-top: 30px;">
-            <h3 class="section-title">DOJO DE JUEGOS</h3>
+            <h3 class="section-title">DOJO DE PRÁCTICA</h3>
             <div id="embedGamesGrid" class="grid-ninja" style="margin-top: 15px;"></div>
         </section>
     </main>
 
     <div class="chat-fab" onclick="toggleChat()"><i class="fas fa-comments fa-lg white-text"></i></div>
+    
     <div id="chatWindow" class="chat-window">
         <div style="background:#111; padding:10px; display:flex; justify-content:space-between; border-bottom:1px solid #333;">
             <span class="gold-text">CLAN CHAT</span><span onclick="toggleChat()" style="cursor:pointer">✖</span>
         </div>
-        <div id="chatMessages" style="flex:1; padding:10px; overflow-y:auto; color:#ccc;"></div>
+        <div id="chatMessages" style="flex:1; padding:10px; overflow-y:auto; color:#ccc; font-size:0.9rem;"></div>
         <input type="text" id="chatMsg" placeholder="Mensaje..." style="width:100%; padding:10px; background:#000; color:white; border:none; border-top:1px solid #333;">
     </div>
 
     <div id="levelsModal" class="modal-overlay">
         <div class="modal-box">
-            <h2 class="shogun-title-mini red-text">COMPRAR PASE</h2>
+            <h2 class="shogun-title-mini red-text">ACTIVAR PASE</h2>
             <div style="background:#300; border:1px solid red; padding:10px; margin-bottom:15px; text-align:left; font-size:0.8rem;">
                 <strong style="color:#f55">⚠️ REGLAS MERCADOPAGO:</strong>
                 <ul style="color:#faa; margin:5px 0 0 20px;">
@@ -132,13 +150,16 @@
                     <li>✅ Poner: <strong>"Varios"</strong> o vacío.</li>
                 </ul>
             </div>
-            <p style="color:#888; font-size:0.9rem;">Alias del Shogun:</p>
-            <div style="background:#000; padding:10px; border:1px solid #444; margin-bottom:15px; cursor:pointer;" onclick="navigator.clipboard.writeText('ALIAS.SHOGUN'); alert('Copiado')">
+            
+            <p style="color:#888; font-size:0.9rem;">Monto a transferir: <strong class="white-text">$10.00</strong></p>
+            <div style="background:#000; padding:10px; border:1px solid #444; margin-bottom:15px; cursor:pointer;" onclick="navigator.clipboard.writeText('ALIAS.DEL.SHOGUN'); alert('Alias Copiado')">
                 <strong class="gold-text">ALIAS.DEL.SHOGUN</strong> <i class="fas fa-copy"></i>
             </div>
+            
             <input type="text" id="depRef" placeholder="ID de Transacción (Ej: 12345678)" style="width:100%; padding:10px; background:#111; border:1px solid #444; color:white; margin-bottom:20px;">
+            
             <div style="display:flex; gap:10px;">
-                <button onclick="submitDeposit()" class="btn-ninja-primary" style="flex:1">ENVIAR</button>
+                <button onclick="submitDeposit()" class="btn-ninja-primary" style="flex:1">ENVIAR AVISO</button>
                 <button onclick="document.getElementById('levelsModal').style.display='none'" class="btn-ninja-outline">CANCELAR</button>
             </div>
         </div>
@@ -153,5 +174,26 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="js/dashboard.js"></script>
+    <script>
+        /* Partículas */
+        document.addEventListener("DOMContentLoaded", () => {
+            const canvas = document.getElementById('particles-canvas');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            const pArray = Array.from({length:35}).map(()=>({
+                x:Math.random()*canvas.width, y:Math.random()*canvas.height, s:Math.random()*1.5, c:Math.random()>.5?'#330000':'#332200'
+            }));
+            function animate(){
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                pArray.forEach(p=>{
+                    ctx.beginPath(); ctx.arc(p.x,p.y,p.s,0,Math.PI*2); ctx.fillStyle=p.c; ctx.fill();
+                    p.y-=0.5; if(p.y<0) p.y=canvas.height;
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        });
+    </script>
 </body>
 </html>
