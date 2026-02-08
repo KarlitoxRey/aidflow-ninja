@@ -21,19 +21,13 @@ async function validateSession() {
         currentUser = await res.json();
         
         renderUI();
-
-        // 👇 LÓGICA AGREGADA: DETECTAR SI ES SHOGUN 👇
-        if (currentUser.role === 'shogun' || currentUser.role === 'admin') {
-            loadShogunFinances();
-        }
-        // 👆 FIN LÓGICA AGREGADA 👆
-
+        
+        // Cargar juegos y Censo
         loadUserGames(!currentUser.isActive);
 
     } catch (error) {
-        console.error(error);
         localStorage.clear();
-        // window.location.replace("login.html"); // Descomentar en producción
+        window.location.replace("login.html");
     }
 }
 
@@ -61,7 +55,7 @@ function renderUI() {
     if (currentUser.isActive) {
         activationPanel.style.display = "none";
         cycleContainer.style.display = "block";
-        refWarning.style.display = "none"; 
+        if(refWarning) refWarning.style.display = "none"; 
         
         updateCycleBar(); 
         blockMenu(false);
@@ -70,7 +64,7 @@ function renderUI() {
     else if (currentUser.hasPendingDeposit) {
         activationPanel.style.display = "block";
         cycleContainer.style.display = "none";
-        refWarning.style.display = "flex"; 
+        if(refWarning) refWarning.style.display = "flex"; 
 
         btn.innerText = "⏳ VERIFICANDO PAGO...";
         btn.className = "btn-action-main btn-pending";
@@ -82,7 +76,7 @@ function renderUI() {
     else {
         activationPanel.style.display = "block";
         cycleContainer.style.display = "none";
-        refWarning.style.display = "flex"; 
+        if(refWarning) refWarning.style.display = "flex"; 
 
         btn.innerText = "⚔️ OBTENER PASE NIVEL 1";
         btn.className = "btn-action-main";
@@ -90,6 +84,9 @@ function renderUI() {
         statusMsg.innerText = "Adquiere el Pase Ninja para iniciar.";
         blockMenu(true);
     }
+
+    // === CARGAR CENSO (AGREGADO) ===
+    loadWarriorCensus();
 }
 
 function updateCycleBar() {
@@ -101,7 +98,6 @@ function updateCycleBar() {
     safeText("cycleEarnings", `$${current.toFixed(2)} / $${LEVEL_1_GOAL.toFixed(2)}`);
 
     const harvestBtn = document.getElementById("harvestBtn");
-    // Retiro solo si meta cumplida y saldo disponible
     if (current >= LEVEL_1_GOAL && currentUser.balance > 0) {
         harvestBtn.style.display = "block";
         harvestBtn.innerText = "💸 CICLO COMPLETADO: RETIRAR";
@@ -112,31 +108,60 @@ function updateCycleBar() {
     }
 }
 
-// 👇 FUNCIÓN AGREGADA PARA CARGAR FONDOS DE ADMIN 👇
-async function loadShogunFinances() {
-    const panel = document.getElementById("shogunFinancePanel");
-    if (!panel) return; // Si no existe el HTML, salimos
+// === LÓGICA DEL CENSO DE GUERREROS (AGREGADO) ===
+async function loadWarriorCensus() {
+    const container = document.getElementById("warriorsGrid");
+    if (!container) return; 
 
     try {
-        const res = await fetch(`${API_URL}/api/finance/funds`, {
+        const res = await fetch(`${API_URL}/api/users`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
         });
         
-        if (res.ok) {
-            const data = await res.json();
-            panel.style.display = "block"; // Mostrar panel solo si la petición fue exitosa
-            
-            safeText("adminBalance", formatMoney(data.adminBalance));
-            safeText("daoBalance", formatMoney(data.daoBalance));
-            safeText("backupBalance", formatMoney(data.backupBalance));
-            safeText("totalIncome", formatMoney(data.totalIncome));
+        const users = await res.json();
+        
+        if (users.length === 0) {
+            container.innerHTML = "<p style='padding:20px; text-align:center; color:#666;'>No hay registros aún.</p>";
+            return;
         }
-    } catch (e) {
-        console.log("No se pudieron cargar finanzas (Probablemente no eres admin)");
-        panel.style.display = "none";
+
+        container.innerHTML = users.map((u, index) => {
+            // Ranking visual
+            let rankBadge = `<span style="color:#666; font-weight:bold; width:20px; display:inline-block;">#${index + 1}</span>`;
+            if (index === 0) rankBadge = "🥇";
+            if (index === 1) rankBadge = "🥈";
+            if (index === 2) rankBadge = "🥉";
+
+            // Nivel visual
+            let levelInfo = '<span class="muted-text">RONIN</span>';
+            if (u.level === 1) levelInfo = '<span style="color:#cd7f32">BRONCE</span>';
+            if (u.level === 2) levelInfo = '<span style="color:#c0c0c0">PLATA</span>';
+            if (u.level === 3) levelInfo = '<span style="color:#ffd700">ORO</span>';
+
+            return `
+            <div style="background: #111; padding: 12px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size:1.2rem;">${rankBadge}</div>
+                    <div>
+                        <strong style="color: white; font-size:1rem;">${u.ninjaName}</strong>
+                        <div style="font-size: 0.75rem; color: #666;">
+                            ${u.isActive ? '🟢 Activo' : '🔴 Inactivo'}
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: bold; font-size: 0.9rem;">${levelInfo}</div>
+                    <div style="font-size: 0.8rem; color: #888;">🪙 ${u.tournamentTokens || 0} Fichas</div>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error("Error censo:", error);
+        container.innerHTML = "<p style='color:red; text-align:center; padding:20px;'>Error de conexión</p>";
     }
 }
-// 👆 FIN FUNCIÓN AGREGADA 👆
 
 function blockMenu(shouldBlock) {
     ['btn-tournament', 'btn-duels', 'btn-missions'].forEach(id => {
@@ -179,7 +204,7 @@ window.doPayout = async (amount) => {
             body: JSON.stringify({ amount, alias })
         });
         const data = await res.json();
-        if(res.ok) { alert("✅ Solicitud enviada al Shogun."); window.location.reload(); }
+        if(res.ok) { alert("✅ Solicitud enviada."); window.location.reload(); }
         else { alert("⚠️ " + data.message); }
     } catch(e) { alert("Error al conectar"); }
 };
