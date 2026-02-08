@@ -31,27 +31,43 @@ async function validateSession() {
 
 function renderUI() {
     safeText("userName", currentUser.ninjaName);
-    safeText("userRank", currentUser.isActive ? "🥷 RANGO: BRONCE" : "👺 RONIN (Sin Pase)");
+    safeText("userRank", currentUser.isActive ? "🥷 RANGO: BRONCE (Nivel 1)" : "👺 RONIN (Sin Pase)");
     
     // Mostramos Fichas
     safeText("userTokens", currentUser.tournamentTokens || 0);
+
+    // === GESTIÓN DE REFERIDOS (NUEVO) ===
+    // Generar el link con el ID del usuario
+    const refLink = `${window.location.origin}/register.html?ref=${currentUser._id}`;
+    safeText("myRefLink", refLink);
+    
+    // Función global para copiar
+    window.copyReferralLink = () => {
+        navigator.clipboard.writeText(refLink);
+        alert("🔗 Link de reclutamiento copiado al portapapeles.");
+    };
 
     const activationPanel = document.getElementById("activationPanel");
     const cycleContainer = document.getElementById("cycleContainer");
     const btn = document.getElementById("mainActionBtn");
     const statusMsg = document.getElementById("statusMsg");
+    const refWarning = document.getElementById("refWarning"); // La advertencia amarilla
 
     // 1. USUARIO ACTIVO (Muestra Barra)
     if (currentUser.isActive) {
         activationPanel.style.display = "none";
         cycleContainer.style.display = "block";
-        updateCycleBar(); // <--- AQUÍ ESTÁ LA LÓGICA DE RETIRO
+        refWarning.style.display = "none"; // OCULTAR ADVERTENCIA: YA COBRA
+
+        updateCycleBar(); 
         blockMenu(false);
     } 
     // 2. PENDIENTE
     else if (currentUser.hasPendingDeposit) {
         activationPanel.style.display = "block";
         cycleContainer.style.display = "none";
+        refWarning.style.display = "flex"; // MOSTRAR ADVERTENCIA
+
         btn.innerText = "⏳ VERIFICANDO PAGO...";
         btn.className = "btn-action-main btn-pending";
         btn.onclick = null;
@@ -62,6 +78,8 @@ function renderUI() {
     else {
         activationPanel.style.display = "block";
         cycleContainer.style.display = "none";
+        refWarning.style.display = "flex"; // MOSTRAR ADVERTENCIA
+
         btn.innerText = "⚔️ OBTENER PASE NIVEL 1";
         btn.className = "btn-action-main";
         btn.onclick = window.openLevelsModal;
@@ -71,26 +89,23 @@ function renderUI() {
 }
 
 function updateCycleBar() {
-    // Usamos 'currentCycleAcc' que es lo que ha acumulado en el ciclo
     const current = currentUser.currentCycleAcc || 0; 
-    
     let percent = (current / LEVEL_1_GOAL) * 100;
     if(percent > 100) percent = 100;
 
     document.getElementById("cycleBar").style.width = `${percent}%`;
     safeText("cycleEarnings", `$${current.toFixed(2)} / $${LEVEL_1_GOAL.toFixed(2)}`);
 
-    // === CORRECCIÓN CRÍTICA: LÓGICA DE RETIRO ===
     const harvestBtn = document.getElementById("harvestBtn");
     
-    // SOLO se activa si completó la meta del ciclo (>= 30) Y tiene saldo real
+    // RETIRO: SOLO si completó la meta Y tiene saldo
     if (current >= LEVEL_1_GOAL && currentUser.balance > 0) {
         harvestBtn.style.display = "block";
         harvestBtn.innerText = "💸 CICLO COMPLETADO: RETIRAR";
-        harvestBtn.className = "btn-ninja-primary"; // Lo ponemos brillante
+        harvestBtn.className = "btn-ninja-primary";
         harvestBtn.onclick = () => window.doPayout(currentUser.balance);
     } else {
-        harvestBtn.style.display = "none"; // Se esconde si no ha completado
+        harvestBtn.style.display = "none";
     }
 }
 
@@ -134,15 +149,9 @@ window.doPayout = async (amount) => {
             method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
             body: JSON.stringify({ amount, alias })
         });
-        
         const data = await res.json();
-        
-        if(res.ok) { 
-            alert("✅ Solicitud enviada al Shogun.\nEl saldo se descontará al aprobarse."); 
-            window.location.reload(); 
-        } else {
-            alert("⚠️ " + data.message);
-        }
+        if(res.ok) { alert("✅ Solicitud enviada al Shogun."); window.location.reload(); }
+        else { alert("⚠️ " + data.message); }
     } catch(e) { alert("Error al conectar"); }
 };
 
