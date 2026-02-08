@@ -40,6 +40,19 @@
         .btn-action-main:hover { box-shadow: 0 0 20px rgba(255,0,60,0.6); transform: scale(1.02); }
         .btn-pending { background: #333; color: #888; cursor: not-allowed; border: 1px solid #555; }
 
+        /* NUEVO: ESTILOS REFERIDOS */
+        .referral-box {
+            background: #111; border: 1px solid #333; padding: 15px; margin-top: 20px;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            position: relative; overflow: hidden; transition: 0.3s;
+        }
+        .referral-box:hover { border-color: var(--gold); }
+        
+        .referral-warning {
+            color: #ffaa00; font-size: 0.85rem; margin-top: 10px; display: flex; align-items: center; gap: 10px;
+            background: rgba(255, 170, 0, 0.1); padding: 10px; border-radius: 4px; border-left: 3px solid #ffaa00;
+        }
+
         /* BLOQUEOS */
         .locked-feature { filter: grayscale(100%); opacity: 0.4; pointer-events: none; position: relative; }
         .locked-feature::after { content: "🔒"; position: absolute; top: 10px; right: 10px; font-size: 20px; }
@@ -52,6 +65,8 @@
         /* MODALES */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; }
         .modal-box { background: #0a0a0a; border: 1px solid var(--blood); padding: 30px; width: 90%; max-width: 450px; text-align: center; }
+        
+        .input-dark { width: 100%; padding: 10px; background: #111; border: 1px solid #444; color: white; margin-bottom: 15px; }
     </style>
 </head>
 
@@ -74,7 +89,7 @@
 
     <main class="container dashboard-grid" style="margin-top: 30px;">
         
-        <section class="card-dark full-width" style="text-align: center; padding: 40px 20px; min-height: 200px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+        <section class="card-dark full-width" style="text-align: center; padding: 40px 20px;">
             
             <div id="activationPanel">
                 <h1 class="section-title" style="margin-bottom: 10px;">ESTADO DEL GUERRERO</h1>
@@ -102,6 +117,24 @@
                     <button id="harvestBtn" class="btn-ninja-outline" style="display:none;">💸 RETIRAR GANANCIAS</button>
                 </div>
             </div>
+
+            <div style="margin-top: 30px; text-align: left; border-top: 1px solid #333; padding-top: 20px;">
+                <h3 class="shogun-title-mini" style="font-size: 1rem; color: #ccc; margin-bottom: 10px;">CENTRO DE RECLUTAMIENTO</h3>
+                
+                <div class="referral-box" onclick="copyReferralLink()" style="cursor: pointer;" title="Click para copiar">
+                    <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span style="color:#666; font-size:0.8rem;">TU ENLACE DE CLAN:</span><br>
+                        <span id="myRefLink" class="gold-text" style="font-family: monospace;">Generando enlace...</span>
+                    </div>
+                    <i class="fas fa-copy white-text"></i>
+                </div>
+                
+                <div id="refWarning" class="referral-warning">
+                    <i class="fas fa-exclamation-triangle fa-lg"></i>
+                    <span><strong>ATENCIÓN:</strong> Las ganancias por referidos están <u>BLOQUEADAS</u> hasta que actives tu Nivel 1. Comparte, pero activa rápido para no perder oro.</span>
+                </div>
+            </div>
+
         </section>
 
         <section class="grid-3" style="margin-top: 30px;">
@@ -143,6 +176,16 @@
     <div id="levelsModal" class="modal-overlay">
         <div class="modal-box">
             <h2 class="shogun-title-mini red-text">ACTIVAR PASE</h2>
+            
+            <div style="text-align: left; margin-bottom: 15px;">
+                <label style="color:#888; font-size:0.8rem;">Selecciona Objetivo:</label>
+                <select id="levelSelect" class="input-dark">
+                    <option value="1">✅ Nivel 1 - Bronce ($10)</option>
+                    <option value="2" disabled>🔒 Nivel 2 - Plata ($25) (Bloqueado)</option>
+                    <option value="3" disabled>🔒 Nivel 3 - Oro ($50) (Bloqueado)</option>
+                </select>
+            </div>
+
             <div style="background:#300; border:1px solid red; padding:10px; margin-bottom:15px; text-align:left; font-size:0.8rem;">
                 <strong style="color:#f55">⚠️ REGLAS MERCADOPAGO:</strong>
                 <ul style="color:#faa; margin:5px 0 0 20px;">
@@ -156,7 +199,7 @@
                 <strong class="gold-text">ALIAS.DEL.SHOGUN</strong> <i class="fas fa-copy"></i>
             </div>
             
-            <input type="text" id="depRef" placeholder="ID de Transacción (Ej: 12345678)" style="width:100%; padding:10px; background:#111; border:1px solid #444; color:white; margin-bottom:20px;">
+            <input type="text" id="depRef" placeholder="ID de Transacción (Ej: 12345678)" class="input-dark">
             
             <div style="display:flex; gap:10px;">
                 <button onclick="submitDeposit()" class="btn-ninja-primary" style="flex:1">ENVIAR AVISO</button>
