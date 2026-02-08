@@ -1,8 +1,8 @@
 import User from "../models/User.js";
 import Transaction from "../models/Transaction.js";
 import Cycle from "../models/Cycle.js"; 
-import SystemWallet from "../models/SystemWallet.js"; // <--- IMPORTANTE
-import { ECONOMY_RULES } from "../config/economyRules.js"; // <--- IMPORTANTE
+import SystemWallet from "../models/SystemWallet.js"; 
+import { ECONOMY_RULES } from "../config/economyRules.js"; 
 
 const PASS_TOKENS = 100;     
 const PASS_TARGET = 50.00;   
@@ -27,6 +27,9 @@ export const getWalletDetails = async (req, res) => {
             cycle: user.activeCycle || null,
             level: user.level || 0,        
             isActive: user.isActive || false, 
+            // 👇 ESTO ES LO QUE FALTABA PARA EL PANEL 👇
+            role: user.role || 'user', 
+            // 👆 PERMITE AL FRONTEND SABER SI ERES SHOGUN 👆
             currentCycleAcc: user.currentCycleAcc || 0,
             hasPendingDeposit: !!pendingTx,
             history: await Transaction.find({ user: req.user.userId }).sort({ createdAt: -1 }).limit(10)
@@ -107,12 +110,11 @@ export const manageDeposit = async (req, res) => {
                 if (!sysWallet) sysWallet = await SystemWallet.create({ type: 'main' });
 
                 sysWallet.adminBalance += maintFee;
-                sysWallet.daoBalance += (daoFee + remainder); // Sumamos lo base + lo que sobró
+                sysWallet.daoBalance += (daoFee + remainder); 
                 sysWallet.backupBalance += backupFee;
                 sysWallet.totalIncome += amount;
                 
-                await sysWallet.save();
-                console.log(`💰 Fondos Distribuidos: Admin $${maintFee} | DAO $${daoFee+remainder} | Backup $${backupFee}`);
+                await sysWallet.save(); 
 
                 // 4. PAGAR AL REFERIDO (Si existe)
                 if (user.referredBy && referralFee > 0) {
@@ -212,4 +214,4 @@ export const getPendingTransactions = async (req, res) => {
 
 export const buyLevel = async (req, res) => res.status(400).json({error: "Usa endpoint deposit"});
 export const harvestEarnings = async (req, res) => res.status(400).json({error: "Usa endpoint payout"});
-export const approveDeposit = manageDeposit; // Alias por si acaso
+export const approveDeposit = manageDeposit;
