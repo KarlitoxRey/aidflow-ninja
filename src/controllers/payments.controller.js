@@ -1,12 +1,11 @@
 import User from "../models/User.js";
 import Transaction from "../models/Transaction.js";
 import Cycle from "../models/Cycle.js"; 
-import SystemWallet from "../models/SystemWallet.js";
-import { ECONOMY_RULES } from "../config/economyRules.js";
+import SystemWallet from "../models/SystemWallet.js"; // <--- IMPORTANTE
+import { ECONOMY_RULES } from "../config/economyRules.js"; // <--- IMPORTANTE
 
 const PASS_TOKENS = 100;     
 const PASS_TARGET = 50.00;   
-const LEVEL_1_GOAL = 30.00; // Meta para poder retirar
 
 // 1. OBTENER DATOS
 export const getWalletDetails = async (req, res) => {
@@ -16,11 +15,10 @@ export const getWalletDetails = async (req, res) => {
         const user = await User.findById(req.user.userId).populate('activeCycle');
         if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
 
-        // Buscamos si hay depósito O retiro pendiente
         const pendingTx = await Transaction.findOne({ 
             user: req.user.userId, 
             status: 'pending',
-            type: { $in: ['deposit', 'withdrawal_external'] } // Miramos ambos tipos
+            type: { $in: ['deposit', 'withdrawal_external'] }
         });
 
         res.json({ 
@@ -30,7 +28,7 @@ export const getWalletDetails = async (req, res) => {
             level: user.level || 0,        
             isActive: user.isActive || false, 
             currentCycleAcc: user.currentCycleAcc || 0,
-            hasPendingDeposit: !!pendingTx, // Bloquea UI si hay algo pendiente
+            hasPendingDeposit: !!pendingTx,
             history: await Transaction.find({ user: req.user.userId }).sort({ createdAt: -1 }).limit(10)
         });
     } catch (error) {
@@ -65,56 +63,7 @@ export const requestDeposit = async (req, res) => {
     }
 };
 
-// 3. RETIRAR FONDOS (SOLO SI COMPLETÓ CICLO)
-export const requestPayout = async (req, res) => {
-    try {
-        const { amount, alias } = req.body;
-        const userId = req.user.userId;
-
-        if (!amount || amount <= 0) return res.status(400).json({ message: "Monto inválido." });
-        if (!alias) return res.status(400).json({ message: "Falta Alias." });
-
-        const user = await User.findById(userId);
-        
-        // VALIDACIÓN DE CICLO (Seguridad Backend)
-        if (user.currentCycleAcc < LEVEL_1_GOAL) {
-            return res.status(403).json({ message: `Debes completar el ciclo ($${LEVEL_1_GOAL}) para retirar.` });
-        }
-
-        if ((user.balance || 0) < amount) {
-            return res.status(400).json({ message: "Saldo insuficiente." });
-        }
-
-        // Verificar retiro pendiente
-        const pendingTx = await Transaction.findOne({ user: userId, type: 'withdrawal_external', status: 'pending' });
-        if (pendingTx) return res.status(400).json({ message: "Ya tienes un retiro en proceso." });
-
-        // Descontar saldo YA (reserva de fondos)
-        user.balance -= amount;
-        
-        // Resetear progreso del ciclo al retirar (Opcional, depende de tu lógica de "Renovación")
-        // user.currentCycleAcc = 0; // Descomentar si al retirar se reinicia la barra
-        
-        await user.save();
-
-        await Transaction.create({
-            user: userId,
-            type: 'withdrawal_external', // ESTE ES EL TIPO QUE ADMIN DEBE VER
-            amount: Number(amount),
-            status: 'pending',
-            description: `Retiro a: ${alias}`,
-            referenceId: `OUT-${Date.now()}`
-        });
-
-        res.json({ message: "Retiro solicitado." });
-
-    } catch (error) {
-        console.error("Error Payout:", error);
-        res.status(500).json({ message: "Error procesando retiro." });
-    }
-};
-
-// 4. ADMIN: GESTIONAR (APROBAR/RECHAZAR)
+// 3. APROBAR PASE (ADMIN) - LOGICA FINANCIERA REFORZADA
 export const manageDeposit = async (req, res) => {
     try {
         const { transactionId, action } = req.body; 
@@ -124,35 +73,74 @@ export const manageDeposit = async (req, res) => {
         if (tx.status !== "pending") return res.status(400).json({ error: "Ya procesada." });
 
         if (action === "approve") {
-            // === APROBAR ===
+            // === APROBAR Y DISTRIBUIR ===
             tx.status = "completed";
             
-            // CASO A: ES UN DEPÓSITO (ACTIVAR USUARIO)
+            // CASO A: DEPÓSITO (ACTIVACIÓN DE USUARIO)
             if (tx.type === 'deposit') {
                 const user = await User.findById(tx.user._id).populate('activeCycle');
+                const amount = tx.amount;
+
+                // 1. ACTIVAR USUARIO
                 user.isActive = true;  
                 user.level = 1;        
                 user.tournamentTokens = (user.tournamentTokens || 0) + PASS_TOKENS;
-                user.currentCycleAcc = 0; // Reinicia barra
+                user.currentCycleAcc = 0; 
 
-                // Distribuir Comisiones
-                await distributeMoney(tx.amount, user);
+                // 2. DISTRIBUIR FONDOS (MATH)
+                const maintFee = amount * ECONOMY_RULES.FIXED_COSTS.MAINTENANCE; // 10%
+                const daoFee = amount * ECONOMY_RULES.FIXED_COSTS.DAO_BASE;      // 5%
+                const backupFee = amount * ECONOMY_RULES.FIXED_COSTS.BACKUP;     // 5%
+                
+                let referralFee = 0;
+                
+                // Calcular Referido
+                if (user.referredBy) {
+                    referralFee = amount * ECONOMY_RULES.REFERRAL_TIERS.LEVEL_1.BASE; // 10%
+                }
+
+                // El resto va al DAO/Micropagos
+                const remainder = amount - (maintFee + daoFee + backupFee + referralFee);
+
+                // 3. ACTUALIZAR BILLETERA DEL SISTEMA
+                let sysWallet = await SystemWallet.findOne({ type: 'main' });
+                if (!sysWallet) sysWallet = await SystemWallet.create({ type: 'main' });
+
+                sysWallet.adminBalance += maintFee;
+                sysWallet.daoBalance += (daoFee + remainder); // Sumamos lo base + lo que sobró
+                sysWallet.backupBalance += backupFee;
+                sysWallet.totalIncome += amount;
+                
+                await sysWallet.save();
+                console.log(`💰 Fondos Distribuidos: Admin $${maintFee} | DAO $${daoFee+remainder} | Backup $${backupFee}`);
+
+                // 4. PAGAR AL REFERIDO (Si existe)
+                if (user.referredBy && referralFee > 0) {
+                    const sponsor = await User.findById(user.referredBy);
+                    if (sponsor) {
+                        sponsor.balance += referralFee;
+                        sponsor.totalEarnings = (sponsor.totalEarnings || 0) + referralFee;
+                        await sponsor.save();
+                        
+                        await Transaction.create({
+                            user: sponsor._id,
+                            type: 'referral_bonus',
+                            amount: referralFee,
+                            status: 'completed',
+                            description: `Comisión por ${user.ninjaName}`
+                        });
+                    }
+                }
+
                 await user.save();
-            }
-            // CASO B: ES UN RETIRO (CONFIRMAR ENVÍO)
-            else if (tx.type === 'withdrawal_external') {
-                // El saldo ya se descontó al pedirlo, así que solo marcamos completed
-                tx.description += " (Enviado)";
             }
             
             await tx.save();
-            res.json({ message: "✅ Transacción Aprobada." });
+            res.json({ message: "✅ Transacción Aprobada y Fondos Distribuidos." });
 
         } else {
             // === RECHAZAR ===
             tx.status = "rejected";
-            
-            // Si era retiro y rechazamos, DEVOLVER el saldo
             if (tx.type === 'withdrawal_external') {
                  const user = await User.findById(tx.user._id);
                  if (user) { 
@@ -170,32 +158,58 @@ export const manageDeposit = async (req, res) => {
     }
 };
 
-// --- AUXILIARES ---
+// 4. RETIRAR FONDOS
+export const requestPayout = async (req, res) => {
+    try {
+        const { amount, alias } = req.body;
+        const userId = req.user.userId;
 
-// ESTO ES LO QUE USA EL ADMIN PARA VER LA LISTA
-export const getPendingTransactions = async (req, res) => {
-    try { 
-        // Buscamos TODO lo que esté pendiente, sin importar el tipo
-        const p = await Transaction.find({ status: "pending" })
-            .populate("user", "ninjaName email")
-            .sort({ createdAt: 1 }); 
+        if (!amount || amount <= 0) return res.status(400).json({ message: "Monto inválido." });
         
-        console.log("Admin solicitando pendientes. Encontrados:", p.length); // Log Debug
-        res.json(p); 
-    } catch (e) { 
-        console.error("Error Admin Pending:", e);
-        res.status(500).json([]); 
+        const user = await User.findById(userId);
+        const META_RETIRO = 30; // O usar ECONOMY_RULES.CYCLE_GOAL.LEVEL_1
+
+        // Validación de Ciclo
+        if (user.currentCycleAcc < META_RETIRO) {
+            return res.status(403).json({ message: `Debes completar la meta de $${META_RETIRO} para retirar.` });
+        }
+
+        if ((user.balance || 0) < amount) {
+            return res.status(400).json({ message: "Saldo insuficiente." });
+        }
+
+        const pendingTx = await Transaction.findOne({ user: userId, type: 'withdrawal_external', status: 'pending' });
+        if (pendingTx) return res.status(400).json({ message: "Ya tienes un retiro en proceso." });
+
+        user.balance -= amount;
+        await user.save();
+
+        await Transaction.create({
+            user: userId,
+            type: 'withdrawal_external',
+            amount: Number(amount),
+            status: 'pending',
+            description: `Retiro a: ${alias}`,
+            referenceId: `OUT-${Date.now()}`
+        });
+
+        res.json({ message: "Retiro solicitado." });
+
+    } catch (error) {
+        res.status(500).json({ message: "Error procesando retiro." });
     }
 };
 
-async function distributeMoney(amount, user) {
-    // ... (Tu lógica de distribución de comisiones original va aquí) ...
-    // Para simplificar el ejemplo, asumimos que funciona como en tu código previo
-    const maintFee = amount * ECONOMY_RULES.FIXED_COSTS.MAINTENANCE;
-    let sysWallet = await SystemWallet.findOne({ type: 'main' }) || await SystemWallet.create({ type: 'main' });
-    sysWallet.adminBalance += maintFee;
-    await sysWallet.save();
-}
+// --- AUXILIARES ---
+export const getPendingTransactions = async (req, res) => {
+    try { 
+        const p = await Transaction.find({ status: "pending" })
+            .populate("user", "ninjaName email")
+            .sort({ createdAt: 1 }); 
+        res.json(p); 
+    } catch (e) { res.status(500).json([]); }
+};
 
 export const buyLevel = async (req, res) => res.status(400).json({error: "Usa endpoint deposit"});
 export const harvestEarnings = async (req, res) => res.status(400).json({error: "Usa endpoint payout"});
+export const approveDeposit = manageDeposit; // Alias por si acaso
