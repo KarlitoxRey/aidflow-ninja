@@ -21,44 +21,48 @@ async function validateSession() {
         currentUser = await res.json();
         
         renderUI();
+
+        // 👇 LÓGICA AGREGADA: DETECTAR SI ES SHOGUN 👇
+        if (currentUser.role === 'shogun' || currentUser.role === 'admin') {
+            loadShogunFinances();
+        }
+        // 👆 FIN LÓGICA AGREGADA 👆
+
         loadUserGames(!currentUser.isActive);
 
     } catch (error) {
+        console.error(error);
         localStorage.clear();
-        window.location.replace("login.html");
+        // window.location.replace("login.html"); // Descomentar en producción
     }
 }
 
 function renderUI() {
     safeText("userName", currentUser.ninjaName);
     safeText("userRank", currentUser.isActive ? "🥷 RANGO: BRONCE (Nivel 1)" : "👺 RONIN (Sin Pase)");
-    
-    // Mostramos Fichas
     safeText("userTokens", currentUser.tournamentTokens || 0);
 
-    // === GESTIÓN DE REFERIDOS (NUEVO) ===
-    // Generar el link con el ID del usuario
+    // GESTIÓN DE REFERIDOS
     const refLink = `${window.location.origin}/register.html?ref=${currentUser._id}`;
     safeText("myRefLink", refLink);
     
-    // Función global para copiar
     window.copyReferralLink = () => {
         navigator.clipboard.writeText(refLink);
-        alert("🔗 Link de reclutamiento copiado al portapapeles.");
+        alert("🔗 Link de reclutamiento copiado.");
     };
 
     const activationPanel = document.getElementById("activationPanel");
     const cycleContainer = document.getElementById("cycleContainer");
     const btn = document.getElementById("mainActionBtn");
     const statusMsg = document.getElementById("statusMsg");
-    const refWarning = document.getElementById("refWarning"); // La advertencia amarilla
+    const refWarning = document.getElementById("refWarning");
 
-    // 1. USUARIO ACTIVO (Muestra Barra)
+    // 1. USUARIO ACTIVO
     if (currentUser.isActive) {
         activationPanel.style.display = "none";
         cycleContainer.style.display = "block";
-        refWarning.style.display = "none"; // OCULTAR ADVERTENCIA: YA COBRA
-
+        refWarning.style.display = "none"; 
+        
         updateCycleBar(); 
         blockMenu(false);
     } 
@@ -66,7 +70,7 @@ function renderUI() {
     else if (currentUser.hasPendingDeposit) {
         activationPanel.style.display = "block";
         cycleContainer.style.display = "none";
-        refWarning.style.display = "flex"; // MOSTRAR ADVERTENCIA
+        refWarning.style.display = "flex"; 
 
         btn.innerText = "⏳ VERIFICANDO PAGO...";
         btn.className = "btn-action-main btn-pending";
@@ -78,7 +82,7 @@ function renderUI() {
     else {
         activationPanel.style.display = "block";
         cycleContainer.style.display = "none";
-        refWarning.style.display = "flex"; // MOSTRAR ADVERTENCIA
+        refWarning.style.display = "flex"; 
 
         btn.innerText = "⚔️ OBTENER PASE NIVEL 1";
         btn.className = "btn-action-main";
@@ -97,8 +101,7 @@ function updateCycleBar() {
     safeText("cycleEarnings", `$${current.toFixed(2)} / $${LEVEL_1_GOAL.toFixed(2)}`);
 
     const harvestBtn = document.getElementById("harvestBtn");
-    
-    // RETIRO: SOLO si completó la meta Y tiene saldo
+    // Retiro solo si meta cumplida y saldo disponible
     if (current >= LEVEL_1_GOAL && currentUser.balance > 0) {
         harvestBtn.style.display = "block";
         harvestBtn.innerText = "💸 CICLO COMPLETADO: RETIRAR";
@@ -108,6 +111,32 @@ function updateCycleBar() {
         harvestBtn.style.display = "none";
     }
 }
+
+// 👇 FUNCIÓN AGREGADA PARA CARGAR FONDOS DE ADMIN 👇
+async function loadShogunFinances() {
+    const panel = document.getElementById("shogunFinancePanel");
+    if (!panel) return; // Si no existe el HTML, salimos
+
+    try {
+        const res = await fetch(`${API_URL}/api/finance/funds`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            panel.style.display = "block"; // Mostrar panel solo si la petición fue exitosa
+            
+            safeText("adminBalance", formatMoney(data.adminBalance));
+            safeText("daoBalance", formatMoney(data.daoBalance));
+            safeText("backupBalance", formatMoney(data.backupBalance));
+            safeText("totalIncome", formatMoney(data.totalIncome));
+        }
+    } catch (e) {
+        console.log("No se pudieron cargar finanzas (Probablemente no eres admin)");
+        panel.style.display = "none";
+    }
+}
+// 👆 FIN FUNCIÓN AGREGADA 👆
 
 function blockMenu(shouldBlock) {
     ['btn-tournament', 'btn-duels', 'btn-missions'].forEach(id => {
@@ -197,3 +226,4 @@ function initChat() {
 window.toggleChat = () => { const w = document.getElementById("chatWindow"); w.style.display = w.style.display==="flex"?"none":"flex"; };
 window.logout = () => { localStorage.clear(); window.location.replace("login.html"); };
 function safeText(id, t) { const e = document.getElementById(id); if(e) e.innerText = t; }
+function formatMoney(amount) { return Number(amount || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }); }
