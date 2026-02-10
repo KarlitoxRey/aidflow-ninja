@@ -19,79 +19,43 @@
             --blood: #e63946;
         }
 
-        /* LAYOUT GLOBAL */
         body {
-            background: var(--bg-dark);
-            color: #fff;
-            margin: 0; padding: 0;
-            height: 100vh;
-            overflow: hidden;
-            font-family: 'Rajdhani', sans-serif;
+            background: var(--bg-dark); color: #fff; margin: 0; padding: 0;
+            height: 100vh; overflow: hidden; font-family: 'Rajdhani', sans-serif;
             display: grid;
             grid-template-columns: 250px 1fr;
             grid-template-rows: 60px 1fr;
-            grid-template-areas: 
-                "sidebar header"
-                "sidebar main";
+            grid-template-areas: "sidebar header" "sidebar main";
         }
 
-        /* HEADER */
-        .admin-header {
-            grid-area: header;
-            background: var(--header-bg);
-            border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 20px;
-        }
-
-        /* SIDEBAR */
-        .admin-sidebar {
-            grid-area: sidebar;
-            background: var(--sidebar-bg);
-            border-right: 1px solid var(--border);
-            padding: 20px;
-            display: flex; flex-direction: column; gap: 10px;
-        }
+        .admin-header { grid-area: header; background: var(--header-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
+        .admin-sidebar { grid-area: sidebar; background: var(--sidebar-bg); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .admin-main { grid-area: main; padding: 20px; overflow-y: auto; }
 
         .nav-btn {
-            background: transparent; border: 1px solid transparent;
-            color: #888; text-align: left; padding: 12px;
-            cursor: pointer; transition: 0.3s; font-family: 'Orbitron';
-            display: flex; align-items: center; gap: 10px;
+            background: transparent; border: 1px solid transparent; color: #888; text-align: left; padding: 12px; cursor: pointer; transition: 0.3s; font-family: 'Orbitron'; display: flex; align-items: center; gap: 10px; width: 100%;
         }
-        .nav-btn:hover, .nav-btn.active {
-            background: rgba(255, 180, 0, 0.1);
-            color: var(--gold);
-            border-left: 3px solid var(--gold);
-        }
-
-        /* MAIN CONTENT */
-        .admin-main {
-            grid-area: main;
-            padding: 20px;
-            overflow-y: auto;
-        }
+        .nav-btn:hover, .nav-btn.active { background: rgba(255, 180, 0, 0.1); color: var(--gold); border-left: 3px solid var(--gold); }
 
         .view-section { display: none; animation: fadeIn 0.3s ease; }
         .view-section.active { display: block; }
-
-        .panel {
-            background: #0a0a0a; border: 1px solid var(--border);
-            padding: 20px; margin-bottom: 20px;
-        }
-
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* TABLA */
+        .panel { background: #0a0a0a; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; }
+        
+        /* FORMULARIOS */
+        .input-ninja { width: 100%; padding: 10px; background: #111; border: 1px solid #333; color: white; margin-bottom: 10px; font-family: 'Rajdhani'; box-sizing: border-box; }
+        .btn-full { width: 100%; padding: 10px; background: var(--blood); color: white; border: none; cursor: pointer; font-family: 'Orbitron'; transition: 0.3s; }
+        .btn-full:hover { background: #ff003c; }
+        
+        .list-item { background: #111; padding: 10px; margin-bottom: 5px; border-left: 2px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .btn-delete { background: #333; color: #f55; border: none; padding: 5px 10px; cursor: pointer; }
+
+        /* TABLAS */
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th { text-align: left; color: #666; border-bottom: 1px solid #333; padding: 10px; font-size: 0.8rem; }
         td { padding: 10px; border-bottom: 1px solid #222; }
-
-        .btn-action { padding: 5px 10px; cursor: pointer; border: none; font-weight: bold; }
-        .btn-approve { background: #0f0; color: black; }
-        .btn-reject { background: #333; color: #fff; }
-        .btn-full { width: 100%; padding: 10px; background: var(--blood); color: white; border: none; cursor: pointer; font-family: 'Orbitron'; }
-
+        
         /* GRID DASHBOARD */
         .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
     </style>
@@ -99,9 +63,7 @@
 <body>
 
     <header class="admin-header">
-        <div style="font-family: 'Orbitron'; font-size: 1.2rem;">
-            SHOGUN <span style="color:var(--blood)">SYSTEM</span>
-        </div>
+        <div style="font-family: 'Orbitron'; font-size: 1.2rem;">SHOGUN <span style="color:var(--blood)">SYSTEM</span></div>
         <div style="display: flex; align-items: center; gap: 15px;">
             <div id="clock" style="font-family: monospace; color: var(--gold);">00:00:00</div>
             <button onclick="logoutAdmin()" style="background:none; border:1px solid #333; color:#666; padding:5px 10px; cursor:pointer;">SALIR</button>
@@ -115,6 +77,12 @@
         <button class="nav-btn" onclick="switchView('view-deposits', this)">
             <i class="fas fa-money-bill-wave"></i> SOLICITUDES <span id="pendingBadge" style="background:var(--blood); color:white; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:none;">0</span>
         </button>
+        <button class="nav-btn" onclick="switchView('view-games', this)">
+            <i class="fas fa-gamepad"></i> JUEGOS
+        </button>
+        <button class="nav-btn" onclick="switchView('view-tournaments', this)">
+            <i class="fas fa-trophy"></i> TORNEOS
+        </button>
         <button class="nav-btn" onclick="switchView('view-users', this)">
             <i class="fas fa-users"></i> GUERREROS
         </button>
@@ -123,61 +91,37 @@
     <main class="admin-main">
         
         <div id="view-dashboard" class="view-section active">
-            
             <div class="grid-4">
                 <div class="panel" style="border-top: 3px solid var(--gold); text-align: center;">
                     <div style="color: #888;">🏛️ FONDO DAO</div>
                     <div id="val-dao" style="font-size: 1.8rem; font-weight: bold; color: var(--gold);">$0.00</div>
                 </div>
-                
                 <div class="panel" style="border-top: 3px solid var(--blood); text-align: center;">
                     <div style="color: #888;">👺 MANTENIMIENTO</div>
                     <div id="val-maint" style="font-size: 1.8rem; font-weight: bold; color: white;">$0.00</div>
                 </div>
-    
                 <div class="panel" style="border-top: 3px solid blue; text-align: center;">
                     <div style="color: #888;">🛡️ RESERVA</div>
                     <div id="val-backup" style="font-size: 1.8rem; font-weight: bold; color: white;">$0.00</div>
                 </div>
-    
                 <div class="panel" style="border-top: 3px solid green; text-align: center;">
                     <div style="color: #888;">🥷 NINJAS ACTIVOS</div>
                     <div id="val-users" style="font-size: 1.8rem; font-weight: bold; color: white;">0</div>
                 </div>
             </div>
-    
+
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
                 <div class="panel">
                     <h3>📈 RENDIMIENTO</h3>
-                    <div style="margin-top: 15px; display: flex; justify-content: space-between;">
-                        <span>Ingreso Hoy:</span>
-                        <strong id="val-today" style="color: #0f0;">$0.00</strong>
-                    </div>
-                    <div style="margin-top: 10px; display: flex; justify-content: space-between;">
-                        <span>Total Histórico:</span>
-                        <strong id="val-total" style="color: white;">$0.00</strong>
-                    </div>
-                    <div style="margin-top: 10px; display: flex; justify-content: space-between;">
-                        <span>Total Registrados:</span>
-                        <strong id="val-total-users">0</strong>
-                    </div>
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between;"><span>Ingreso Hoy:</span><strong id="val-today" style="color: #0f0;">$0.00</strong></div>
+                    <div style="margin-top: 10px; display: flex; justify-content: space-between;"><span>Total Histórico:</span><strong id="val-total" style="color: white;">$0.00</strong></div>
                 </div>
-    
                 <div class="panel">
-                    <h3>📜 HISTORIAL DE MOVIMIENTOS</h3>
+                    <h3>📜 ÚLTIMOS MOVIMIENTOS</h3>
                     <div style="max-height: 300px; overflow-y: auto;">
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                            <thead>
-                                <tr style="text-align: left; color: #666; border-bottom: 1px solid #333;">
-                                    <th style="padding: 5px;">FECHA</th>
-                                    <th>NINJA</th>
-                                    <th>ACCIÓN</th>
-                                    <th>MONTO</th>
-                                </tr>
-                            </thead>
-                            <tbody id="activity-table-body">
-                                <tr><td colspan="4" style="text-align:center; padding:20px;">Cargando...</td></tr>
-                            </tbody>
+                            <thead><tr style="text-align: left; color: #666; border-bottom: 1px solid #333;"><th>FECHA</th><th>NINJA</th><th>ACCIÓN</th><th>MONTO</th></tr></thead>
+                            <tbody id="activity-table-body"><tr><td colspan="4" style="text-align:center;">Cargando...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -187,42 +131,79 @@
         <div id="view-deposits" class="view-section">
             <div class="panel">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                    <h3 style="margin:0; border:none;">SOLICITUDES PENDIENTES</h3>
+                    <h3 style="margin:0;">SOLICITUDES PENDIENTES</h3>
                     <button onclick="loadPendingDeposits()" class="btn-full" style="width:auto; padding:5px 15px;">REFRESCAR</button>
                 </div>
-                
                 <table style="width:100%">
-                    <thead>
-                        <tr>
-                            <th>FECHA</th>
-                            <th>USUARIO</th>
-                            <th>TIPO</th>
-                            <th>MONTO</th>
-                            <th>DETALLE</th>
-                            <th>ACCIÓN</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>FECHA</th><th>USUARIO</th><th>TIPO</th><th>MONTO</th><th>DETALLE</th><th>ACCIÓN</th></tr></thead>
                     <tbody id="depositList"></tbody>
                 </table>
                 <div id="emptyTreasury" style="text-align:center; padding:40px; display:none; color:#666;">Todo al día.</div>
             </div>
         </div>
 
+        <div id="view-games" class="view-section">
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+                <div class="panel">
+                    <h3>🕹️ SUBIR / EDITAR</h3>
+                    <input type="text" id="gTitle" placeholder="Nombre" class="input-ninja">
+                    <input type="text" id="gUrl" placeholder="URL Embed" class="input-ninja">
+                    <label style="color:#888;">Tipo:</label>
+                    <select id="gType" class="input-ninja">
+                        <option value="practica">🎯 Práctica</option>
+                        <option value="torneo">🏆 Torneo</option>
+                        <option value="libre">🆓 Libre</option>
+                    </select>
+                    <button onclick="createGame()" class="btn-full">SUBIR</button>
+                </div>
+                <div class="panel">
+                    <h3>CATÁLOGO</h3>
+                    <div id="adminGames" style="max-height: 400px; overflow-y: auto;">Cargando...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-tournaments" class="view-section">
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+                <div class="panel">
+                    <h3>🏆 CREAR TORNEO</h3>
+                    <input type="text" id="tName" placeholder="Nombre" class="input-ninja">
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="tFee" placeholder="Entrada ($)" class="input-ninja">
+                        <input type="number" id="tPrize" placeholder="Premio ($)" class="input-ninja">
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="tWinners" placeholder="Ganadores" value="1" class="input-ninja">
+                        <select id="tGameType" class="input-ninja">
+                            <option value="Mixed">General</option>
+                            <option value="Fighting">Pelea</option>
+                            <option value="Racing">Carreras</option>
+                        </select>
+                    </div>
+                    <button onclick="createTournament()" class="btn-full">CREAR</button>
+                </div>
+                <div class="panel">
+                    <h3>ARENA</h3>
+                    <div id="adminTournaments" style="max-height: 400px; overflow-y: auto;">Cargando...</div>
+                </div>
+            </div>
+        </div>
+
         <div id="view-users" class="view-section">
             <div class="panel">
-                <h3>CENSO DE GUERREROS</h3>
-                <div id="usersListContainer" style="text-align:center; padding:40px; color:#666;">Cargando base de datos...</div>
+                <div style="display:flex; justify-content:space-between;">
+                    <h3>👥 CENSO DE GUERREROS</h3>
+                    <button onclick="loadUsersList()" class="btn-full" style="width:auto; padding:5px 15px;">ACTUALIZAR</button>
+                </div>
+                <table style="margin-top:20px;">
+                    <thead><tr><th>NINJA</th><th>NIVEL</th><th>REFS</th><th>PUNTOS</th><th>ESTADO</th></tr></thead>
+                    <tbody id="usersTableBody"><tr><td colspan="5" style="text-align:center;">Cargando...</td></tr></tbody>
+                </table>
             </div>
         </div>
 
     </main>
-
     <script type="module" src="js/admin.js"></script>
-    <script>
-        // Reloj
-        setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
-        }, 1000);
-    </script>
+    <script>setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);</script>
 </body>
 </html>
