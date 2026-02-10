@@ -1,13 +1,15 @@
 import express from "express";
-import { confirmDeposit, getTreasuryStats } from "../controllers/finance.controller.js";
+// 👇 Importamos la nueva función getAdminDashboard
+import { confirmDeposit, getTreasuryStats, getAdminDashboard } from "../controllers/finance.controller.js";
 import { verifyToken, isShogun } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// Solo el Shogun puede ver el estado real del tesoro
+// Rutas existentes...
 router.get("/stats", verifyToken, isShogun, getTreasuryStats);
-
-// Confirmación de depósitos (Normalmente llamada por un webhook de pagos o Admin)
 router.post("/confirm", verifyToken, isShogun, confirmDeposit);
+
+// 👇 AGREGAR ESTA RUTA NUEVA 👇
+router.get("/dashboard", verifyToken, isShogun, getAdminDashboard);
 
 export default router;
