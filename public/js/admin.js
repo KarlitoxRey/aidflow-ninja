@@ -283,26 +283,77 @@ async function loadAdminTournaments() {
 }
 
 // ==========================================
-// 6. USUARIOS Y ESTADÍSTICAS
+// 6. USUARIOS Y ESTADÍSTICAS (REAL TIME)
 // ==========================================
 async function loadStats() {
-    // Aquí puedes conectar a un endpoint real de stats si lo tienes
-    // Por ahora simulamos la carga para que se vea activo
-    const elUsers = document.getElementById("statUsers");
-    const elVol = document.getElementById("statVol");
-    const elProfit = document.getElementById("statProfit");
+    const token = localStorage.getItem("token");
+    if(!token) return;
 
-    if(elUsers) elUsers.innerText = "Activo";
-    
-    // Ejemplo de cómo podrías obtener el volumen real si creas el endpoint
-    // const res = await fetch(`${API_URL}/api/stats/global`);
-    // ...
+    try {
+        // Llamamos al nuevo endpoint
+        const res = await fetch(`${API_URL}/api/finance/dashboard`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) return; // Si falla silenciosamente
+
+        const data = await res.json();
+
+        // 1. Actualizar Tarjetas de Fondos
+        safeText("val-dao", formatMoney(data.funds.dao));
+        safeText("val-maint", formatMoney(data.funds.admin));
+        safeText("val-backup", formatMoney(data.funds.backup));
+        safeText("val-users", data.stats.active);
+
+        // 2. Actualizar Rendimiento
+        safeText("val-today", formatMoney(data.stats.today));
+        safeText("val-total", formatMoney(data.funds.total));
+        safeText("val-total-users", data.stats.total);
+
+        // 3. Llenar Tabla de Movimientos
+        renderHistoryTable(data.history);
+
+    } catch (error) {
+        console.error("Error cargando stats:", error);
+    }
 }
 
-async function loadUsersList() {
-    const container = document.getElementById("usersListContainer");
-    if(!container) return;
-    
-    // Aquí implementarías la llamada a /api/users si decides crear ese endpoint
-    container.innerHTML = '<p class="muted-text">Función de censo en desarrollo...</p>';
+// Función auxiliar para la tabla
+function renderHistoryTable(transactions) {
+    const container = document.getElementById("activity-table-body");
+    if (!container) return;
+
+    if (!transactions || transactions.length === 0) {
+        container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">Sin actividad reciente.</td></tr>';
+        return;
+    }
+
+    container.innerHTML = transactions.map(tx => {
+        const date = new Date(tx.updatedAt).toLocaleDateString();
+        const user = tx.user ? tx.user.ninjaName : 'Desconocido';
+        const isDeposit = tx.type === 'deposit';
+        const color = isDeposit ? '#0f0' : '#f00'; // Verde ingreso, Rojo retiro
+        const sign = isDeposit ? '+' : '-';
+        
+        return `
+            <tr style="border-bottom: 1px solid #222;">
+                <td style="padding: 8px; color: #666;">${date}</td>
+                <td style="font-weight: bold; color: white;">${user}</td>
+                <td>${tx.description || tx.type}</td>
+                <td style="color: ${color}; font-family: monospace;">${sign}${formatMoney(tx.amount)}</td>
+            </tr>
+        `;
+    }).join('');
 }
+
+// Auxiliares
+function safeText(id, text) {
+    const el = document.getElementById(id);
+    if(el) el.innerText = text;
+}
+function formatMoney(amount) {
+    return Number(amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
+// Asegurar que se actualice cada 15 segundos
+setInterval(loadStats, 15000);
