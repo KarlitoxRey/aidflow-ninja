@@ -38,27 +38,24 @@ export const getRanking = async (req, res) => {
 export const submitScore = async (req, res) => {
     try {
         const { tournamentId, points } = req.body;
-        // Obtenemos ID del usuario desde el token decodificado
         const userId = req.user.id || req.user._id; 
 
-        // 1. Validar torneo
         const tournament = await Tournament.findById(tournamentId);
-        
-        if (!tournament || tournament.status !== 'active') { 
-             return res.status(400).json({ message: "⛔ El torneo no está activo o ha finalizado." });
+        if (!tournament) return res.status(404).json({ message: "Torneo no encontrado" });
+        if (tournament.status !== 'active') return res.status(400).json({ message: "Torneo finalizado" });
+
+        let score = await Score.findOne({ tournament: tournamentId, user: userId });
+
+        if (score) {
+            if (points > score.points) {
+                score.points = points;
+                await score.save();
+            }
+        } else {
+            score = new Score({ tournament: tournamentId, user: userId, points });
+            await score.save();
         }
 
-        // 2. Guardar el puntaje
-        const newScore = new Score({
-            user: userId,
-            tournament: tournamentId,
-            game: tournament.game,
-            points: Number(points)
-        });
-
-        await newScore.save();
-        
-        // 3. Agregar al jugador a la lista de participantes si no estaba
         if (!tournament.players.includes(userId)) {
             tournament.players.push(userId);
             await tournament.save();
@@ -72,36 +69,53 @@ export const submitScore = async (req, res) => {
 };
 
 // ==========================================
-// 🛡️ CREAR TORNEO (SOLO SHOGUN)
+// 🛡️ CREAR TORNEO (SOLO SHOGUN) - ACTUALIZADO
 // ==========================================
 export const createTournament = async (req, res) => {
     try {
-        // Verificamos rol
-        if (req.user.role !== 'shogun') {
+        if (req.user.role !== 'shogun' && req.user.role !== 'admin') {
             return res.status(403).json({ message: "🚫 Acceso denegado. Solo Shogun." });
         }
 
-        const { name, entryFee, prize, gameId, startDate, endDate } = req.body;
+        // Agregados maxWinners y gameType
+        const { name, entryFee, prize, gameId, startDate, endDate, maxWinners, gameType } = req.body;
 
-        if (!gameId || !startDate || !endDate) {
-            return res.status(400).json({ message: "Faltan datos (Juego o Fechas)" });
+        // Validación básica (gameId es opcional si es torneo genérico)
+        if (!name || !entryFee) {
+            return res.status(400).json({ message: "Faltan datos básicos" });
         }
         
         const newTournament = new Tournament({ 
             name, 
             entryFee, 
-            prize,
-            game: gameId, 
-            startDate,
-            endDate,
+            prizePool: prize, // Asegúrate que tu modelo use prizePool o prize
+            game: gameId || null, 
+            startDate: startDate || new Date(),
+            endDate: endDate || new Date(Date.now() + 7*24*60*60*1000), // 1 semana por defecto
             status: 'active', 
-            createdBy: req.user.id
+            createdBy: req.user.id,
+            maxWinners: maxWinners || 1, // Nuevo
+            gameType: gameType || 'Mixed' // Nuevo
         });
         
         await newTournament.save();
         res.status(201).json(newTournament);
     } catch (error) {
         console.error("Error createTournament:", error);
-        res.status(500).json({ message: "Error creando torneo." });
+        res.status(500).json({ message: "Error al crear torneo" });
+    }
+};
+
+// ==========================================
+// 🗑️ ELIMINAR TORNEO (NUEVO)
+// ==========================================
+export const deleteTournament = async (req, res) => {
+    try {
+        if (req.user.role !== 'shogun' && req.user.role !== 'admin') return res.status(403).json({ message: "Denegado" });
+        
+        await Tournament.findByIdAndDelete(req.params.id);
+        res.json({ message: "Torneo eliminado" });
+    } catch (error) {
+        res.status(500).json({ message: "Error al eliminar" });
     }
 };
