@@ -21,7 +21,7 @@ async function initAdmin() {
         const role = user.role ? user.role.toLowerCase() : '';
 
         // 🛑 VALIDACIÓN DE RANGO SHOGUN
-        if (!res.ok || role !== 'shogun') {
+        if (!res.ok || (role !== 'shogun' && role !== 'admin')) {
             alert("⛔ ACCESO DENEGADO. No eres el Shogun.");
             localStorage.clear();
             window.location.replace("login.html");
@@ -29,8 +29,11 @@ async function initAdmin() {
             console.log("⚔️ Shogun al mando.");
             
             // Cargas iniciales automáticas
-            loadStats();
-            loadPendingDeposits(); // Para actualizar el badge rojo del menú
+            loadStats();            // <--- NUEVO: Carga finanzas reales
+            loadPendingDeposits();  // <--- VIEJO: Carga depósitos pendientes
+            
+            // Auto-refresh de finanzas cada 15 segundos
+            setInterval(loadStats, 15000);
         }
     } catch (error) {
         console.error("Error crítico Admin:", error);
@@ -40,129 +43,187 @@ async function initAdmin() {
 // ==========================================
 // 2. SISTEMA DE PESTAÑAS (NAVEGACIÓN)
 // ==========================================
-// Vinculamos a window para que el HTML (onclick) pueda ejecutarlo
 window.switchView = (viewName, btnElement) => {
     
     // A. Ocultar todas las secciones
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     
     // B. Desactivar todos los botones del menú
-    document.querySelectorAll('.menu-btn').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
     
     // C. Activar la sección deseada
-    const targetSection = document.getElementById(`view-${viewName}`);
+    const targetSection = document.getElementById(viewName); // Corregido para coincidir con IDs del HTML
     if (targetSection) targetSection.classList.add('active');
     
     // D. Activar el botón presionado
     if (btnElement) btnElement.classList.add('active');
 
-    // E. LÓGICA DE CARGA BAJO DEMANDA (Para no saturar)
-    if (viewName === 'treasury') {
+    // E. LÓGICA DE CARGA BAJO DEMANDA
+    if (viewName === 'view-deposits') {
         loadPendingDeposits();
     } 
-    else if (viewName === 'command') { // Centro de Mando
-        loadAdminGames(); 
-        loadAdminTournaments();
-    }
-    else if (viewName === 'users') {
-        loadUsersList();
-    }
-    else if (viewName === 'dashboard') {
+    else if (viewName === 'view-dashboard') {
         loadStats();
     }
-};
-
-// ==========================================
-// 3. TESORERÍA (DEPÓSITOS Y RETIROS)
-// ==========================================
-window.loadPendingDeposits = async () => {
-    const list = document.getElementById("depositList");
-    const empty = document.getElementById("emptyTreasury");
-    const badge = document.getElementById("treasuryBadge");
-    
-    if(list) list.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Consultando bóveda...</td></tr>';
-
-    try {
-        const res = await fetch(`${API_URL}/api/payments/pending`, {
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-
-        if(!res.ok) throw new Error("Error API Tesorería");
-        const txs = await res.json();
-        
-        if(list) list.innerHTML = '';
-
-        // Actualizar Badge (Contador Rojo)
-        if (badge) {
-            if(txs.length > 0) {
-                badge.style.display = "inline-block";
-                badge.innerText = txs.length;
-                if(empty) empty.style.display = "none";
-            } else {
-                badge.style.display = "none";
-                if(empty) empty.style.display = "block";
-                return; // Si no hay nada, terminamos aquí
-            }
-        }
-
-        // Renderizar Filas
-        txs.forEach(tx => {
-            const row = document.createElement("tr");
-            const isDep = tx.type === 'deposit';
-            row.className = isDep ? 'row-deposit' : 'row-withdraw';
-            const date = new Date(tx.createdAt).toLocaleDateString();
-            
-            row.innerHTML = `
-                <td>${date}</td>
-                <td>${tx.user ? tx.user.ninjaName : 'Anon'}</td>
-                <td style="color:${isDep ? '#4caf50' : '#f44336'}">
-                    <strong>${isDep ? '📥 DEPOSITO' : '📤 RETIRO'}</strong>
-                </td>
-                <td style="font-weight:bold; color:var(--gold);">$${tx.amount}</td>
-                <td style="font-size:0.8rem; color:#aaa;">${tx.referenceId || tx.description}</td>
-                <td>
-                    <button onclick="processDeposit('${tx._id}', 'approve')" class="btn-ninja-primary" style="font-size:0.7rem; padding:5px 10px; margin-right:5px;" title="Aprobar">✔</button>
-                    <button onclick="processDeposit('${tx._id}', 'reject')" class="btn-ninja-outline" style="font-size:0.7rem; padding:5px 10px; color:var(--red); border-color:var(--red);" title="Rechazar">✖</button>
-                </td>
-            `;
-            list.appendChild(row);
-        });
-
-    } catch (error) {
-        console.error(error);
-        if(list) list.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Error de conexión.</td></tr>';
+    // Si tienes vista de juegos/torneos, agrégalas aquí si es necesario refrescar
+    else if (viewName === 'view-games') {
+        loadAdminGames();
+        loadAdminTournaments();
     }
 };
 
-window.processDeposit = async (id, action) => {
-    const actionText = action === 'approve' ? "APROBAR" : "RECHAZAR";
-    if(!confirm(`¿Estás seguro de ${actionText} esta operación?`)) return;
+window.logoutAdmin = () => {
+    localStorage.clear();
+    window.location.replace("login.html");
+};
+
+// ==========================================
+// 3. DASHBOARD Y ESTADÍSTICAS (NUEVO & REAL)
+// ==========================================
+async function loadStats() {
+    const token = localStorage.getItem("token");
+    if(!token) return;
+
+    try {
+        // Llamamos al nuevo endpoint financiero
+        const res = await fetch(`${API_URL}/api/finance/dashboard`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) return; 
+
+        const data = await res.json();
+
+        // 1. Actualizar Tarjetas de Fondos (Usando los IDs de tu HTML nuevo)
+        safeText("val-dao", formatMoney(data.funds.dao));
+        safeText("val-maint", formatMoney(data.funds.admin));
+        safeText("val-backup", formatMoney(data.funds.backup));
+        safeText("val-users", data.stats.active);
+
+        // 2. Actualizar Rendimiento
+        safeText("val-today", formatMoney(data.stats.today));
+        safeText("val-total", formatMoney(data.funds.total));
+        safeText("val-total-users", data.stats.total);
+
+        // 3. Llenar Tabla de Movimientos
+        renderHistoryTable(data.history);
+
+    } catch (error) {
+        console.error("Error cargando stats:", error);
+    }
+}
+
+function renderHistoryTable(transactions) {
+    const container = document.getElementById("activity-table-body");
+    if (!container) return;
+
+    if (!transactions || transactions.length === 0) {
+        container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">Sin actividad reciente.</td></tr>';
+        return;
+    }
+
+    container.innerHTML = transactions.map(tx => {
+        const date = new Date(tx.updatedAt).toLocaleDateString();
+        const user = tx.user ? tx.user.ninjaName : 'Desconocido';
+        const isDeposit = tx.type === 'deposit';
+        const color = isDeposit ? '#0f0' : '#f00'; 
+        const sign = isDeposit ? '+' : '-';
+        
+        return `
+            <tr style="border-bottom: 1px solid #222;">
+                <td style="padding: 8px; color: #666;">${date}</td>
+                <td style="font-weight: bold; color: white;">${user}</td>
+                <td>${tx.description || tx.type}</td>
+                <td style="color: ${color}; font-family: monospace;">${sign}${formatMoney(tx.amount)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ==========================================
+// 4. TESORERÍA (DEPÓSITOS Y RETIROS)
+// ==========================================
+window.loadPendingDeposits = async () => {
+    const container = document.getElementById("depositList");
+    const emptyMsg = document.getElementById("emptyTreasury");
+    const badge = document.getElementById("pendingBadge");
+    const token = localStorage.getItem("token");
+
+    if(container) container.innerHTML = '<tr><td colspan="6" style="text-align:center;">Consultando...</td></tr>';
+
+    try {
+        // Usamos el endpoint correcto de pagos pendientes
+        const res = await fetch(`${API_URL}/api/payments/pending`, { 
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const list = await res.json();
+
+        // Actualizar Badge
+        if(badge) {
+            badge.innerText = list.length;
+            badge.style.display = list.length > 0 ? 'inline-block' : 'none';
+        }
+
+        if (list.length === 0) {
+            if(container) container.innerHTML = "";
+            if(emptyMsg) emptyMsg.style.display = "block";
+            return;
+        }
+
+        if(emptyMsg) emptyMsg.style.display = "none";
+        
+        if(container) {
+            container.innerHTML = list.map(tx => `
+                <tr>
+                    <td>${new Date(tx.createdAt).toLocaleDateString()}</td>
+                    <td>
+                        <strong style="color:white">${tx.user?.ninjaName || 'Desconocido'}</strong><br>
+                        <small style="color:#666">${tx.user?.email || ''}</small>
+                    </td>
+                    <td style="color:${tx.type==='deposit'?'#0f0':'#f00'}">${tx.type.toUpperCase()}</td>
+                    <td style="font-weight:bold; font-size:1.1rem;">$${tx.amount}</td>
+                    <td style="font-family:monospace; color:#888;">${tx.referenceId || tx.description}</td>
+                    <td>
+                        <button onclick="processTx('${tx._id}', 'approve')" class="btn-action btn-approve" title="Aprobar">✔</button>
+                        <button onclick="processTx('${tx._id}', 'reject')" class="btn-action btn-reject" title="Rechazar">✖</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+    } catch (error) {
+        console.error("Error depósitos:", error);
+    }
+};
+
+window.processTx = async (txId, action) => {
+    if(!confirm(`¿Seguro que deseas ${action.toUpperCase()} esta transacción?`)) return;
 
     try {
         const res = await fetch(`${API_URL}/api/payments/manage`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem("token")}`
             },
-            body: JSON.stringify({ transactionId: id, action })
+            body: JSON.stringify({ transactionId: txId, action })
         });
 
         const data = await res.json();
         if(res.ok) {
-            alert(`✅ ${data.message}`);
-            loadPendingDeposits(); // Recargar lista al instante
-            loadStats(); // Actualizar stats globales
+            alert(data.message);
+            loadPendingDeposits(); // Refrescar lista
+            loadStats(); // Refrescar finanzas (el dinero entró)
         } else {
-            alert("⚠️ " + data.error);
+            alert("Error: " + data.error);
         }
     } catch (e) {
-        alert("Error de red al procesar.");
+        alert("Error de conexión");
     }
 };
 
 // ==========================================
-// 4. CENTRO DE MANDO: JUEGOS
+// 5. CENTRO DE MANDO: JUEGOS (MANTENEMOS ESTO)
 // ==========================================
 window.createGame = async function() {
     const title = document.getElementById('gTitle').value;
@@ -182,12 +243,11 @@ window.createGame = async function() {
         });
         
         if(res.ok) {
-            alert("🕹️ Juego desplegado en el Dojo.");
-            // Limpiar inputs
+            alert("🕹️ Juego desplegado.");
             document.getElementById('gTitle').value = "";
             document.getElementById('gUrl').value = "";
             document.getElementById('gThumb').value = "";
-            loadAdminGames(); // Recargar lista
+            loadAdminGames();
         } else {
             alert("Error al crear juego.");
         }
@@ -198,8 +258,6 @@ async function loadAdminGames() {
     const container = document.getElementById("adminGames");
     if(!container) return;
     
-    container.innerHTML = '<p class="muted-text">Cargando...</p>';
-
     try {
         const res = await fetch(`${API_URL}/api/games`);
         const games = await res.json();
@@ -221,14 +279,14 @@ async function loadAdminGames() {
 }
 
 // ==========================================
-// 5. CENTRO DE MANDO: TORNEOS
+// 6. CENTRO DE MANDO: TORNEOS (MANTENEMOS ESTO)
 // ==========================================
 window.createTournament = async function() {
     const name = document.getElementById('tName').value;
     const entryFee = document.getElementById('tFee').value;
     const prize = document.getElementById('tPrize').value;
 
-    if(!name || !entryFee) return alert("❌ Faltan datos del torneo.");
+    if(!name || !entryFee) return alert("❌ Faltan datos.");
 
     try {
         const res = await fetch(`${API_URL}/api/tournaments`, {
@@ -241,7 +299,7 @@ window.createTournament = async function() {
         });
 
         if(res.ok) {
-            alert("🏆 Torneo forjado con éxito.");
+            alert("🏆 Torneo creado.");
             document.getElementById('tName').value = "";
             document.getElementById('tFee').value = "";
             document.getElementById('tPrize').value = "";
@@ -255,8 +313,6 @@ window.createTournament = async function() {
 async function loadAdminTournaments() {
     const container = document.getElementById("adminTournaments");
     if(!container) return;
-
-    container.innerHTML = '<p class="muted-text">Cargando...</p>';
 
     try {
         const token = localStorage.getItem("token");
@@ -283,77 +339,12 @@ async function loadAdminTournaments() {
 }
 
 // ==========================================
-// 6. USUARIOS Y ESTADÍSTICAS (REAL TIME)
+// AUXILIARES
 // ==========================================
-async function loadStats() {
-    const token = localStorage.getItem("token");
-    if(!token) return;
-
-    try {
-        // Llamamos al nuevo endpoint
-        const res = await fetch(`${API_URL}/api/finance/dashboard`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!res.ok) return; // Si falla silenciosamente
-
-        const data = await res.json();
-
-        // 1. Actualizar Tarjetas de Fondos
-        safeText("val-dao", formatMoney(data.funds.dao));
-        safeText("val-maint", formatMoney(data.funds.admin));
-        safeText("val-backup", formatMoney(data.funds.backup));
-        safeText("val-users", data.stats.active);
-
-        // 2. Actualizar Rendimiento
-        safeText("val-today", formatMoney(data.stats.today));
-        safeText("val-total", formatMoney(data.funds.total));
-        safeText("val-total-users", data.stats.total);
-
-        // 3. Llenar Tabla de Movimientos
-        renderHistoryTable(data.history);
-
-    } catch (error) {
-        console.error("Error cargando stats:", error);
-    }
-}
-
-// Función auxiliar para la tabla
-function renderHistoryTable(transactions) {
-    const container = document.getElementById("activity-table-body");
-    if (!container) return;
-
-    if (!transactions || transactions.length === 0) {
-        container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">Sin actividad reciente.</td></tr>';
-        return;
-    }
-
-    container.innerHTML = transactions.map(tx => {
-        const date = new Date(tx.updatedAt).toLocaleDateString();
-        const user = tx.user ? tx.user.ninjaName : 'Desconocido';
-        const isDeposit = tx.type === 'deposit';
-        const color = isDeposit ? '#0f0' : '#f00'; // Verde ingreso, Rojo retiro
-        const sign = isDeposit ? '+' : '-';
-        
-        return `
-            <tr style="border-bottom: 1px solid #222;">
-                <td style="padding: 8px; color: #666;">${date}</td>
-                <td style="font-weight: bold; color: white;">${user}</td>
-                <td>${tx.description || tx.type}</td>
-                <td style="color: ${color}; font-family: monospace;">${sign}${formatMoney(tx.amount)}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// Auxiliares
 function safeText(id, text) {
     const el = document.getElementById(id);
     if(el) el.innerText = text;
 }
 function formatMoney(amount) {
-    return Number(amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    return Number(amount || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 }
-
-// Asegurar que se actualice cada 15 segundos
-setInterval(loadStats, 15000);
