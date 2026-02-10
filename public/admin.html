@@ -24,262 +24,205 @@
             background: var(--bg-dark);
             color: #fff;
             margin: 0; padding: 0;
-            height: 100vh; /* Ocupa toda la pantalla */
+            height: 100vh;
             overflow: hidden;
             font-family: 'Rajdhani', sans-serif;
-            display: flex;
-            flex-direction: column; /* Estructura Vertical: Header arriba, Cuerpo abajo */
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: 60px 1fr;
+            grid-template-areas: 
+                "sidebar header"
+                "sidebar main";
         }
 
-        /* 1. CABECERA (HEADER) - ARRIBA */
-        .top-header {
-            height: 70px;
+        /* HEADER */
+        .admin-header {
+            grid-area: header;
             background: var(--header-bg);
             border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 0 30px;
-            flex-shrink: 0;
-            justify-content: space-between;
-            z-index: 200;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px;
         }
 
-        .brand-title {
-            font-family: 'Orbitron';
-            font-size: 1.5rem;
-            color: #fff;
-            letter-spacing: 2px;
-            margin: 0;
-        }
-        .brand-title span { color: var(--blood); }
-
-        /* CONTENEDOR INFERIOR (Sidebar + Main) */
-        .layout-body {
-            display: flex;
-            flex: 1; /* Ocupa el resto de la altura */
-            height: calc(100vh - 70px);
-            overflow: hidden;
-        }
-
-        /* 2. BARRA LATERAL (MENU) - IZQUIERDA */
-        .sidebar {
-            width: 250px;
+        /* SIDEBAR */
+        .admin-sidebar {
+            grid-area: sidebar;
             background: var(--sidebar-bg);
             border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
+            padding: 20px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .nav-btn {
+            background: transparent; border: 1px solid transparent;
+            color: #888; text-align: left; padding: 12px;
+            cursor: pointer; transition: 0.3s; font-family: 'Orbitron';
+            display: flex; align-items: center; gap: 10px;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(255, 180, 0, 0.1);
+            color: var(--gold);
+            border-left: 3px solid var(--gold);
+        }
+
+        /* MAIN CONTENT */
+        .admin-main {
+            grid-area: main;
             padding: 20px;
             overflow-y: auto;
         }
 
-        .menu-btn {
-            background: transparent; border: none; color: #888;
-            width: 100%; padding: 15px; text-align: left;
-            font-family: 'Orbitron'; font-size: 0.9rem; cursor: pointer;
-            transition: 0.2s; border-radius: 4px; margin-bottom: 5px;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .menu-btn:hover, .menu-btn.active {
-            background: rgba(255, 180, 0, 0.05);
-            color: var(--gold); border-left: 3px solid var(--gold);
-        }
-        .badge { background: var(--blood); color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: auto; }
-
-        /* 3. PANEL CENTRAL (CONTENIDO) */
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-            background-image: radial-gradient(circle at center, #111 0%, #000 100%);
-        }
-
-        /* --- ESTILOS INTERNOS DEL DASHBOARD --- */
         .view-section { display: none; animation: fadeIn 0.3s ease; }
         .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* KPIs */
-        .kpi-header {
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;
+        .panel {
+            background: #0a0a0a; border: 1px solid var(--border);
+            padding: 20px; margin-bottom: 20px;
         }
-        .kpi-box {
-            background: #0e0e0e; border: 1px solid var(--border); padding: 20px; border-radius: 8px;
-        }
-        .kpi-box h4 { margin: 0; color: #666; font-size: 0.8rem; font-family: 'Orbitron'; }
-        .kpi-box p { margin: 10px 0 0; font-size: 2rem; font-weight: bold; color: #fff; }
-        
-        /* Paneles */
-        .panel { background: #0e0e0e; border: 1px solid var(--border); padding: 25px; border-radius: 8px; margin-bottom: 20px; }
-        .panel h3 { margin-top: 0; color: var(--gold); font-family: 'Orbitron'; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px; }
 
-        /* Inputs y Tablas */
-        .input-ninja { background: #050505; border: 1px solid #333; color: white; padding: 10px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
-        .btn-full { width: 100%; padding: 10px; background: var(--gold); border: none; font-weight: bold; cursor: pointer; color: #000; }
-        
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; color: #666; padding: 10px; border-bottom: 1px solid #333; }
-        td { padding: 10px; border-bottom: 1px solid #1a1a1a; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .split-view { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        /* TABLA */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { text-align: left; color: #666; border-bottom: 1px solid #333; padding: 10px; font-size: 0.8rem; }
+        td { padding: 10px; border-bottom: 1px solid #222; }
+
+        .btn-action { padding: 5px 10px; cursor: pointer; border: none; font-weight: bold; }
+        .btn-approve { background: #0f0; color: black; }
+        .btn-reject { background: #333; color: #fff; }
+        .btn-full { width: 100%; padding: 10px; background: var(--blood); color: white; border: none; cursor: pointer; font-family: 'Orbitron'; }
+
+        /* GRID DASHBOARD */
+        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <header class="top-header">
-        <h1 class="brand-title">SHOGUN <span>SYSTEM</span></h1>
-        <div style="display:flex; gap:15px; align-items:center;">
-            <span style="font-size:0.8rem; color:#666;">MODO ADMINISTRADOR</span>
-            <button onclick="window.location.href='dashboard.html'" style="background:var(--blood); border:none; color:white; padding:5px 15px; cursor:pointer; font-family:'Orbitron';">SALIR</button>
+    <header class="admin-header">
+        <div style="font-family: 'Orbitron'; font-size: 1.2rem;">
+            SHOGUN <span style="color:var(--blood)">SYSTEM</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div id="clock" style="font-family: monospace; color: var(--gold);">00:00:00</div>
+            <button onclick="logoutAdmin()" style="background:none; border:1px solid #333; color:#666; padding:5px 10px; cursor:pointer;">SALIR</button>
         </div>
     </header>
 
-    <div class="layout-body">
-        
-        <aside class="sidebar">
-            <nav>
-                <button class="menu-btn active" onclick="switchView('dashboard', this)">
-                    <i class="fas fa-chart-line"></i> DASHBOARD
-                </button>
-                <button class="menu-btn" onclick="switchView('command', this)">
-                    <i class="fas fa-terminal"></i> CENTRO DE MANDO
-                </button>
-                <button class="menu-btn" onclick="switchView('treasury', this)">
-                    <i class="fas fa-coins"></i> TESORERÍA 
-                    <span id="treasuryBadge" class="badge" style="display:none">0</span>
-                </button>
-                <button class="menu-btn" onclick="switchView('users', this)">
-                    <i class="fas fa-users"></i> GUERREROS
-                </button>
-            </nav>
-        </aside>
+    <aside class="admin-sidebar">
+        <button class="nav-btn active" onclick="switchView('view-dashboard', this)">
+            <i class="fas fa-chart-line"></i> DASHBOARD
+        </button>
+        <button class="nav-btn" onclick="switchView('view-deposits', this)">
+            <i class="fas fa-money-bill-wave"></i> SOLICITUDES <span id="pendingBadge" style="background:var(--blood); color:white; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:none;">0</span>
+        </button>
+        <button class="nav-btn" onclick="switchView('view-users', this)">
+            <i class="fas fa-users"></i> GUERREROS
+        </button>
+    </aside>
 
-        <main class="main-content">
+    <main class="admin-main">
+        
+        <div id="view-dashboard" class="view-section active">
             
-          <div id="view-dashboard" class="view-section active">
+            <div class="grid-4">
+                <div class="panel" style="border-top: 3px solid var(--gold); text-align: center;">
+                    <div style="color: #888;">🏛️ FONDO DAO</div>
+                    <div id="val-dao" style="font-size: 1.8rem; font-weight: bold; color: var(--gold);">$0.00</div>
+                </div>
+                
+                <div class="panel" style="border-top: 3px solid var(--blood); text-align: center;">
+                    <div style="color: #888;">👺 MANTENIMIENTO</div>
+                    <div id="val-maint" style="font-size: 1.8rem; font-weight: bold; color: white;">$0.00</div>
+                </div>
     
-    <div class="grid-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
-        <div class="panel" style="border-top: 3px solid var(--gold); text-align: center;">
-            <div style="color: #888;">🏛️ FONDO DAO</div>
-            <div id="val-dao" style="font-size: 1.8rem; font-weight: bold; color: var(--gold);">$0.00</div>
-        </div>
-        
-        <div class="panel" style="border-top: 3px solid var(--blood); text-align: center;">
-            <div style="color: #888;">👺 MANTENIMIENTO</div>
-            <div id="val-maint" style="font-size: 1.8rem; font-weight: bold; color: white;">$0.00</div>
-        </div>
-
-        <div class="panel" style="border-top: 3px solid blue; text-align: center;">
-            <div style="color: #888;">🛡️ RESERVA</div>
-            <div id="val-backup" style="font-size: 1.8rem; font-weight: bold; color: white;">$0.00</div>
-        </div>
-
-        <div class="panel" style="border-top: 3px solid green; text-align: center;">
-            <div style="color: #888;">🥷 NINJAS ACTIVOS</div>
-            <div id="val-users" style="font-size: 1.8rem; font-weight: bold; color: white;">0</div>
-        </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
-        <div class="panel">
-            <h3>📈 RENDIMIENTO</h3>
-            <div style="margin-top: 15px; display: flex; justify-content: space-between;">
-                <span>Ingreso Hoy:</span>
-                <strong id="val-today" style="color: #0f0;">$0.00</strong>
+                <div class="panel" style="border-top: 3px solid blue; text-align: center;">
+                    <div style="color: #888;">🛡️ RESERVA</div>
+                    <div id="val-backup" style="font-size: 1.8rem; font-weight: bold; color: white;">$0.00</div>
+                </div>
+    
+                <div class="panel" style="border-top: 3px solid green; text-align: center;">
+                    <div style="color: #888;">🥷 NINJAS ACTIVOS</div>
+                    <div id="val-users" style="font-size: 1.8rem; font-weight: bold; color: white;">0</div>
+                </div>
             </div>
-            <div style="margin-top: 10px; display: flex; justify-content: space-between;">
-                <span>Total Histórico:</span>
-                <strong id="val-total" style="color: white;">$0.00</strong>
-            </div>
-            <div style="margin-top: 10px; display: flex; justify-content: space-between;">
-                <span>Total Registrados:</span>
-                <strong id="val-total-users">0</strong>
+    
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+                <div class="panel">
+                    <h3>📈 RENDIMIENTO</h3>
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between;">
+                        <span>Ingreso Hoy:</span>
+                        <strong id="val-today" style="color: #0f0;">$0.00</strong>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; justify-content: space-between;">
+                        <span>Total Histórico:</span>
+                        <strong id="val-total" style="color: white;">$0.00</strong>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; justify-content: space-between;">
+                        <span>Total Registrados:</span>
+                        <strong id="val-total-users">0</strong>
+                    </div>
+                </div>
+    
+                <div class="panel">
+                    <h3>📜 HISTORIAL DE MOVIMIENTOS</h3>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="text-align: left; color: #666; border-bottom: 1px solid #333;">
+                                    <th style="padding: 5px;">FECHA</th>
+                                    <th>NINJA</th>
+                                    <th>ACCIÓN</th>
+                                    <th>MONTO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activity-table-body">
+                                <tr><td colspan="4" style="text-align:center; padding:20px;">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="panel">
-            <h3>📜 ÚLTIMOS MOVIMIENTOS</h3>
-            <div style="max-height: 300px; overflow-y: auto;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+        <div id="view-deposits" class="view-section">
+            <div class="panel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3 style="margin:0; border:none;">SOLICITUDES PENDIENTES</h3>
+                    <button onclick="loadPendingDeposits()" class="btn-full" style="width:auto; padding:5px 15px;">REFRESCAR</button>
+                </div>
+                
+                <table style="width:100%">
                     <thead>
-                        <tr style="text-align: left; color: #666; border-bottom: 1px solid #333;">
-                            <th style="padding: 5px;">FECHA</th>
-                            <th>NINJA</th>
-                            <th>ACCIÓN</th>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>USUARIO</th>
+                            <th>TIPO</th>
                             <th>MONTO</th>
+                            <th>DETALLE</th>
+                            <th>ACCIÓN</th>
                         </tr>
                     </thead>
-                    <tbody id="activity-table-body">
-                        </tbody>
+                    <tbody id="depositList"></tbody>
                 </table>
+                <div id="emptyTreasury" style="text-align:center; padding:40px; display:none; color:#666;">Todo al día.</div>
             </div>
         </div>
-    </div>
-</div>
 
-            <div id="view-command" class="view-section">
-                <div class="split-view">
-                    <div>
-                        <div class="panel">
-                            <h3><i class="fas fa-trophy"></i> CREAR TORNEO</h3>
-                            <input type="text" id="tName" placeholder="Nombre" class="input-ninja">
-                            <div style="display:flex; gap:10px;">
-                                <input type="number" id="tFee" placeholder="Entrada" class="input-ninja">
-                                <input type="number" id="tPrize" placeholder="Premio" class="input-ninja">
-                            </div>
-                            <button onclick="createTournament()" class="btn-full">FORJAR</button>
-                        </div>
-                        <div class="panel">
-                            <h3><i class="fas fa-gamepad"></i> SUBIR JUEGO</h3>
-                            <input type="text" id="gTitle" placeholder="Título" class="input-ninja">
-                            <input type="text" id="gUrl" placeholder="URL Embed" class="input-ninja">
-                            <input type="text" id="gThumb" placeholder="Thumbnail" class="input-ninja">
-                            <button onclick="createGame()" class="btn-full" style="background:#333; color:white; border:1px solid #555;">DESPLEGAR</button>
-                        </div>
-                    </div>
-                    <div class="panel">
-                        <h3>INVENTARIO</h3>
-                        <h4 style="color:#666; margin-bottom:5px;">TORNEOS</h4>
-                        <div id="adminTournaments" style="height:150px; overflow-y:auto; margin-bottom:20px; border-bottom:1px solid #333;">Cargando...</div>
-                        <h4 style="color:#666; margin-bottom:5px;">JUEGOS</h4>
-                        <div id="adminGames" style="height:150px; overflow-y:auto;">Cargando...</div>
-                    </div>
-                </div>
+        <div id="view-users" class="view-section">
+            <div class="panel">
+                <h3>CENSO DE GUERREROS</h3>
+                <div id="usersListContainer" style="text-align:center; padding:40px; color:#666;">Cargando base de datos...</div>
             </div>
+        </div>
 
-            <div id="view-treasury" class="view-section">
-                <div class="panel">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                        <h3 style="margin:0; border:none;">SOLICITUDES DE FONDOS</h3>
-                        <button onclick="loadPendingDeposits()" class="btn-full" style="width:auto; padding:5px 15px;">REFRESCAR</button>
-                    </div>
-                    
-                    <table style="width:100%">
-                        <thead>
-                            <tr>
-                                <th>FECHA</th>
-                                <th>USUARIO</th>
-                                <th>TIPO</th>
-                                <th>MONTO</th>
-                                <th>DETALLE</th>
-                                <th>ACCIÓN</th>
-                            </tr>
-                        </thead>
-                        <tbody id="depositList"></tbody>
-                    </table>
-                    <div id="emptyTreasury" style="text-align:center; padding:40px; display:none; color:#666;">Todo al día.</div>
-                </div>
-            </div>
-
-            <div id="view-users" class="view-section">
-                <div class="panel">
-                    <h3>CENSO DE GUERREROS</h3>
-                    <div id="usersListContainer" style="text-align:center; padding:40px; color:#666;">Cargando base de datos...</div>
-                </div>
-            </div>
-
-        </main>
-    </div>
+    </main>
 
     <script type="module" src="js/admin.js"></script>
+    <script>
+        // Reloj
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+        }, 1000);
+    </script>
 </body>
 </html>
