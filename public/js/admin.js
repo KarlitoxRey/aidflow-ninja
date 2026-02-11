@@ -22,7 +22,6 @@ async function initAdmin() {
             window.location.replace("login.html");
         } else {
             console.log("⚔️ Shogun al mando.");
-            // Cargas iniciales
             loadStats();
             loadPendingDeposits();
             // Auto-refresh cada 15 seg
@@ -49,10 +48,10 @@ window.switchView = (viewName, btnElement) => {
     if(viewName === 'view-dashboard') loadStats();
     if(viewName === 'view-games') loadAdminGames();         
     
-    // 👇 AQUÍ ESTÁ EL CAMBIO IMPORTANTE 👇
+    // 👇 CARGA DE TORNEOS Y SELECTOR DE JUEGOS
     if(viewName === 'view-tournaments') {
         loadAdminTournaments(); 
-        loadGameOptions(); // Cargar la lista de juegos para el selector
+        loadGameOptions(); 
     }
     
     if(viewName === 'view-users') loadUsersList();          
@@ -61,7 +60,115 @@ window.switchView = (viewName, btnElement) => {
 window.logoutAdmin = () => { localStorage.clear(); window.location.replace("login.html"); };
 
 // ==========================================
-// 3. JUEGOS Y TORNEOS (LÓGICA NUEVA)
+// 3. GESTIÓN DE JUEGOS (PROPIOS Y EXTERNOS)
+// ==========================================
+window.createGame = async function(sourceType) {
+    let title, embedUrl, thumbnail, type;
+
+    // Determinar de qué formulario vienen los datos
+    if (sourceType === 'internal') {
+        // Formulario de Juegos Propios
+        title = document.getElementById('nTitle').value;
+        embedUrl = document.getElementById('nUrl').value;
+        thumbnail = document.getElementById('nThumb').value;
+        type = document.getElementById('nType').value;
+    } else {
+        // Formulario de Embeds (Default)
+        title = document.getElementById('gTitle').value;
+        embedUrl = document.getElementById('gUrl').value;
+        thumbnail = document.getElementById('gThumb').value;
+        type = document.getElementById('gType').value;
+        sourceType = 'external';
+    }
+
+    if(!title || !embedUrl) return alert("❌ Faltan datos (Título o URL).");
+
+    try {
+        const res = await fetch(`${API_URL}/api/games`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": `Bearer ${localStorage.getItem("token")}` 
+            },
+            body: JSON.stringify({ 
+                title, 
+                embedUrl, 
+                thumbnail, 
+                type, 
+                source: sourceType // Enviamos si es 'internal' o 'external'
+            })
+        });
+
+        if(res.ok) { 
+            alert(`✅ Juego ${sourceType === 'internal' ? 'PROPIO' : 'EXTERNO'} agregado.`); 
+            
+            // Limpiar campos según el formulario usado
+            if (sourceType === 'internal') {
+                document.getElementById('nTitle').value = "";
+                document.getElementById('nUrl').value = "";
+                document.getElementById('nThumb').value = "";
+            } else {
+                document.getElementById('gTitle').value = "";
+                document.getElementById('gUrl').value = "";
+                document.getElementById('gThumb').value = "";
+            }
+            
+            loadAdminGames(); 
+        } else {
+            alert("Error al guardar el juego.");
+        }
+    } catch(e) { console.error(e); }
+};
+
+window.deleteGame = async function(id) {
+    if(!confirm("¿Eliminar este juego permanentemente?")) return;
+    try {
+        const res = await fetch(`${API_URL}/api/games/${id}`, {
+            method: "DELETE", headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+        if(res.ok) loadAdminGames();
+    } catch(e) {}
+};
+
+async function loadAdminGames() {
+    const container = document.getElementById("adminGames");
+    if(!container) return;
+    try {
+        const res = await fetch(`${API_URL}/api/games`);
+        const games = await res.json();
+        
+        if(games.length === 0) {
+            container.innerHTML = '<p class="muted-text" style="grid-column: 1/-1;">Inventario vacío.</p>';
+            return;
+        }
+
+        container.innerHTML = games.map(g => {
+            // Distinguir visualmente
+            const isInternal = g.source === 'internal';
+            const badge = isInternal 
+                ? `<span style="background:var(--gold); color:black; padding:2px 5px; font-size:0.7rem; font-weight:bold; border-radius:3px;">⚡ PROPIO</span>`
+                : `<span style="background:#333; color:#ccc; padding:2px 5px; font-size:0.7rem; border-radius:3px;">🌐 EMBED</span>`;
+
+            return `
+            <div class="list-item" style="display:flex; flex-direction:column; align-items:flex-start; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px; width:100%;">
+                    <img src="${g.thumbnail || 'https://via.placeholder.com/40'}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;">
+                    <div style="flex:1;">
+                        <strong>${g.title}</strong> <br>
+                        ${badge} <small style="color:#888;">(${g.type})</small>
+                    </div>
+                    <button onclick="deleteGame('${g._id}')" class="btn-delete" style="align-self: flex-start;">X</button>
+                </div>
+                <div style="font-family:monospace; font-size:0.7rem; color:#666; word-break:break-all;">
+                    ${g.embedUrl.substring(0, 40)}...
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) { container.innerHTML = "Error cargando juegos."; }
+}
+
+// ==========================================
+// 4. GESTIÓN DE TORNEOS (LOGICA QUE FALTABA)
 // ==========================================
 
 // Función para llenar el SELECT del HTML con los juegos disponibles
@@ -89,25 +196,23 @@ window.createTournament = async function() {
     const prize = document.getElementById('tPrize').value;
     const winners = document.getElementById('tWinners').value;
     const gameType = document.getElementById('tGameType').value;
-    const gameId = document.getElementById('tGameSelect').value; // 👇 OBTENEMOS EL ID DEL JUEGO
+    const gameId = document.getElementById('tGameSelect').value; // OBTENEMOS EL ID DEL JUEGO
 
     if(!name || !entryFee || !gameId) return alert("❌ Faltan datos (Nombre, Entrada o Juego).");
 
     try {
         const res = await fetch(`${API_URL}/api/tournaments`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": `Bearer ${localStorage.getItem("token")}` 
             },
-            // 👇 ENVIAMOS gameId AL BACKEND
             body: JSON.stringify({ name, entryFee, prize, maxWinners: winners, gameType, gameId })
         });
 
         if(res.ok) {
             alert("🏆 Torneo creado exitosamente.");
-            // Limpiar campos
-            document.getElementById('tName').value = "";
+            document.getElementById('tName').value = ""; // Limpiar
             document.getElementById('tFee').value = "";
             loadAdminTournaments();
         } else {
@@ -153,63 +258,8 @@ async function loadAdminTournaments() {
     }
 }
 
-// Gestión de Juegos
-window.createGame = async function() {
-    const title = document.getElementById('gTitle').value;
-    const embedUrl = document.getElementById('gUrl').value;
-    const type = document.getElementById('gType').value;
-    const thumbnail = document.getElementById('gThumb').value; // Agregado thumbnail
-
-    if(!title || !embedUrl) return alert("❌ Faltan datos.");
-
-    try {
-        const res = await fetch(`${API_URL}/api/games`, {
-            method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
-            body: JSON.stringify({ title, embedUrl, thumbnail, type })
-        });
-        if(res.ok) { 
-            alert("🕹️ Juego subido."); 
-            document.getElementById('gTitle').value = "";
-            document.getElementById('gUrl').value = "";
-            loadAdminGames(); 
-        }
-    } catch(e) { console.error(e); }
-};
-
-window.deleteGame = async function(id) {
-    if(!confirm("¿Eliminar juego?")) return;
-    try {
-        const res = await fetch(`${API_URL}/api/games/${id}`, {
-            method: "DELETE", headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-        if(res.ok) loadAdminGames();
-    } catch(e) {}
-};
-
-async function loadAdminGames() {
-    const container = document.getElementById("adminGames");
-    if(!container) return;
-    try {
-        const res = await fetch(`${API_URL}/api/games`);
-        const games = await res.json();
-        
-        if(games.length === 0) {
-            container.innerHTML = '<p class="muted-text">Inventario vacío.</p>';
-            return;
-        }
-
-        container.innerHTML = games.map(g => `
-            <div class="list-item">
-                <div>
-                    <strong>${g.title}</strong> <small>(${g.type || 'gen'})</small>
-                </div>
-                <button onclick="deleteGame('${g._id}')" class="btn-delete">BORRAR</button>
-            </div>`).join('');
-    } catch(e) { container.innerHTML = "Error games"; }
-}
-
 // ==========================================
-// 4. DASHBOARD (FINANZAS & HISTORIAL)
+// 5. DASHBOARD (FINANZAS & HISTORIAL)
 // ==========================================
 async function loadStats() {
     const token = localStorage.getItem("token");
@@ -247,7 +297,7 @@ function renderHistoryTable(transactions) {
 }
 
 // ==========================================
-// 5. TESORERÍA (SOLICITUDES DE PAGO)
+// 6. TESORERÍA (SOLICITUDES DE PAGO)
 // ==========================================
 window.loadPendingDeposits = async () => {
     const container = document.getElementById("depositList");
@@ -307,7 +357,7 @@ window.processTx = async (txId, action) => {
 };
 
 // ==========================================
-// 6. CENSO DE GUERREROS
+// 7. CENSO DE GUERREROS
 // ==========================================
 window.loadUsersList = async function() {
     const tbody = document.getElementById("usersTableBody");
