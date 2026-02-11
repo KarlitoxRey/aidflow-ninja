@@ -22,8 +22,11 @@ async function initAdmin() {
             window.location.replace("login.html");
         } else {
             console.log("⚔️ Shogun al mando.");
-            loadStats();
-            loadPendingDeposits();
+            // Cargas iniciales
+            loadStats();            // Finanzas y Dashboard
+            loadPendingDeposits();  // Solicitudes
+            
+            // Auto-refresh cada 15 seg
             setInterval(loadStats, 15000);
         }
     } catch (error) { console.error(error); }
@@ -33,23 +36,27 @@ async function initAdmin() {
 // 2. NAVEGACIÓN
 // ==========================================
 window.switchView = (viewName, btnElement) => {
+    // A. Ocultar secciones y desactivar botones
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
     
-    document.getElementById(viewName).classList.add('active');
+    // B. Activar sección y botón
+    const target = document.getElementById(viewName);
+    if(target) target.classList.add('active');
     if (btnElement) btnElement.classList.add('active');
 
+    // C. Carga diferida según la vista
     if(viewName === 'view-deposits') loadPendingDeposits();
     if(viewName === 'view-dashboard') loadStats();
-    if(viewName === 'view-games') loadAdminGames();         // <---
-    if(viewName === 'view-tournaments') loadAdminTournaments(); // <---
-    if(viewName === 'view-users') loadUsersList();          // <---
+    if(viewName === 'view-games') loadAdminGames();         
+    if(viewName === 'view-tournaments') loadAdminTournaments(); 
+    if(viewName === 'view-users') loadUsersList();          
 };
 
 window.logoutAdmin = () => { localStorage.clear(); window.location.replace("login.html"); };
 
 // ==========================================
-// 3. DASHBOARD (FINANZAS)
+// 3. DASHBOARD (FINANZAS & HISTORIAL)
 // ==========================================
 async function loadStats() {
     const token = localStorage.getItem("token");
@@ -59,21 +66,26 @@ async function loadStats() {
         if (!res.ok) return; 
         const data = await res.json();
 
+        // Actualizar Tarjetas
         safeText("val-dao", formatMoney(data.funds.dao));
         safeText("val-maint", formatMoney(data.funds.admin));
         safeText("val-backup", formatMoney(data.funds.backup));
         safeText("val-users", data.stats.active);
+        
+        // Actualizar Rendimiento
         safeText("val-today", formatMoney(data.stats.today));
         safeText("val-total", formatMoney(data.funds.total));
+        
+        // Actualizar Tabla Historial
         renderHistoryTable(data.history);
-    } catch (error) { console.error(error); }
+    } catch (error) { console.error("Error stats:", error); }
 }
 
 function renderHistoryTable(transactions) {
     const container = document.getElementById("activity-table-body");
     if (!container) return;
     if (!transactions || transactions.length === 0) {
-        container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">Sin actividad.</td></tr>';
+        container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">Sin actividad reciente.</td></tr>';
         return;
     }
     container.innerHTML = transactions.map(tx => `
@@ -86,7 +98,7 @@ function renderHistoryTable(transactions) {
 }
 
 // ==========================================
-// 4. TESORERÍA
+// 4. TESORERÍA (SOLICITUDES DE PAGO)
 // ==========================================
 window.loadPendingDeposits = async () => {
     const container = document.getElementById("depositList");
@@ -97,26 +109,32 @@ window.loadPendingDeposits = async () => {
         const res = await fetch(`${API_URL}/api/payments/pending`, { headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` } });
         const list = await res.json();
 
-        if(badge) { badge.innerText = list.length; badge.style.display = list.length > 0 ? 'inline-block' : 'none'; }
+        if(badge) { 
+            badge.innerText = list.length; 
+            badge.style.display = list.length > 0 ? 'inline-block' : 'none'; 
+        }
         
         if (list.length === 0) {
-            container.innerHTML = "";
-            emptyMsg.style.display = "block";
+            if(container) container.innerHTML = "";
+            if(emptyMsg) emptyMsg.style.display = "block";
             return;
         }
-        emptyMsg.style.display = "none";
-        container.innerHTML = list.map(tx => `
-            <tr>
-                <td>${new Date(tx.createdAt).toLocaleDateString()}</td>
-                <td><strong style="color:white">${tx.user?.ninjaName || 'Anon'}</strong></td>
-                <td style="color:${tx.type==='deposit'?'#0f0':'#f00'}">${tx.type.toUpperCase()}</td>
-                <td style="font-weight:bold;">$${tx.amount}</td>
-                <td style="font-family:monospace; color:#888;">${tx.referenceId || tx.description}</td>
-                <td>
-                    <button onclick="processTx('${tx._id}', 'approve')" class="btn-action btn-approve">✔</button>
-                    <button onclick="processTx('${tx._id}', 'reject')" class="btn-action btn-reject">X</button>
-                </td>
-            </tr>`).join('');
+        
+        if(emptyMsg) emptyMsg.style.display = "none";
+        if(container) {
+            container.innerHTML = list.map(tx => `
+                <tr>
+                    <td>${new Date(tx.createdAt).toLocaleDateString()}</td>
+                    <td><strong style="color:white">${tx.user?.ninjaName || 'Anon'}</strong></td>
+                    <td style="color:${tx.type==='deposit'?'#0f0':'#f00'}">${tx.type.toUpperCase()}</td>
+                    <td style="font-weight:bold;">$${tx.amount}</td>
+                    <td style="font-family:monospace; color:#888;">${tx.referenceId || tx.description}</td>
+                    <td>
+                        <button onclick="processTx('${tx._id}', 'approve')" class="btn-action btn-approve">✔</button>
+                        <button onclick="processTx('${tx._id}', 'reject')" class="btn-action btn-reject">X</button>
+                    </td>
+                </tr>`).join('');
+        }
     } catch (error) { console.error(error); }
 };
 
@@ -128,8 +146,15 @@ window.processTx = async (txId, action) => {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("token")}` },
             body: JSON.stringify({ transactionId: txId, action })
         });
-        if(res.ok) { alert("Hecho."); loadPendingDeposits(); loadStats(); }
-    } catch (e) { alert("Error"); }
+        if(res.ok) { 
+            alert("Operación exitosa."); 
+            loadPendingDeposits(); 
+            loadStats(); 
+        } else {
+            const data = await res.json();
+            alert("Error: " + data.error);
+        }
+    } catch (e) { alert("Error de conexión"); }
 };
 
 // ==========================================
@@ -147,8 +172,13 @@ window.createGame = async function() {
             method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
             body: JSON.stringify({ title, embedUrl, type })
         });
-        if(res.ok) { alert("🕹️ Juego subido."); loadAdminGames(); }
-    } catch(e) {}
+        if(res.ok) { 
+            alert("🕹️ Juego subido."); 
+            document.getElementById('gTitle').value = "";
+            document.getElementById('gUrl').value = "";
+            loadAdminGames(); 
+        }
+    } catch(e) { console.error(e); }
 };
 
 window.deleteGame = async function(id) {
@@ -167,6 +197,12 @@ async function loadAdminGames() {
     try {
         const res = await fetch(`${API_URL}/api/games`);
         const games = await res.json();
+        
+        if(games.length === 0) {
+            container.innerHTML = '<p class="muted-text">Inventario vacío.</p>';
+            return;
+        }
+
         container.innerHTML = games.map(g => `
             <div class="list-item">
                 <div>
@@ -194,7 +230,10 @@ window.createTournament = async function() {
             method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
             body: JSON.stringify({ name, entryFee, prize, maxWinners: winners, gameType })
         });
-        if(res.ok) { alert("🏆 Torneo creado."); loadAdminTournaments(); }
+        if(res.ok) { 
+            alert("🏆 Torneo creado."); 
+            loadAdminTournaments(); 
+        }
     } catch(e) {}
 };
 
@@ -216,6 +255,11 @@ async function loadAdminTournaments() {
         const res = await fetch(`${API_URL}/api/tournaments`, { headers: { "Authorization": `Bearer ${token}` } });
         const data = await res.json();
         
+        if(data.length === 0) {
+            container.innerHTML = '<p class="muted-text">No hay torneos activos.</p>';
+            return;
+        }
+        
         container.innerHTML = data.map(t => `
             <div class="list-item">
                 <div>
@@ -236,11 +280,11 @@ window.loadUsersList = async function() {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Cargando...</td></tr>';
 
     try {
-        const res = await fetch(`${API_URL}/api/users/census`, { // Ruta especial
+        const res = await fetch(`${API_URL}/api/users/census`, { 
             headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
         });
         
-        // Si no existe la ruta census, intentamos con la normal
+        // Si no existe la ruta census, intentamos con la normal (fallback)
         if(!res.ok) return loadUsersFallback();
 
         const users = await res.json();
@@ -252,13 +296,13 @@ window.loadUsersList = async function() {
                 <td style="color:var(--gold); font-weight:bold;">${u.tournamentTokens || 0}</td>
                 <td>${u.isActive ? '<span style="color:#0f0">ACTIVO</span>' : '<span style="color:#666">OFF</span>'}</td>
             </tr>`).join('');
-    } catch(e) { tbody.innerHTML = 'Error'; }
+    } catch(e) { tbody.innerHTML = 'Error de conexión'; }
 };
 
 function getLevelColor(level) {
-    if(level === 1) return '#cd7f32';
-    if(level === 2) return '#c0c0c0';
-    if(level === 3) return '#ffd700';
+    if(level === 1) return '#cd7f32'; // Bronce
+    if(level === 2) return '#c0c0c0'; // Plata
+    if(level === 3) return '#ffd700'; // Oro
     return '#666';
 }
 
@@ -276,6 +320,8 @@ async function loadUsersFallback() {
         </tr>`).join('');
 }
 
-// Auxiliares
+// ==========================================
+// AUXILIARES
+// ==========================================
 function safeText(id, text) { const el = document.getElementById(id); if(el) el.innerText = text; }
 function formatMoney(amount) { return Number(amount || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }); }
