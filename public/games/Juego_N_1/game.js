@@ -1,12 +1,10 @@
-﻿/* game.js */
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Configuración visual
 const COLORS = {
-    player: '#ffffff', // Ninja Blanco
-    enemy: '#8e0000',  // Enemigos Rojos (Sangre)
-    food: '#ffb400',   // Oro (Puntos)
+    player: '#ffffff',
+    enemy: '#8e0000',
+    food: '#ffb400',
     grid: '#111'
 };
 
@@ -15,7 +13,14 @@ let player, food, enemies, score, speed, gameLoop;
 let isPlaying = false;
 let highScore = localStorage.getItem("aidflowHighScore") || 0;
 
+// Detectar modo automáticamente
+let mode = document.body.getAttribute("data-mode"); // "practice" o "tournament"
+let lives = (mode === "tournament") ? 3 : Infinity;
+
 document.getElementById("highScore").innerText = highScore;
+document.getElementById("gameModeLabel").innerText = 
+    (mode === "tournament") ? "Modo Torneo (3 vidas)" : "Modo Práctica (libre)";
+document.getElementById("lives").innerText = (mode === "tournament") ? lives : "∞";
 
 function startGame() {
     if (isPlaying) return;
@@ -28,7 +33,6 @@ function startGame() {
     isPlaying = true;
 
     document.getElementById("score").innerText = "0";
-    document.getElementById("btnStart").innerText = "REINICIAR";
 
     clearInterval(gameLoop);
     gameLoop = setInterval(update, speed);
@@ -42,29 +46,24 @@ function randomPosition() {
 }
 
 function update() {
-    // Fondo limpio
     ctx.fillStyle = COLORS.grid;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Mover
     player.x += player.dx;
     player.y += player.dy;
 
-    // 💀 Colisión Borde
     if (player.x < 0 || player.x >= canvas.width || player.y < 0 || player.y >= canvas.height) {
         endGame();
         return;
     }
 
-    // 🍏 Comer Oro
     if (player.x === food.x && player.y === food.y) {
         score += 10;
         document.getElementById("score").innerText = score;
         
         food = randomPosition();
-        enemies.push(randomPosition()); // + Dificultad
+        enemies.push(randomPosition());
 
-        // Acelerar
         if (speed > 50) {
             speed -= 2;
             clearInterval(gameLoop);
@@ -72,27 +71,21 @@ function update() {
         }
     }
 
-    // 🖌️ DIBUJAR
-
-    // Comida (Oro) - Efecto brillo
     ctx.shadowBlur = 15;
     ctx.shadowColor = COLORS.food;
     ctx.fillStyle = COLORS.food;
     ctx.fillRect(food.x + 2, food.y + 2, grid - 4, grid - 4);
     ctx.shadowBlur = 0;
 
-    // Jugador (Ninja)
     ctx.fillStyle = COLORS.player;
     ctx.fillRect(player.x, player.y, grid, grid);
 
-    // Enemigos (Amenazas)
     ctx.fillStyle = COLORS.enemy;
     enemies.forEach(e => {
         ctx.beginPath();
         ctx.arc(e.x + 10, e.y + 10, 8, 0, Math.PI * 2);
         ctx.fill();
 
-        // Colisión Enemigo
         if (e.x === player.x && e.y === player.y) {
             endGame();
         }
@@ -102,7 +95,14 @@ function update() {
 function endGame() {
     clearInterval(gameLoop);
     isPlaying = false;
-    document.getElementById("btnStart").innerText = "INTENTAR DE NUEVO";
+
+    if (mode === "tournament") {
+        lives--;
+        document.getElementById("lives").innerText = lives;
+        if (lives > 0) {
+            return; // sigue jugando
+        }
+    }
 
     if (score > highScore) {
         highScore = score;
@@ -110,38 +110,55 @@ function endGame() {
         document.getElementById("highScore").innerText = highScore;
     }
 
-    // 📡 ENVIAR PUNTAJE VIA SDK
-    if (window.AidFlow) {
-        window.AidFlow.sendScore(score);
-    }
+    saveScore(score, mode);
+    showRanking(mode);
 
-    // Feedback visual simple
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
     ctx.fillStyle = "#fff";
     ctx.font = "30px Orbitron";
     ctx.textAlign = "center";
     ctx.fillText("MISION FALLIDA", canvas.width/2, canvas.height/2 - 20);
-    
-    ctx.fillStyle = COLORS.gold;
+    ctx.fillStyle = COLORS.food;
     ctx.font = "20px Roboto";
     ctx.fillText(`Puntos: ${score}`, canvas.width/2, canvas.height/2 + 20);
 }
 
-// Controles
+function saveScore(score, mode) {
+    let key = (mode === "tournament") ? "aidflowTournamentRanking" : "aidflowPracticeRanking";
+    let ranking = JSON.parse(localStorage.getItem(key)) || [];
+    ranking.push({ user: "Jugador", score });
+    ranking.sort((a,b) => b.score - a.score);
+    localStorage.setItem(key, JSON.stringify(ranking));
+}
+
+function showRanking(mode) {
+    let key = (mode === "tournament") ? "aidflowTournamentRanking" : "aidflowPracticeRanking";
+    let ranking = JSON.parse(localStorage.getItem(key)) || [];
+    let html = "<h2>Ranking " + (mode === "tournament" ? "Torneo" : "Práctica") + "</h2><ol>";
+    ranking.slice(0,10).forEach(r => {
+        html += `<li>${r.user}: ${r.score}</li>`;
+    });
+    html += "</ol>";
+    document.getElementById("ranking").innerHTML = html;
+}
+
+// Botón salir
+document.getElementById("btnExit").addEventListener("click", () => {
+    clearInterval(gameLoop);
+    isPlaying = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+// Controles teclado
 document.addEventListener("keydown", e => {
-    // Prevenir scroll con flechas
     if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight", "Space"].includes(e.code)) {
         e.preventDefault();
     }
-
-    // Reiniciar con Espacio si murió
     if (e.code === "Space" && !isPlaying) {
         startGame();
         return;
     }
-
     const goingUp = player.dy === -grid;
     const goingDown = player.dy === grid;
     const goingRight = player.dx === grid;
@@ -160,3 +177,11 @@ document.addEventListener("keydown", e => {
         player.dx = grid; player.dy = 0;
     }
 });
+
+// Controles táctiles (mobile)
+let touchStartX, touchStartY;
+canvas.addEventListener("touchstart", e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+});
+canvas.addEventListener("touchend", e => {
