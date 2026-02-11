@@ -142,26 +142,58 @@
             </div>
         </div>
 
-        <div id="view-games" class="view-section">
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
-                <div class="panel">
-                    <h3>🕹️ SUBIR / EDITAR</h3>
-                    <input type="text" id="gTitle" placeholder="Nombre" class="input-ninja">
-                    <input type="text" id="gUrl" placeholder="URL Embed" class="input-ninja">
-                    <label style="color:#888;">Tipo:</label>
-                    <select id="gType" class="input-ninja">
-                        <option value="practica">🎯 Práctica</option>
-                        <option value="torneo">🏆 Torneo</option>
-                        <option value="libre">🆓 Libre</option>
-                    </select>
-                    <button onclick="createGame()" class="btn-full">SUBIR</button>
-                </div>
-                <div class="panel">
-                    <h3>CATÁLOGO</h3>
-                    <div id="adminGames" style="max-height: 400px; overflow-y: auto;">Cargando...</div>
-                </div>
-            </div>
+   <div id="view-games" class="view-section">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        
+        <div class="panel">
+            <h3>🌐 JUEGO EXTERNO (EMBED)</h3>
+            <p style="color:#888; font-size:0.8rem; margin-bottom:15px;">
+                Juegos de sitios como RetroGames.cc o Itch.io. <br>
+                <span style="color:var(--blood)">*No otorgan puntos automáticos (solo manuales).</span>
+            </p>
+
+            <input type="text" id="gTitle" placeholder="Título del Juego" class="input-ninja">
+            <input type="text" id="gUrl" placeholder="URL Embed (src)" class="input-ninja">
+            <input type="text" id="gThumb" placeholder="URL Imagen Portada" class="input-ninja">
+            
+            <label style="color:#888; font-size:0.8rem;">Categoría:</label>
+            <select id="gType" class="input-ninja">
+                <option value="practica">Práctica</option>
+                <option value="libre">Libre</option>
+            </select>
+            
+            <button onclick="createGame('external')" class="btn-full">AGREGAR EMBED</button>
         </div>
+
+        <div class="panel" style="border: 1px solid var(--gold);">
+            <h3 style="color:var(--gold)">⚡ JUEGO PROPIO (API)</h3>
+            <p style="color:#888; font-size:0.8rem; margin-bottom:15px;">
+                Tus juegos alojados que envían Score al sistema. <br>
+                <span style="color:#0f0">*Control total de puntos y torneos.*</span>
+            </p>
+
+            <input type="text" id="nTitle" placeholder="Título del Juego Propio" class="input-ninja">
+            <input type="text" id="nUrl" placeholder="Ruta (Ej: /games/mario/index.html)" class="input-ninja">
+            <input type="text" id="nThumb" placeholder="URL Imagen Portada" class="input-ninja">
+
+            <label style="color:#888; font-size:0.8rem;">Categoría:</label>
+            <select id="nType" class="input-ninja">
+                <option value="torneo">🏆 Torneo (Competitivo)</option>
+                <option value="practica">🎯 Práctica con Puntos</option>
+            </select>
+
+            <button onclick="createGame('internal')" class="btn-full" style="background:var(--gold); color:black; font-weight:bold;">REGISTRAR JUEGO PROPIO</button>
+        </div>
+
+    </div>
+
+    <div class="panel" style="margin-top: 20px;">
+        <h3>CATÁLOGO DEL DOJO</h3>
+        <div id="adminGames" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:10px; max-height: 400px; overflow-y: auto;">
+            Cargando...
+        </div>
+    </div>
+</div>
 
         <div id="view-tournaments" class="view-section">
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
