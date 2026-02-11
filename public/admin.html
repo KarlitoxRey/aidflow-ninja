@@ -166,22 +166,45 @@
         <div id="view-tournaments" class="view-section">
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
                 <div class="panel">
-                    <h3>🏆 CREAR TORNEO</h3>
-                    <input type="text" id="tName" placeholder="Nombre" class="input-ninja">
-                    <div style="display:flex; gap:10px;">
-                        <input type="number" id="tFee" placeholder="Entrada ($)" class="input-ninja">
-                        <input type="number" id="tPrize" placeholder="Premio ($)" class="input-ninja">
-                    </div>
-                    <div style="display:flex; gap:10px;">
-                        <input type="number" id="tWinners" placeholder="Ganadores" value="1" class="input-ninja">
-                        <select id="tGameType" class="input-ninja">
-                            <option value="Mixed">General</option>
-                            <option value="Fighting">Pelea</option>
-                            <option value="Racing">Carreras</option>
-                        </select>
-                    </div>
-                    <button onclick="createTournament()" class="btn-full">CREAR</button>
-                </div>
+    <h3>🏆 CREAR TORNEO</h3>
+    
+    <label style="color:#888; font-size:0.8rem;">Nombre del Torneo:</label>
+    <input type="text" id="tName" placeholder="Ej: Copa Mortal Kombat" class="input-ninja">
+    
+    <label style="color:#888; font-size:0.8rem;">Seleccionar Juego:</label>
+    <select id="tGameSelect" class="input-ninja">
+        <option value="">Cargando juegos...</option>
+    </select>
+
+    <div style="display:flex; gap:10px;">
+        <div style="flex:1">
+            <label style="color:#888; font-size:0.8rem;">Entrada ($):</label>
+            <input type="number" id="tFee" placeholder="0" class="input-ninja">
+        </div>
+        <div style="flex:1">
+            <label style="color:#888; font-size:0.8rem;">Premio ($):</label>
+            <input type="number" id="tPrize" placeholder="0" class="input-ninja">
+        </div>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <div style="flex:1">
+            <label style="color:#888; font-size:0.8rem;">Ganadores:</label>
+            <input type="number" id="tWinners" value="1" class="input-ninja">
+        </div>
+        <div style="flex:1">
+            <label style="color:#888; font-size:0.8rem;">Tipo:</label>
+            <select id="tGameType" class="input-ninja">
+                <option value="Mixed">General</option>
+                <option value="Fighting">Pelea</option>
+                <option value="Racing">Carreras</option>
+                <option value="Strategy">Estrategia</option>
+            </select>
+        </div>
+    </div>
+
+    <button onclick="createTournament()" class="btn-full">CREAR TORNEO</button>
+</div>
                 <div class="panel">
                     <h3>ARENA</h3>
                     <div id="adminTournaments" style="max-height: 400px; overflow-y: auto;">Cargando...</div>
