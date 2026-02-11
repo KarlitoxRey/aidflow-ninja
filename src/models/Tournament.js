@@ -16,7 +16,7 @@ const tournamentSchema = new mongoose.Schema({
         required: true, 
         min: 0 
     },
-    prize: { 
+    prize: {   // 👈 nombre correcto y consistente
         type: Number, 
         required: true, 
         min: 0 
@@ -41,6 +41,14 @@ const tournamentSchema = new mongoose.Schema({
     createdBy: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: "User"
+    },
+    maxWinners: { 
+        type: Number, 
+        default: 1 
+    },
+    gameType: { 
+        type: String, 
+        default: 'Mixed' 
     }
 }, { timestamps: true });
 
