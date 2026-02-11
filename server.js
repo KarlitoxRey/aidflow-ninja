@@ -30,6 +30,9 @@ app.set('trust proxy', 1); // Importante para Rate Limit en Render
 
 const server = http.createServer(app);
 
+app.use(express.static('public')); 
+// O a veces: app.use(express.static(path.join(__dirname, 'public')));
+
 // 🔥 SEGURIDAD (CSP) 🔥
 app.use(
   helmet({
