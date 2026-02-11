@@ -10,7 +10,7 @@ export const getGames = async (req, res) => {
     }
 };
 
-// Crear juego (Solo Shogun)
+// Crear juego (Solo Shogun) - ACTUALIZADO para soportar 'source'
 export const createGame = async (req, res) => {
     try {
         // Verificar que quien pide esto sea Shogun (Admin)
@@ -18,13 +18,15 @@ export const createGame = async (req, res) => {
             return res.status(403).json({ message: "🚫 Acceso denegado: Solo el Shogun puede añadir juegos." });
         }
 
-        const { title, thumbnail, embedUrl, type } = req.body;
+        // Recibimos 'source' para saber si es 'internal' (propio) o 'external' (embed)
+        const { title, thumbnail, embedUrl, type, source } = req.body;
 
         const newGame = new Game({
             title,
             thumbnail,
-            embedUrl,
-            type
+            embedUrl, // Si es 'internal', aquí va la ruta local. Si es 'external', la URL del iframe.
+            type: type || 'practica',
+            source: source || 'external' // Por defecto asumimos que es externo si no se especifica
         });
 
         await newGame.save();
