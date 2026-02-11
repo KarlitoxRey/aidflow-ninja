@@ -23,9 +23,8 @@ async function initAdmin() {
         } else {
             console.log("⚔️ Shogun al mando.");
             // Cargas iniciales
-            loadStats();            // Finanzas y Dashboard
-            loadPendingDeposits();  // Solicitudes
-            
+            loadStats();
+            loadPendingDeposits();
             // Auto-refresh cada 15 seg
             setInterval(loadStats, 15000);
         }
@@ -49,14 +48,168 @@ window.switchView = (viewName, btnElement) => {
     if(viewName === 'view-deposits') loadPendingDeposits();
     if(viewName === 'view-dashboard') loadStats();
     if(viewName === 'view-games') loadAdminGames();         
-    if(viewName === 'view-tournaments') loadAdminTournaments(); 
+    
+    // 👇 AQUÍ ESTÁ EL CAMBIO IMPORTANTE 👇
+    if(viewName === 'view-tournaments') {
+        loadAdminTournaments(); 
+        loadGameOptions(); // Cargar la lista de juegos para el selector
+    }
+    
     if(viewName === 'view-users') loadUsersList();          
 };
 
 window.logoutAdmin = () => { localStorage.clear(); window.location.replace("login.html"); };
 
 // ==========================================
-// 3. DASHBOARD (FINANZAS & HISTORIAL)
+// 3. JUEGOS Y TORNEOS (LÓGICA NUEVA)
+// ==========================================
+
+// Función para llenar el SELECT del HTML con los juegos disponibles
+async function loadGameOptions() {
+    const select = document.getElementById("tGameSelect");
+    if (!select) return;
+
+    try {
+        const res = await fetch(`${API_URL}/api/games`);
+        const games = await res.json();
+
+        if (games.length === 0) {
+            select.innerHTML = '<option value="">No hay juegos. Crea uno primero.</option>';
+        } else {
+            // Llenamos el select con los juegos reales
+            select.innerHTML = '<option value="">-- Selecciona un Juego --</option>' + 
+                games.map(g => `<option value="${g._id}">${g.title}</option>`).join('');
+        }
+    } catch (e) { console.error("Error cargando juegos para select"); }
+}
+
+window.createTournament = async function() {
+    const name = document.getElementById('tName').value;
+    const entryFee = document.getElementById('tFee').value;
+    const prize = document.getElementById('tPrize').value;
+    const winners = document.getElementById('tWinners').value;
+    const gameType = document.getElementById('tGameType').value;
+    const gameId = document.getElementById('tGameSelect').value; // 👇 OBTENEMOS EL ID DEL JUEGO
+
+    if(!name || !entryFee || !gameId) return alert("❌ Faltan datos (Nombre, Entrada o Juego).");
+
+    try {
+        const res = await fetch(`${API_URL}/api/tournaments`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            // 👇 ENVIAMOS gameId AL BACKEND
+            body: JSON.stringify({ name, entryFee, prize, maxWinners: winners, gameType, gameId })
+        });
+
+        if(res.ok) {
+            alert("🏆 Torneo creado exitosamente.");
+            // Limpiar campos
+            document.getElementById('tName').value = "";
+            document.getElementById('tFee').value = "";
+            loadAdminTournaments();
+        } else {
+            const err = await res.json();
+            alert("Error: " + (err.message || "Error al crear"));
+        }
+    } catch(e) { console.error(e); alert("Error de conexión"); }
+};
+
+window.deleteTournament = async function(id) {
+    if(!confirm("¿Cancelar torneo?")) return;
+    try {
+        const res = await fetch(`${API_URL}/api/tournaments/${id}`, {
+            method: "DELETE", headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+        if(res.ok) loadAdminTournaments();
+    } catch(e) {}
+};
+
+async function loadAdminTournaments() {
+    const container = document.getElementById("adminTournaments");
+    if(!container) return;
+    try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/tournaments`, { headers: { "Authorization": `Bearer ${token}` } });
+        const data = await res.json();
+        
+        if(data.length === 0) {
+            container.innerHTML = '<p class="muted-text">No hay torneos activos.</p>';
+            return;
+        }
+        
+        container.innerHTML = data.map(t => `
+            <div class="list-item">
+                <div>
+                    <strong>${t.name}</strong> <span style="font-size:0.8rem; color:#888;">(${t.game?.title || 'General'})</span><br>
+                    <small style="color:var(--gold);">Pozo: $${t.prizePool} | Ganadores: ${t.maxWinners || 1}</small>
+                </div>
+                <button onclick="deleteTournament('${t._id}')" class="btn-delete">CANCELAR</button>
+            </div>`).join('');
+    } catch(e) {
+        container.innerHTML = '<p style="color:red">Error cargando torneos.</p>';
+    }
+}
+
+// Gestión de Juegos
+window.createGame = async function() {
+    const title = document.getElementById('gTitle').value;
+    const embedUrl = document.getElementById('gUrl').value;
+    const type = document.getElementById('gType').value;
+    const thumbnail = document.getElementById('gThumb').value; // Agregado thumbnail
+
+    if(!title || !embedUrl) return alert("❌ Faltan datos.");
+
+    try {
+        const res = await fetch(`${API_URL}/api/games`, {
+            method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
+            body: JSON.stringify({ title, embedUrl, thumbnail, type })
+        });
+        if(res.ok) { 
+            alert("🕹️ Juego subido."); 
+            document.getElementById('gTitle').value = "";
+            document.getElementById('gUrl').value = "";
+            loadAdminGames(); 
+        }
+    } catch(e) { console.error(e); }
+};
+
+window.deleteGame = async function(id) {
+    if(!confirm("¿Eliminar juego?")) return;
+    try {
+        const res = await fetch(`${API_URL}/api/games/${id}`, {
+            method: "DELETE", headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+        if(res.ok) loadAdminGames();
+    } catch(e) {}
+};
+
+async function loadAdminGames() {
+    const container = document.getElementById("adminGames");
+    if(!container) return;
+    try {
+        const res = await fetch(`${API_URL}/api/games`);
+        const games = await res.json();
+        
+        if(games.length === 0) {
+            container.innerHTML = '<p class="muted-text">Inventario vacío.</p>';
+            return;
+        }
+
+        container.innerHTML = games.map(g => `
+            <div class="list-item">
+                <div>
+                    <strong>${g.title}</strong> <small>(${g.type || 'gen'})</small>
+                </div>
+                <button onclick="deleteGame('${g._id}')" class="btn-delete">BORRAR</button>
+            </div>`).join('');
+    } catch(e) { container.innerHTML = "Error games"; }
+}
+
+// ==========================================
+// 4. DASHBOARD (FINANZAS & HISTORIAL)
 // ==========================================
 async function loadStats() {
     const token = localStorage.getItem("token");
@@ -66,17 +219,13 @@ async function loadStats() {
         if (!res.ok) return; 
         const data = await res.json();
 
-        // Actualizar Tarjetas
         safeText("val-dao", formatMoney(data.funds.dao));
         safeText("val-maint", formatMoney(data.funds.admin));
         safeText("val-backup", formatMoney(data.funds.backup));
         safeText("val-users", data.stats.active);
-        
-        // Actualizar Rendimiento
         safeText("val-today", formatMoney(data.stats.today));
         safeText("val-total", formatMoney(data.funds.total));
         
-        // Actualizar Tabla Historial
         renderHistoryTable(data.history);
     } catch (error) { console.error("Error stats:", error); }
 }
@@ -98,7 +247,7 @@ function renderHistoryTable(transactions) {
 }
 
 // ==========================================
-// 4. TESORERÍA (SOLICITUDES DE PAGO)
+// 5. TESORERÍA (SOLICITUDES DE PAGO)
 // ==========================================
 window.loadPendingDeposits = async () => {
     const container = document.getElementById("depositList");
@@ -158,121 +307,7 @@ window.processTx = async (txId, action) => {
 };
 
 // ==========================================
-// 5. GESTIÓN DE JUEGOS
-// ==========================================
-window.createGame = async function() {
-    const title = document.getElementById('gTitle').value;
-    const embedUrl = document.getElementById('gUrl').value;
-    const type = document.getElementById('gType').value;
-
-    if(!title || !embedUrl) return alert("❌ Faltan datos.");
-
-    try {
-        const res = await fetch(`${API_URL}/api/games`, {
-            method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
-            body: JSON.stringify({ title, embedUrl, type })
-        });
-        if(res.ok) { 
-            alert("🕹️ Juego subido."); 
-            document.getElementById('gTitle').value = "";
-            document.getElementById('gUrl').value = "";
-            loadAdminGames(); 
-        }
-    } catch(e) { console.error(e); }
-};
-
-window.deleteGame = async function(id) {
-    if(!confirm("¿Eliminar juego?")) return;
-    try {
-        const res = await fetch(`${API_URL}/api/games/${id}`, {
-            method: "DELETE", headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-        if(res.ok) loadAdminGames();
-    } catch(e) {}
-};
-
-async function loadAdminGames() {
-    const container = document.getElementById("adminGames");
-    if(!container) return;
-    try {
-        const res = await fetch(`${API_URL}/api/games`);
-        const games = await res.json();
-        
-        if(games.length === 0) {
-            container.innerHTML = '<p class="muted-text">Inventario vacío.</p>';
-            return;
-        }
-
-        container.innerHTML = games.map(g => `
-            <div class="list-item">
-                <div>
-                    <strong>${g.title}</strong> <small>(${g.type || 'gen'})</small>
-                </div>
-                <button onclick="deleteGame('${g._id}')" class="btn-delete">BORRAR</button>
-            </div>`).join('');
-    } catch(e) { container.innerHTML = "Error games"; }
-}
-
-// ==========================================
-// 6. GESTIÓN DE TORNEOS
-// ==========================================
-window.createTournament = async function() {
-    const name = document.getElementById('tName').value;
-    const entryFee = document.getElementById('tFee').value;
-    const prize = document.getElementById('tPrize').value;
-    const winners = document.getElementById('tWinners').value;
-    const gameType = document.getElementById('tGameType').value;
-
-    if(!name || !entryFee) return alert("❌ Faltan datos.");
-
-    try {
-        const res = await fetch(`${API_URL}/api/tournaments`, {
-            method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
-            body: JSON.stringify({ name, entryFee, prize, maxWinners: winners, gameType })
-        });
-        if(res.ok) { 
-            alert("🏆 Torneo creado."); 
-            loadAdminTournaments(); 
-        }
-    } catch(e) {}
-};
-
-window.deleteTournament = async function(id) {
-    if(!confirm("¿Cancelar torneo?")) return;
-    try {
-        const res = await fetch(`${API_URL}/api/tournaments/${id}`, {
-            method: "DELETE", headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-        if(res.ok) loadAdminTournaments();
-    } catch(e) {}
-};
-
-async function loadAdminTournaments() {
-    const container = document.getElementById("adminTournaments");
-    if(!container) return;
-    try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/tournaments`, { headers: { "Authorization": `Bearer ${token}` } });
-        const data = await res.json();
-        
-        if(data.length === 0) {
-            container.innerHTML = '<p class="muted-text">No hay torneos activos.</p>';
-            return;
-        }
-        
-        container.innerHTML = data.map(t => `
-            <div class="list-item">
-                <div>
-                    <strong>${t.name}</strong><br>
-                    <small style="color:var(--gold);">Pozo: $${t.prizePool} | Ganadores: ${t.maxWinners || 1}</small>
-                </div>
-                <button onclick="deleteTournament('${t._id}')" class="btn-delete">CANCELAR</button>
-            </div>`).join('');
-    } catch(e) {}
-}
-
-// ==========================================
-// 7. CENSO DE GUERREROS (TABLA)
+// 6. CENSO DE GUERREROS
 // ==========================================
 window.loadUsersList = async function() {
     const tbody = document.getElementById("usersTableBody");
@@ -284,7 +319,6 @@ window.loadUsersList = async function() {
             headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
         });
         
-        // Si no existe la ruta census, intentamos con la normal (fallback)
         if(!res.ok) return loadUsersFallback();
 
         const users = await res.json();
@@ -300,9 +334,9 @@ window.loadUsersList = async function() {
 };
 
 function getLevelColor(level) {
-    if(level === 1) return '#cd7f32'; // Bronce
-    if(level === 2) return '#c0c0c0'; // Plata
-    if(level === 3) return '#ffd700'; // Oro
+    if(level === 1) return '#cd7f32'; 
+    if(level === 2) return '#c0c0c0'; 
+    if(level === 3) return '#ffd700'; 
     return '#666';
 }
 
@@ -320,8 +354,6 @@ async function loadUsersFallback() {
         </tr>`).join('');
 }
 
-// ==========================================
-// AUXILIARES
-// ==========================================
+// Auxiliares
 function safeText(id, text) { const el = document.getElementById(id); if(el) el.innerText = text; }
 function formatMoney(amount) { return Number(amount || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }); }
