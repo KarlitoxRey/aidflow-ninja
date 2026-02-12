@@ -3,194 +3,311 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Shinobi Galaxy: Techno-Feudal</title>
+    <title>Shinobi Galaxy: Pro Edition</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
-
-        body {
-            margin: 0; background: #050505; overflow: hidden;
-            font-family: 'Orbitron', sans-serif; touch-action: none; user-select: none;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        :root { --ninja-red: #d90429; --shogun-gold: #ffb703; }
+        body { margin: 0; background: #050505; overflow: hidden; font-family: 'Orbitron', sans-serif; touch-action: none; color: white; }
         canvas { display: block; }
         
-        /* UI & OVERLAYS */
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px;
-        }
-        .hud-top { display: flex; justify-content: space-between; text-shadow: 0 0 10px rgba(0,0,0,0.8); }
-        .score-box { color: #ffb703; font-size: 24px; }
-        .lives-box { color: #d90429; font-size: 24px; }
+        /* UI OVERLAYS */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 20px; box-sizing: border-box; }
+        .hud-top { display: flex; justify-content: space-between; font-size: 1.2rem; }
+        .score-box { color: var(--shogun-gold); }
+        .mode-badge { font-size: 0.7rem; background: var(--ninja-red); padding: 2px 8px; border-radius: 4px; vertical-align: middle; }
 
         #overlay-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5,5,5,0.95); display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 10; pointer-events: auto; text-align: center;
+            background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 10; text-align: center;
         }
-        h1 { color: #d90429; font-size: 2.5rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;}
-        p { color: #888; margin-bottom: 30px; font-size: 1rem; }
-        .btn-action {
-            background: transparent; color: #ffb703; border: 2px solid #ffb703;
-            padding: 15px 40px; font-family: 'Orbitron'; font-size: 1.2rem;
-            cursor: pointer; text-transform: uppercase; transition: 0.3s;
-        }
-        .btn-action:hover { background: #ffb703; color: #000; box-shadow: 0 0 20px rgba(255, 183, 3, 0.4); }
         
-        /* CORRECCIÓN: Fondo de imagen real */
-        .bg-stars {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
-            background: url('assets/background.jpg') no-repeat center center;
-            background-size: cover;
-            opacity: 1;
+        .btn-ninja {
+            background: transparent; color: var(--shogun-gold); border: 2px solid var(--shogun-gold);
+            padding: 12px 30px; font-family: 'Orbitron'; cursor: pointer; text-transform: uppercase;
+            margin: 10px; transition: 0.3s; font-weight: bold;
         }
+        .btn-ninja:hover { background: var(--shogun-gold); color: black; box-shadow: 0 0 20px rgba(255, 183, 3, 0.5); }
+        .btn-revive { border-color: #00f2ff; color: #00f2ff; }
+        
+        .ranking-mini { margin-top: 20px; font-size: 0.8rem; width: 250px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; }
+        .ranking-item { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 3px 0; }
     </style>
 </head>
 <body>
-    <div class="bg-stars"></div>
     <div id="ui-layer">
         <div class="hud-top">
-            <div class="score-box">PTS: <span id="scoreVal">0</span></div>
-            <div class="lives-box">ESCUDOS: <span id="livesVal">3</span></div>
+            <div class="score-box">PUNTOS: <span id="scoreVal">0</span> <span id="gameMode" class="mode-badge">-</span></div>
+            <div id="livesVal" style="color: var(--ninja-red);">🛡️🛡️🛡️</div>
         </div>
     </div>
+
     <canvas id="gameCanvas"></canvas>
+
     <div id="overlay-screen">
-        <h1 id="overlay-title">INICIANDO SISTEMA...</h1>
-        <p id="overlay-msg">Cargando flota enemiga...</p>
-        <button id="start-btn" class="btn-action" style="display:none;" onclick="startGame()">DESPEGAR</button>
+        <h1 id="ov-title">SISTEMA OFFLINE</h1>
+        <p id="ov-msg">Verificando credenciales del clan...</p>
+        <div id="actions"></div>
+        <div id="ranking-box" class="ranking-mini"></div>
     </div>
 
-<script>
+<script type="module">
+    import { API_URL } from '../../js/api.js';
+
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    let W, H, score=0, level=1, lives=3, gameActive=false, imagesLoaded=false; const keys={};
+    const params = new URLSearchParams(window.location.search);
+    
+    // Configuración de Sesión
+    const IS_TOURNAMENT = params.get('mode') === 'tournament';
+    const TOKEN = localStorage.getItem('token');
+    const USER_NAME = localStorage.getItem('ninjaName') || 'Ronin';
 
-    // 🖼️ CARGA DE SPRITES DEFINITIVA (6 imágenes)
+    let W, H, score=0, level=1, lives=3, gameActive=false, combo=1;
+    let player, bullets=[], enemies=[], particles=[], enemiesSpawnedInWave=0;
+    
     const sprites = { player:new Image(), enemy1:new Image(), enemy2:new Image(), enemy3:new Image(), boss:new Image(), shuriken:new Image() };
-    const ASSETS_PATH = 'assets/'; let assetsToLoad=6, assetsLoaded=0;
+    const ASSETS = ['player','enemy1','enemy2','enemy3','boss','shuriken'];
+    let loadedCount = 0;
 
-    function onAssetLoad() {
-        assetsLoaded++;
-        if(assetsLoaded >= assetsToLoad) {
-            imagesLoaded = true;
-            document.getElementById('overlay-title').innerText = "SHINOBI GALAXY";
-            document.getElementById('overlay-msg').innerText = "El Shogunato Mecánico ataca.";
-            document.getElementById('start-btn').style.display = 'block';
-        }
+    // Inicialización
+    async function init() {
+        ASSETS.forEach(name => {
+            sprites[name].src = `assets/${name}.png`;
+            sprites[name].onload = () => { 
+                loadedCount++; 
+                if(loadedCount === ASSETS.length) showMenu(); 
+            };
+        });
+        loadRanking();
+        document.getElementById('gameMode').innerText = IS_TOURNAMENT ? 'COMPETICIÓN' : 'PRÁCTICA';
     }
-    // Cargamos todas las naves nuevas
-    ['player','enemy1','enemy2','enemy3','boss','shuriken'].forEach(k=>{ sprites[k].src=`${ASSETS_PATH}${k}.png`; sprites[k].onload=onAssetLoad; sprites[k].onerror=onAssetLoad; });
 
-    // Entidades
-    let player, bullets=[], enemies=[], particles=[];
+    function showMenu(title = "SHINOBI GALAXY", msg = "El Shogunato Mecánico se aproxima.") {
+        gameActive = false;
+        document.getElementById('ov-title').innerText = title;
+        document.getElementById('ov-msg').innerText = msg;
+        const actions = document.getElementById('actions');
+        actions.innerHTML = `<button class="btn-ninja" onclick="window.startGame()">DESPEGAR</button>`;
+    }
+
+    window.startGame = () => {
+        document.getElementById('overlay-screen').style.display = 'none';
+        score = 0; lives = 3; level = 1; bullets = []; enemies = [];
+        player = new Player();
+        gameActive = true;
+        updateHUD();
+        spawnWave();
+        loop();
+    };
+
+    async function gameOver() {
+        gameActive = false;
+        document.getElementById('overlay-screen').style.display = 'flex';
+        document.getElementById('ov-title').innerText = "MISIÓN FALLIDA";
+        
+        let msg = `Puntaje final: ${score}`;
+        const actions = document.getElementById('actions');
+        
+        if (IS_TOURNAMENT) {
+            await saveScore();
+            msg += "<br>Tu honor ha sido registrado en el pergamino.";
+            actions.innerHTML = `
+                <button class="btn-ninja btn-revive" onclick="revivePlayer()">REINTENTAR (Costo +)</button>
+                <button class="btn-ninja" onclick="window.startGame()">NUEVA PARTIDA</button>
+            `;
+        } else {
+            actions.innerHTML = `<button class="btn-ninja" onclick="window.startGame()">REINTENTAR</button>`;
+        }
+        document.getElementById('ov-msg').innerHTML = msg;
+        loadRanking();
+    }
+
+    async function saveScore() {
+        if(!TOKEN) return;
+        try {
+            await fetch(`${API_URL}/api/games/save-score`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKEN}` },
+                body: JSON.stringify({ game: 'shinobi-galaxy', score, level })
+            });
+        } catch (e) { console.error("Error guardando honor", e); }
+    }
+
+    async function loadRanking() {
+        const box = document.getElementById('ranking-box');
+        try {
+            const res = await fetch(`${API_URL}/api/games/ranking/shinobi-galaxy`);
+            const data = await res.json();
+            box.innerHTML = `<strong>TOP GUERREROS</strong><br>` + 
+                data.slice(0,5).map((r, i) => `
+                    <div class="ranking-item">
+                        <span>${i+1}. ${r.ninjaName}</span>
+                        <span>${r.score}</span>
+                    </div>
+                `).join('');
+        } catch (e) { box.innerHTML = "Ranking no disponible"; }
+    }
+
+    // --- LÓGICA DE JUEGO MEJORADA ---
 
     class Player {
-        constructor() {
-            this.w=60; this.h=70; // Ajustado para el Glider
-            this.x=W/2-this.w/2; this.y=H-100; this.speed=8; this.cooldown=0;
-        }
+        constructor() { this.w=60; this.h=70; this.x=W/2-30; this.y=H-100; this.speed=8; this.cd=0; }
+        draw() { ctx.drawImage(sprites.player, this.x, this.y, this.w, this.h); }
         update() {
-            if(keys['ArrowLeft'] && this.x>0) this.x-=this.speed;
-            if(keys['ArrowRight'] && this.x+this.w<W) this.x+=this.speed;
-            if(keys[' ']) this.shoot();
-            if(this.cooldown>0) this.cooldown--;
+            if(keys['ArrowLeft'] && this.x > 0) this.x -= this.speed;
+            if(keys['ArrowRight'] && this.x < W - this.w) this.x += this.speed;
+            if(this.cd > 0) this.cd--;
         }
         shoot() {
-            if(this.cooldown<=0) { bullets.push(new Bullet(this.x+this.w/2, this.y)); this.cooldown=12; }
+            if(this.cd <= 0) {
+                bullets.push(new Bullet(this.x + this.w/2, this.y));
+                this.cd = 12 - Math.min(level, 5); // Cadencia mejora con nivel
+            }
         }
-        draw() { if(isLoaded(sprites.player)) ctx.drawImage(sprites.player,this.x,this.y,this.w,this.h); }
     }
 
     class Bullet {
-        constructor(x,y) { this.x=x; this.y=y; this.r=15; this.speed=14; this.angle=0; }
-        update() { this.y-=this.speed; this.angle+=0.6; } // Rotación del shuriken
+        constructor(x,y) { this.x=x; this.y=y; this.speed=15; this.angle=0; }
+        update() { this.y -= this.speed; this.angle += 0.5; }
         draw() {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-            // Efecto de brillo extra
-            ctx.shadowBlur = 15; ctx.shadowColor = '#ff0000';
-            if(isLoaded(sprites.shuriken)) ctx.drawImage(sprites.shuriken, -15, -15, 30, 30);
+            ctx.drawImage(sprites.shuriken, -15, -15, 30, 30);
             ctx.restore();
         }
     }
 
     class Enemy {
-        constructor(x,y,type) {
-            this.x=x; this.y=y; this.type=type;
-            // Lógica para los nuevos tipos de naves
-            if(type==='genin') { // Drone Kunai (Pequeño)
-                this.w=30; this.h=50; this.hp=1; this.speedY=3+(level*0.1); this.img=sprites.enemy1; this.score=10;
-            } else if (type==='chunin') { // Caza Luna (Ancho)
-                this.w=70; this.h=40; this.hp=2; this.speedY=5+(level*0.2); this.img=sprites.enemy2; this.score=25;
-            } else if (type==='jonin') { // Tanque (Grande)
-                this.w=80; this.h=80; this.hp=5; this.speedY=1.5+(level*0.1); this.img=sprites.enemy3; this.score=50;
-            } else if (type==='boss') { // Nave Nodriza (ENORME)
-                this.w=200; this.h=200; this.hp=30+(level*5); this.speedY=0.7; this.img=sprites.boss; this.score=1000;
-            }
+        constructor(type) {
+            this.type = type;
+            this.x = Math.random() * (W - 80);
+            this.y = -100;
+            const diff = 1 + (level * 0.15);
+            
+            if(type === 'genin') { this.w=40; this.h=40; this.hp=1; this.speed=3*diff; this.score=10; this.img=sprites.enemy1; }
+            else if(type === 'chunin') { this.w=60; this.h=50; this.hp=3; this.speed=2*diff; this.score=30; this.img=sprites.enemy2; }
+            else { this.w=80; this.h=80; this.hp=7; this.speed=1.5*diff; this.score=100; this.img=sprites.enemy3; }
         }
         update() {
-            this.y+=this.speedY;
-            if(this.type==='chunin') this.x += Math.sin(this.y*0.05)*3; // Movimiento lateral rápido
+            this.y += this.speed;
+            if(this.type === 'chunin') this.x += Math.sin(this.y * 0.05) * 2;
         }
-        draw() { if(isLoaded(this.img)) ctx.drawImage(this.img,this.x,this.y,this.w,this.h); }
+        draw() { ctx.drawImage(this.img, this.x, this.y, this.w, this.h); }
     }
-
-    class Particle {
-        constructor(x,y,c) { this.x=x; this.y=y; this.c=c; this.vx=(Math.random()-0.5)*10; this.vy=(Math.random()-0.5)*10; this.life=1; }
-        update() { this.x+=this.vx; this.y+=this.vy; this.life-=0.05; }
-        draw() { ctx.globalAlpha=this.life; ctx.fillStyle=this.c; ctx.beginPath(); ctx.arc(this.x,this.y,this.life*4,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
-    }
-
-    function isLoaded(img) { return img.complete && img.naturalHeight!==0; }
-    function startGame() { if(!imagesLoaded)return; document.getElementById('overlay-screen').style.display='none'; score=0; lives=3; level=1; player=new Player(); bullets=[]; enemies=[]; particles=[]; gameActive=true; updateHUD(); spawnWave(); loop(); }
 
     function spawnWave() {
-        if(!gameActive)return;
-        let count=5+level*2; let spawned=0; let spawnInterval=900-(level*60); if(spawnInterval<300)spawnInterval=300;
-        const interval=setInterval(()=>{
-            if(!gameActive){clearInterval(interval);return;}
-            let isBoss=(spawned===count-1 && level%4===0); let type='genin';
-            if(isBoss) type='boss';
-            else {
-                let rand=Math.random();
-                if(level<3) type=rand>0.8?'chunin':'genin';
-                else { if(rand>0.85)type='jonin'; else if(rand>0.6)type='chunin'; else type='genin'; }
+        if(!gameActive) return;
+        let count = 5 + level;
+        let spawned = 0;
+        const timer = setInterval(() => {
+            if(!gameActive) { clearInterval(timer); return; }
+            
+            let type = 'genin';
+            if(level > 2 && Math.random() > 0.7) type = 'chunin';
+            if(level > 5 && Math.random() > 0.85) type = 'jonin';
+            
+            enemies.push(new Enemy(type));
+            spawned++;
+            if(spawned >= count) {
+                clearInterval(timer);
+                setTimeout(() => { if(enemies.length === 0) { level++; spawnWave(); } }, 2000);
             }
-            let eW=type==='boss'?200:(type==='chunin'?70:40);
-            enemies.push(new Enemy(Math.random()*(W-eW), -200, type)); spawned++;
-            if(spawned>=count)clearInterval(interval);
-        }, spawnInterval);
+        }, 1200 - Math.min(level * 50, 800)); // Enemigos salen más rápido según nivel
     }
 
     function loop() {
-        if(!gameActive)return; requestAnimationFrame(loop); ctx.clearRect(0,0,W,H);
-        player.update(); player.draw();
-        for(let i=bullets.length-1;i>=0;i--){ let b=bullets[i]; b.update(); b.draw(); if(b.y<-50)bullets.splice(i,1); }
-        for(let i=enemies.length-1;i>=0;i--){
-            let e=enemies[i]; e.update(); e.draw();
-            for(let j=bullets.length-1;j>=0;j--){
-                let b=bullets[j];
-                if(b.x>e.x && b.x<e.x+e.w && b.y>e.y && b.y<e.y+e.h) {
-                    bullets.splice(j,1); e.hp--; createExplosion(b.x,b.y,'#fff');
-                    if(e.hp<=0) { enemies.splice(i,1); score+=e.score; createExplosion(e.x+e.w/2,e.y+e.h/2,'#d90429'); updateHUD(); break; }
+        if(!gameActive) return;
+        requestAnimationFrame(loop);
+        ctx.clearRect(0,0,W,H);
+
+        player.update();
+        player.draw();
+
+        // Balas
+        for(let i=bullets.length-1; i>=0; i--) {
+            bullets[i].update(); bullets[i].draw();
+            if(bullets[i].y < -50) bullets.splice(i,1);
+        }
+
+        // Enemigos
+        for(let i=enemies.length-1; i>=0; i--) {
+            let e = enemies[i];
+            e.update(); e.draw();
+
+            // Colisión con balas
+            for(let j=bullets.length-1; j>=0; j--) {
+                let b = bullets[j];
+                if(b.x > e.x && b.x < e.x+e.w && b.y > e.y && b.y < e.y+e.h) {
+                    bullets.splice(j,1);
+                    e.hp--;
+                    createExplosion(b.x, b.y, '#fff', 5);
+                    if(e.hp <= 0) {
+                        score += e.score;
+                        enemies.splice(i,1);
+                        createExplosion(e.x+e.w/2, e.y+e.h/2, '#d90429', 15);
+                        updateHUD();
+                        if(enemies.length === 0) { level++; spawnWave(); }
+                        break;
+                    }
                 }
             }
-            if(e.hp<=0)continue;
-            if(player.x<e.x+e.w && player.x+player.w>e.x && player.y<e.y+e.h && player.y+player.h>e.y) {
-                enemies.splice(i,1); createExplosion(player.x+player.w/2, player.y+player.h/2,'#ffb703'); lives--; updateHUD(); if(lives<=0)gameOver();
+
+            // Colisión con Player
+            if(gameActive && e && player.x < e.x+e.w && player.x+player.w > e.x && player.y < e.y+e.h && player.y+player.h > e.y) {
+                enemies.splice(i,1);
+                lives--;
+                updateHUD();
+                createExplosion(player.x+30, player.y+30, '#ffb703', 20);
+                if(lives <= 0) gameOver();
             }
-            if(e.y>H)enemies.splice(i,1);
+
+            if(e.y > H) enemies.splice(i,1);
         }
-        if(enemies.length===0){ level++; spawnWave(); }
-        for(let i=particles.length-1;i>=0;i--){ particles[i].update(); particles[i].draw(); if(particles[i].life<=0)particles.splice(i,1); }
+
+        // Partículas
+        for(let i=particles.length-1; i>=0; i--) {
+            particles[i].update(); particles[i].draw();
+            if(particles[i].life <= 0) particles.splice(i,1);
+        }
     }
 
-    function createExplosion(x,y,c) { for(let k=0;k<12;k++)particles.push(new Particle(x,y,c)); }
-    function updateHUD() { document.getElementById('scoreVal').innerText=score; document.getElementById('livesVal').innerText="🛡️".repeat(lives); }
-    function gameOver() { gameActive=false; document.getElementById('overlay-title').innerText="NAVE DESTRUIDA"; document.getElementById('overlay-msg').innerHTML=`Honor obtenido: <strong style="color:white">${score}</strong>`; document.getElementById('start-btn').innerText="REINTENTAR"; document.getElementById('overlay-screen').style.display='flex'; }
-    function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; if(player)player.y=H-100; }
-    window.addEventListener('resize',resize); window.addEventListener('keydown',e=>keys[e.key]=true); window.addEventListener('keyup',e=>{keys[e.key]=false;if(e.key===' '&&gameActive)player.shoot();});
-    canvas.addEventListener('touchmove',e=>{e.preventDefault();if(player){player.x=e.touches[0].clientX-player.w/2;player.shoot();}},{passive:false});
+    function createExplosion(x,y,c,qty) {
+        for(let i=0; i<qty; i++) particles.push({
+            x, y, c,
+            vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+            life: 1,
+            update() { this.x+=this.vx; this.y+=this.vy; this.life-=0.03; },
+            draw() { ctx.globalAlpha=this.life; ctx.fillStyle=this.c; ctx.beginPath(); ctx.arc(this.x,this.y,3,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
+        });
+    }
+
+    function updateHUD() {
+        document.getElementById('scoreVal').innerText = score;
+        document.getElementById('livesVal').innerText = "🛡️".repeat(lives);
+    }
+
+    // Input
+    const keys = {};
+    window.addEventListener('keydown', e => { 
+        keys[e.key] = true; 
+        if(e.key === ' ' && gameActive) player.shoot(); 
+    });
+    window.addEventListener('keyup', e => keys[e.key] = false);
+    
+    // Touch (Mobile)
+    canvas.addEventListener('touchmove', e => {
+        e.preventDefault();
+        if(player && gameActive) {
+            player.x = e.touches[0].clientX - player.w/2;
+            player.shoot();
+        }
+    }, {passive:false});
+
+    function resize() { W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+    window.addEventListener('resize', resize);
+    
     resize();
+    init();
 </script>
 </body>
 </html>
