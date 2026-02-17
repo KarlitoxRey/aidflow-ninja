@@ -446,3 +446,31 @@ footer {
     transform: translateY(-5px);
     border-color: var(--shogun-gold);
 }
+
+
+.duel-card {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+    border-left: 4px solid var(--ninja-red);
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.duel-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 15px var(--shadow-red);
+}
+
+.duel-info h4 {
+    margin: 0;
+    color: var(--shogun-gold);
+    font-family: 'Orbitron';
+}
+
+.duel-bet {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #fff;
+}

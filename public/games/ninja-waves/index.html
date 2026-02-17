@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ninja Waves | AidFlow</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="game-body">
+    <div id="hud">
+        <div class="hud-item">
+            <span class="gold-text">DISTANCIA:</span> 
+            <span id="hud-distance">0m</span>
+        </div>
+        <div class="hud-item">
+            <span class="gold-text">HONOR:</span> 
+            <span id="hud-lives">🏮🏮🏮</span>
+        </div>
+        <div class="hud-item">
+            <span id="hud-continues" class="red-text">RE-COMPRAS: 0/5</span>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="modal-continue" class="modal hidden">
+        <div class="card-dark text-center">
+            <h2 class="red-text">¿CAER O LEVANTARSE?</h2>
+            <p>Inserta una ficha para continuar desde el último checkpoint.</p>
+            <button id="btn-recompra" class="btn-ninja-primary">CONTINUAR (1 FICHA)</button>
+            <button id="btn-rendirse" class="btn-ninja-outline">RENDIRSE</button>
+        </div>
+    </div>
+
+    <script type="module" src="game.js"></script>
+</body>
+</html>

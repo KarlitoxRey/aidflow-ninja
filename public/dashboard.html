@@ -167,6 +167,26 @@
 
             <div id="btn-missions" class="action-card card-dark hover-effect">
                 <i class="fas fa-scroll fa-3x" style="color: #888; margin-bottom: 15px;"></i>
+
+                <section class="card-dark full-width">
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+        <img src="images/icon-duel.png" width="35" alt="Duelo">
+        <h2 class="section-title" style="margin: 0;">ARENA DE <span class="red-text">DUELOS 1v1</span></h2>
+    </div>
+
+    <div class="duel-creator" style="background: rgba(142, 0, 0, 0.1); padding: 20px; border: 1px solid var(--ninja-red); margin-bottom: 20px;">
+        <h3 class="gold-text" style="font-size: 1rem; margin-bottom: 15px;">FORJAR NUEVO DESAFÍO</h3>
+        <div style="display: flex; gap: 10px;">
+            <input type="number" id="duelBet" placeholder="Apuesta (Ej: 10)" class="input-ninja" style="flex: 1;">
+            <button onclick="createDuel()" class="btn-ninja-primary">LANZAR RETO</button>
+        </div>
+        <p class="muted-text" style="font-size: 0.8rem; margin-top: 10px;">* El Dojo retendrá el 10% de comisión del pozo final.</p>
+    </div>
+
+    <div id="duelArenaContainer" class="grid-ninja">
+        <p class="muted-text">Buscando oponentes en las sombras...</p>
+    </div>
+</section>
                 <h3>MISIONES</h3>
                 <p class="muted-text">Recompensas Diarias</p>
             </div>

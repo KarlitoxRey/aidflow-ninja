@@ -1,0 +1,48 @@
+.game-body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #050505;
+    font-family: 'Orbitron', sans-serif;
+}
+
+#hud {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-left: 3px solid var(--ninja-red);
+}
+
+.hud-item {
+    font-size: 1.2rem;
+    color: white;
+}
+
+#gameCanvas {
+    display: block;
+}
+
+/* Modales */
+.modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.hidden { display: none !important; }
+
+.checkpoint-line {
+    border-left: 2px dashed var(--shogun-gold);
+    height: 100%;
+    position: absolute;
+}
