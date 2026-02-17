@@ -59,6 +59,11 @@
         /* GRID DASHBOARD */
         .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
     </style>
+    <script type="module">
+    import { checkAccess } from "./js/guard.js";
+    // Bloquea acceso si no es Shogun
+    checkAccess('shogun'); 
+</script>
 </head>
 <body>
 

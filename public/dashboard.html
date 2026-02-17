@@ -68,6 +68,11 @@
         
         .input-dark { width: 100%; padding: 10px; background: #111; border: 1px solid #444; color: white; margin-bottom: 15px; }
     </style>
+    <script type="module">
+    import { checkAccess } from "./js/guard.js";
+    // Bloquea acceso si no hay login
+    checkAccess();
+</script>
 </head>
 
 <body class="bg-ninja">

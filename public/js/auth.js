@@ -1,7 +1,8 @@
-import { API_URL } from "./api.js";
+import { CONFIG } from "./config.js";
+import { ninjaFetch } from "./api.js";
 
 /* =====================
-    LOGIN SHOGUN READY
+    LOGIN
 ===================== */
 const loginForm = document.getElementById("loginForm");
 
@@ -11,51 +12,49 @@ loginForm?.addEventListener("submit", async (e) => {
     const password = loginForm.querySelector("input[type='password']").value;
 
     try {
-        const res = await fetch(`${API_URL}/api/auth/login`, {
+        // Usamos ninjaFetch
+        const res = await ninjaFetch(CONFIG.ENDPOINTS.LOGIN, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
         });
+
+        if (!res) return; // Si hubo error de red
 
         const data = await res.json();
         
         if (!res.ok) {
-            alert(`⚠️ ${data.error || "Falla en la identificación"}`);
+            alert(`⚠️ ${data.error || "Credenciales incorrectas"}`);
             return;
         }
 
-        // 🔐 PERSISTENCIA DE PODER
-        // Limpiamos cualquier residuo previo antes de guardar
-        localStorage.clear();
-        
-        localStorage.setItem("token", data.token);
-        // Normalizamos a minúsculas para consistencia en todas las validaciones
-        const userRole = data.user.role.toLowerCase();
-        localStorage.setItem("role", userRole);
-        localStorage.setItem("ninjaName", data.user.ninjaName);
+        // 🔐 Guardar sesión
+        localStorage.setItem(CONFIG.STORAGE.TOKEN, data.token);
+        localStorage.setItem(CONFIG.STORAGE.ROLE, data.user.role.toLowerCase()); // Normalizamos a minúsculas
+        localStorage.setItem(CONFIG.STORAGE.USER_NAME, data.user.ninjaName);
 
-        // Redirección inmediata según jerarquía
-        if (userRole === 'shogun') {
-            window.location.replace("admin.html");
+        // Redirección inteligente
+        if (data.user.role.toLowerCase() === CONFIG.ROLES.SHOGUN) {
+            window.location.replace(CONFIG.PAGES.ADMIN);
         } else {
-            window.location.replace("dashboard.html");
+            window.location.replace(CONFIG.PAGES.DASHBOARD);
         }
 
     } catch (err) {
-        alert("🚫 El templo no responde. Verificá tu conexión.");
+        // El error ya se muestra en api.js
     }
 });
 
 /* =====================
-    REGISTER CON TÉRMINOS
+    REGISTER
 ===================== */
 const registerForm = document.getElementById("registerForm");
+
 registerForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const acceptTerms = document.getElementById("acceptTerms");
     if (!acceptTerms || !acceptTerms.checked) {
-        alert("Debes aceptar el Código de Honor para unirte al Clan.");
+        alert("Debes aceptar el Código de Honor.");
         return;
     }
 
@@ -64,19 +63,22 @@ registerForm?.addEventListener("submit", async (e) => {
     const password = document.getElementById("password").value;
 
     try {
-        const res = await fetch(`${API_URL}/api/auth/register`, {
+        const res = await ninjaFetch(CONFIG.ENDPOINTS.REGISTER, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ninjaName, email, password }),
         });
 
+        if (!res) return;
+
         const data = await res.json();
         if (!res.ok) {
-            alert(data.error || "Error: Este Guerrero o Email ya están registrados.");
+            alert(data.error || "Error al registrar.");
             return;
         }
 
-        alert("✅ Registro exitoso. Identifícate para entrar al Dojo.");
-        window.location.href = "login.html";
-    } catch (err) { alert("🚫 Error al forjar la cuenta."); }
+        alert("✅ Registro exitoso. Entra al Dojo.");
+        window.location.href = CONFIG.PAGES.LOGIN;
+    } catch (err) {
+        // Error manejado en api.js
+    }
 });
