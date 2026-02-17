@@ -1,48 +1,80 @@
-.game-body {
+html, body {
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Adiós scrollbars */
     background: #050505;
     font-family: 'Orbitron', sans-serif;
-}
-
-#hud {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-left: 3px solid var(--ninja-red);
-}
-
-.hud-item {
-    font-size: 1.2rem;
-    color: white;
+    touch-action: none; /* CRÍTICO: Deshabilita zoom/scroll en móviles */
+    overscroll-behavior: none; /* Evita el rebote en iOS */
+    user-select: none; /* No seleccionar texto */
+    -webkit-user-select: none;
 }
 
 #gameCanvas {
     display: block;
+    width: 100%;
+    height: 100%;
 }
 
-/* Modales */
+/* HUD Flotante Adaptable */
+#hud {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px;
+    border-left: 3px solid var(--ninja-red);
+    border-radius: 0 5px 5px 0;
+    pointer-events: none; /* Click-through */
+}
+
+.hud-item {
+    font-size: clamp(0.8rem, 4vw, 1.2rem); /* Texto escala con pantalla */
+    color: white;
+    text-shadow: 1px 1px 0 #000;
+}
+
+.gold-text { color: #ffb400; }
+.red-text { color: #ff3333; }
+
+/* Modal Responsivo */
 .modal {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.92);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 100;
+    padding: 20px;
+}
+
+.card-dark {
+    background: #111;
+    border: 2px solid #8e0000;
+    padding: 20px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 0 20px rgba(142, 0, 0, 0.5);
+}
+
+.btn-ninja-primary {
+    background: #8e0000;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-family: 'Orbitron';
+    margin: 10px;
+    cursor: pointer;
+    width: 100%;
 }
 
 .hidden { display: none !important; }
-
-.checkpoint-line {
-    border-left: 2px dashed var(--shogun-gold);
-    height: 100%;
-    position: absolute;
-}
